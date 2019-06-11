@@ -21,7 +21,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
-#include "kgCsv.h"
+#include "kgCSV.h"
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
 #include "cmn.hpp"
@@ -43,7 +43,7 @@ void kgmod::itemAtt::build(void) {
     itemAttF.read_header();
     vector<string> fldName = itemAttF.fldName();
     
-    cerr << "<<< bild itemAtt >>>" << endl;
+    cerr << "<<< build itemAtt >>>" << endl;
     auto itemFld = find(fldName.begin(), fldName.end(), config->traFile.itemFld);
     if (itemFld == fldName.end()) {
         stringstream msg;
