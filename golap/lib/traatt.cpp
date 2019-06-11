@@ -25,7 +25,7 @@
 #include <kgMethod.h>
 #include <kgConfig.h>
 #include <kgMessage.h>
-#include "kgCsv.h"
+#include "kgCSV.h"
 #include "btree_map.h"
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
@@ -45,7 +45,7 @@ void kgmod::traAtt::build(BTree& bmpList) {
     traAttF.read_header();
     vector<string> fldName = traAttF.fldName();
     
-    cerr << "<<< bild traAtt >>>" << endl;
+    cerr << "<<< build traAtt >>>" << endl;
     auto traFld = find(fldName.begin(), fldName.end(), config->traFile.traFld);
     if (traFld == fldName.end()) {
         stringstream msg;
