@@ -18,7 +18,7 @@
  ////////// LICENSE INFO ////////////////////*/
 
 #include <stdio.h>
-#include "kgCsv.h"
+#include "kgCSV.h"
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
 #include "lrucache.hpp"
