@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <string>
 #include <vector>
-#include "kgCsv.h"
+#include "kgCSV.h"
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
 #include "cmn.hpp"
