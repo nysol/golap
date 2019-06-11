@@ -25,7 +25,7 @@
 #include <kgConfig.h>
 #include <kgMessage.h>
 #include <boost/algorithm/string.hpp>
-#include "kgCsv.h"
+#include "kgCSV.h"
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
 #include "cmn.hpp"
