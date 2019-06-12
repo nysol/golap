@@ -2,7 +2,7 @@
 #EXTRA_DIST =$(wildcard *.h) $(wildcard ../help/*.h )
 #EXTRA_DIST = dat/*.h
 
-AM_CXXFLAGS = -std=gnu++11 -I. -I../ -I ../lib @XML2HEAD@
+AM_CXXFLAGS = -std=gnu++11 -fpermissive -I. -I../ -I ../lib @XML2HEAD@
 
 
 ## Define a libtool archive target "libexample-@EXAMPLE_API_VERSION@.la", with

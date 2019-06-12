@@ -1,7 +1,7 @@
 
 #EXTRA_DIST =$(wildcard *.h) $(wildcard dat/*.h)
 
-AM_CXXFLAGS = -std=gnu++11 -I$(top_srcdir)/golap/mod -I$(top_srcdir)/golap/lib @XML2HEAD@
+AM_CXXFLAGS = -std=gnu++11 -fpermissive -I$(top_srcdir)/golap/mod -I$(top_srcdir)/golap/lib @XML2HEAD@
 
 
 bin_PROGRAMS = \

@@ -27,6 +27,7 @@
 #include <kgMethod.h>
 #include <kgConfig.h>
 #include <kgMessage.h>
+#include <cfloat>
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
 #include "cmn.hpp"
