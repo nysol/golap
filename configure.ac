@@ -50,9 +50,15 @@ CXXFLAGS="-I $BOOSTPATH/include $CXXFLAGS"
 
 AC_SUBST([BOOSTPATH], [$BOOSTPATH])
 
+BTHREAD=""
 AC_CHECK_LIB([kgmod3], [main], [], [echo "Error. You need to have libkgmod3";exit -1])
 AC_CHECK_LIB([boost_system], [main], [], [echo "Error. You need to have libboost";exit -1])
 AC_CHECK_LIB([boost_filesystem], [main], [], [echo "Error. You need to have libboost";exit -1])
+AC_CHECK_LIB([boost_thread], [main], [BTHREAD="-lboost_thread"], [])
+AC_CHECK_LIB([boost_thread-mt], [main], [BTHREAD="-lboost_thread-mt"], [])
+
+AC_SUBST(BTHREAD)
+
 
 #OSチェック
 AM_CONDITIONAL(DARWIN_CERT, false)
