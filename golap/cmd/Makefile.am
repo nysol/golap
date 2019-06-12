@@ -11,10 +11,12 @@ golap
 ### excmd command end ###
 
 cregdb_SOURCES = cregdb.cpp
-cregdb_LDADD = -lkgmod3 $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
+#cregdb_LDADD = -lkgmod3  $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
+cregdb_LDADD = -lkgmod3 -lboost_thread $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@
 
 golap_SOURCES = golap.cpp
-golap_LDADD = -lkgmod3 $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
+#golap_LDADD = -lkgmod3 $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
+golap_LDADD = -lkgmod3 -lboost_thread $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.
 
 install-exec-hook:
 if DARWIN_CERT 

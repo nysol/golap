@@ -54,7 +54,6 @@ AC_CHECK_LIB([kgmod3], [main], [], [echo "Error. You need to have libkgmod3";exi
 AC_CHECK_LIB([boost_system], [main], [], [echo "Error. You need to have libboost";exit -1])
 AC_CHECK_LIB([boost_filesystem], [main], [], [echo "Error. You need to have libboost";exit -1])
 
-
 #OSチェック
 AM_CONDITIONAL(DARWIN_CERT, false)
 AC_CANONICAL_HOST
