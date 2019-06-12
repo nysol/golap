@@ -22,7 +22,7 @@
 #include <kgMethod.h>
 #include <kgConfig.h>
 #include <kgMessage.h>
-#include "kgCsv.h"
+#include "kgCSV.h"
 #include "bidx-ewah.hpp"
 #include "cmn.hpp"
 #include "config.hpp"
