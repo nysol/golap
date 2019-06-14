@@ -16,8 +16,6 @@
  * for more details.
  
  ////////// LICENSE INFO ////////////////////*/
-
-#include <boost/thread/mutex.hpp>
 #include <chrono>
 #include <unistd.h>
 #include "param.hpp"
@@ -25,8 +23,6 @@
 
 using namespace std;
 using namespace kgmod;
-
-boost::mutex Mtx;
 
 kgmod::Param::Param(string& ParamFile) : ParamFile(ParamFile), flock(NULL) {
 //    if (! ReadParam()) {

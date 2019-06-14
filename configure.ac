@@ -57,7 +57,13 @@ AC_CHECK_LIB([boost_filesystem], [main], [], [echo "Error. You need to have libb
 AC_CHECK_LIB([boost_thread], [main], [BTHREAD="-lboost_thread"], [])
 AC_CHECK_LIB([boost_thread-mt], [main], [BTHREAD="-lboost_thread-mt"], [])
 
+if test -z $BTHREAD ; then
+	echo "Error. You need to have libboost_thread or libboost_thread-mt";
+	exit -1;
+fi
+
 AC_SUBST(BTHREAD)
+
 
 
 #OSチェック

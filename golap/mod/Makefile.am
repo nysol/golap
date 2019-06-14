@@ -16,7 +16,7 @@ lib_LTLIBRARIES = libgolapmod@MOD_MAJOR_VERSION@.la
 ## Instruct libtool to include ABI version information in the generated shared
 ## library file (.so).  The library ABI version is defined in configure.ac, so
 ## that all version information is kept in one place.
-libgolapmod@MOD_MAJOR_VERSION@_la_LDFLAGS = -version-info $(MOD_SO_VERSION) -single_module @XML2LIB@
+libgolapmod@MOD_MAJOR_VERSION@_la_LDFLAGS = -version-info $(MOD_SO_VERSION) -single_module @XML2LIB@ @BTHREAD@
 
 #libgolapmod@MOD_MAJOR_VERSION@_la_LIBADD = $(top_srcdir)/kgmod/libkgmod@MOD_MAJOR_VERSION@.la
 
