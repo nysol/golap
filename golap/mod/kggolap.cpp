@@ -130,16 +130,20 @@ kgmod::kgGolap::Result kgmod::kgGolap::Enum(struct selCond& selCond, sort_key so
             string itemName2 = occ->itemAtt->itemName[*i];
             size_t freq = c->second;
             float sup = (float)freq / traNum;
+            if (sup < selCond.minSup) break;
             
             if (itemFreq.find(*i) == itemFreq.end())
                 itemFreq[*i] = occ->itemFreq(*i, TraBmp);
             if (itemFreq.find(c->first) == itemFreq.end())
                 itemFreq[c->first] = occ->itemFreq(c->first, TraBmp);
             float conf1 = (float)freq / itemFreq[*i];
+            if (conf1 < selCond.minConf) break;
 //            float conf2 = (float)freq / itemFreq[c->first];
             
             float jac = (float)freq / (itemFreq[*i] + itemFreq[c->first] - freq);
+            if (jac < selCond.minJac) break;
             float lift = (float)(freq * traNum) / (itemFreq[*i] * itemFreq[c->first]);
+            if (lift < selCond.minLift) break;
             
             float pmi = Cmn::calcPmi(freq, itemFreq[*i], itemFreq[c->first], traNum);
             
