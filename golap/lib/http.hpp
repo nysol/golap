@@ -82,9 +82,17 @@ private:
     }
     
     void send(void) {
-        asio::async_write(socket_, asio::buffer(send_data_), //asio::transfer_at_least(1),
-                          boost::bind(&Http::on_send, this, asio::placeholders::error,
-                                      asio::placeholders::bytes_transferred));
+        //asio::async_write(socket_, asio::buffer(send_data_), //asio::transfer_at_least(1),
+        //                  boost::bind(&Http::on_send, this, asio::placeholders::error,
+        //                              asio::placeholders::bytes_transferred));
+				boost::system::error_code error;   
+				asio::write(socket_, asio::buffer(send_data_), error);
+        if (error) {
+            cout << "failed to send: " << error.message() << endl;
+        } else {
+//            cout << bytes_transferred << " bytes transfered" << endl;
+        }
+
     }
     
     void on_send(const boost::system::error_code& error, size_t bytes_transferred) {

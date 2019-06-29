@@ -267,6 +267,8 @@ void kgmod::exec::proc(void) {
     cerr << "process time: " << elapsed / 1000 << " sec" <<endl;
     
     cerr << "sending" << endl;
+    put_send_data("HTTP/1.1 200 Ok\r\nContent-type: text/plain; charset=UTF-8\r\nConnection: keep-alive\r\n\r\n\n");
+    Http::proc();
     for (auto i = res.begin(); i != res.end(); i++) {
         put_send_data((i->second) + "\n");
         Http::proc();
