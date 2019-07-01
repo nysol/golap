@@ -66,9 +66,18 @@ private:
     }
     
     void start_receive(void) {
-        asio::async_read(socket_, receive_buff_, asio::transfer_at_least(1),
-                         boost::bind(&Http::on_receive, this,
-                                     asio::placeholders::error, asio::placeholders::bytes_transferred));
+//        asio::async_read(socket_, receive_buff_, asio::transfer_at_least(1),
+//                         boost::bind(&Http::on_receive, this,
+//                                     asio::placeholders::error, asio::placeholders::bytes_transferred));
+				boost::system::error_code error;   
+				asio::read(socket_, receive_buff_, asio::transfer_at_least(1), error);
+        if (error && error != asio::error::eof) {
+            cout << "failed to receive: " << error.message() << std::endl;
+        } else {
+//            timer_.expires_from_now(chrono::seconds(waitTimeInSec));
+//            timer_.async_wait(boost::bind(&Http::on_timer, this, _1));
+            proc();
+        }
     }
     
     void on_receive(const boost::system::error_code& error, size_t bytes_transferred) {
