@@ -189,6 +189,12 @@ bool kgmod::Cmn::MatchWild(const char* pat, const char* str) {
     }
 }
 
+bool kgmod::Cmn::StartWith(const string& str, const string& pref) {
+    size_t size = pref.size();
+    if (str.size() < size) return false;
+    return equal(begin(pref), end(pref), std::begin(str));
+}
+
 double kgmod::Cmn::DiffTime(const timespec& Start, const timespec End) {
     const size_t nsec = 1000000000;     // 1,000,000,000
     double s = Start.tv_sec + (double)Start.tv_nsec / nsec;

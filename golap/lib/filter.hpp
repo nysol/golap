@@ -28,7 +28,7 @@
 #include "occ.hpp"
 
 namespace kgmod {
-    enum tra_item : unsigned int {TRA, ITEM};
+    enum tra_item : unsigned int {TRA, ITEM, SLICE};
     
     typedef typename cache::lru_cache<string, Ewah> cmd_cache_t;
     class cmdCache : public cmd_cache_t {
@@ -90,8 +90,8 @@ namespace kgmod {
         Ewah range(const string& key, const pair<string, string>& values, const tra_item traitem);
         
         // tra専用
-        Ewah sel_item(const string& key, const values_t& values, const tra_item traitem);
-        Ewah del_item(const string& key, const values_t& values, const tra_item traitem);
+        Ewah sel_item(string& itemFilter, const tra_item traitem);
+        Ewah del_item(string& itemFilter, const tra_item traitem);
         Ewah having(const string& key, string& andor, string& itemFilter, const tra_item traitem);
         
         void go_next(char** cmdPtr);

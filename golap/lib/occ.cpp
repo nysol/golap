@@ -130,7 +130,7 @@ void kgmod::Occ::save(const bool clean) {
 }
 
 void kgmod::Occ::loadCooccur(void) {
-    cerr << "reading co-occurrence" << endl;
+    cerr << "loading co-occurrence" << endl;
     occ.resize(traAtt->traMax + 1);
     
     FILE* fp = fopen(dbName.c_str(), "rb");
@@ -190,4 +190,16 @@ void kgmod::Occ::dump(const bool debug) {
         Cmn::CheckEwah(occ[i]);
     }
  *******/
+}
+
+void kgmod::Occ::getTra2KeyValue(string& key, vector<string>* tra2key) {
+    tra2key->resize(traAtt->traMax);
+    vector<string> vals = evalKeyValue(key);
+    for (auto& val : vals) {
+        Ewah tras;
+        tras = bmpList.GetVal(key, val);
+        for (auto i = tras.begin(), ei = tras.end(); i != ei; i++) {
+            (*tra2key)[*i] = val;
+        }
+    }
 }

@@ -510,3 +510,65 @@ void kgmod::BTree::dump(bool debug) {
         }
     }
 }
+
+vector<string> kgmod::BTree::EvalKeyValue(const string& Key, const Ewah* filter) {
+    vector<string> out;
+    if (DataTypeMap[Key] == STR) {
+        for (auto i = str_btree.lower_bound({Key,""}); i != str_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (filter == NULL) {
+                out.push_back(i->first.second);
+            } else {
+                Ewah tmp;
+                tmp = i->second & *filter;
+                if (tmp.numberOfOnes() != 0) out.push_back(i->first.second);
+            }
+        }
+    } else {
+        for (auto i = num_btree.lower_bound({Key,-DBL_MAX}); i != num_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (filter == NULL) {
+                stringstream ss;
+                ss << i->first.second;
+                out.push_back(ss.str());
+            } else {
+                Ewah tmp;
+                tmp = i->second & *filter;
+                if (tmp.numberOfOnes() != 0) {
+                    stringstream ss;
+                    ss << i->first.second;
+                    out.push_back(ss.str());
+                }
+            }
+        }
+    }
+    return out;
+}
+
+size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
+    size_t cnt = 0;
+    if (DataTypeMap[Key] == STR) {
+        for (auto i = str_btree.lower_bound({Key,""}); i != str_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (filter == NULL) {
+                cnt++;
+            } else {
+                Ewah tmp;
+                tmp = i->second & *filter;
+                if (tmp.numberOfOnes() != 0) cnt++;
+            }
+        }
+    } else {
+        for (auto i = num_btree.lower_bound({Key,-DBL_MAX}); i != num_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (filter == NULL) {
+                cnt++;
+            } else {
+                Ewah tmp;
+                tmp = i->second & *filter;
+                if (tmp.numberOfOnes() != 0) cnt++;
+            }
+        }
+    }
+    return cnt;
+}

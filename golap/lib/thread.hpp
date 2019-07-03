@@ -17,39 +17,40 @@
  
  ////////// LICENSE INFO ////////////////////*/
 
-#ifndef traatt_hpp
-#define traatt_hpp
+#ifndef thread_hpp
+#define thread_hpp
 
-#include <kgConfig.h>
-#include <kgmod.h>
-#include "btree.hpp"
-#include "cmn.hpp"
-#include "config.hpp"
-
-using namespace std;
-using namespace kgmod;
+#include <queue>
+#include <boost/thread/mutex.hpp>
+#include "thread.hpp"
 
 namespace kgmod {
-    class traAtt {
-        Config* config;
-        kgEnv* env;
-        string dbName;
-        
+    template<typename T>
+    class MtQueue {
     public:
-        btree::btree_map<string, size_t> traNo;
-        btree::btree_map<size_t, string> tra;
-        size_t traMax;
+        typedef pair<size_t, T> th_t;
+        void push(th_t* th) {
+            mtx.lock();
+            q.push(th);
+            mtx.unlock();
+        }
+        th_t* pop() {
+            pair<size_t, T>* th;
+            mtx.lock();
+            if (q.empty()) {
+                th = NULL;
+            } else {
+                th = q.front();
+                q.pop();
+            }
+            mtx.unlock();
+            return th;
+        }
         
-    public:
-        traAtt(Config* config, kgEnv* env);
-        
-        void build(BTree& BmpList);
-        void save(bool clean = true);
-        void load(void);
-        void dump(bool debug);
-        vector<string> listAtt(void);
-        // traattのevalKeyValueはoccのものを用いる
+    private:
+        queue<pair<size_t, T>*> q;
+        boost::mutex mtx;
     };
 }
 
-#endif /* traatt_hpp */
+#endif /* thread_hpp */

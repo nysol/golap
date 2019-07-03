@@ -179,3 +179,17 @@ void kgmod::itemAtt::dump(bool debug) {
     bmpList.dump(debug);
     cerr << endl;
 }
+
+vector<string> kgmod::itemAtt::listAtt(void) {
+    //    vector<string> out;
+    //    size_t siz = config->itemAttFile.numFields.size();
+    //    siz += config->itemAttFile.strFields.size();
+    //    siz += config->itemAttFile.catFields.size();
+    //    out.reserve(siz);
+    
+    vector<string> out = config->itemAttFile.numFields;
+    out.insert(out.end(), config->itemAttFile.strFields.begin(), config->itemAttFile.strFields.end());
+    out.insert(out.end(), config->itemAttFile.catFields.begin(), config->itemAttFile.catFields.end());
+    sort(out.begin(), out.end());
+    return out;
+}

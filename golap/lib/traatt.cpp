@@ -77,19 +77,19 @@ void kgmod::traAtt::build(BTree& bmpList) {
                 int cnt = (int)(fld - fldName.begin());
                 if (cnt == traFldPos) continue;
                 string fldVal = traAttF.getVal(cnt);
-                if (fldVal == "") continue;
+//                if (fldVal == "") continue;
                 
 //                cerr << *fld << ":" << fldVal << endl;
                 if (isFirst[cnt]) {
                     Ewah bmp;
-                    bmp.set(traAttF.recNo());
+                    bmp.set(traMax);
                     (*(*resList)[split])[{*fld, fldVal}] = bmp;
                     isFirst[cnt] = false;
                 } else {
-                    (*(*resList)[split])[{*fld, fldVal}].set(traAttF.recNo());
+                    (*(*resList)[split])[{*fld, fldVal}].set(traMax);
                 }
                 
-                if (traAttF.recNo() % stlipEvery == stlipEvery - 1) break;
+                if (traMax % stlipEvery == stlipEvery - 1) break;
             }
         }
     }
@@ -224,4 +224,12 @@ void kgmod::traAtt::dump(bool debug) {
     cerr << "traMax: " << traMax << endl;
     cerr << "*** see 'dump occ' if you check traAtt index ***" << endl;
     cerr << endl;
+}
+
+vector<string> kgmod::traAtt::listAtt(void) {
+    vector<string> out = config->traAttFile.numFields;
+    out.insert(out.end(), config->traAttFile.strFields.begin(), config->traAttFile.strFields.end());
+    out.insert(out.end(), config->traAttFile.catFields.begin(), config->traAttFile.catFields.end());
+    sort(out.begin(), out.end());
+    return out;
 }

@@ -18,6 +18,7 @@
  ////////// LICENSE INFO ////////////////////*/
 
 #include <iostream>
+#include <thread>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/optional.hpp>
@@ -137,6 +138,32 @@ kgmod::Config::Config(string& infile) {
             cmdCache_saveInterval = *val;
         } else {
             cmdCache_saveInterval = 1;
+        }
+        
+        if (boost::optional<string> val = Prm.get<string>("mt.enable")) {
+            string tmp = *val;
+            transform(tmp.cbegin(), tmp.cend(), tmp.begin(), ::toupper);
+            if (tmp == "TRUE") {
+                mt_enable = true;
+            } else {
+                mt_enable = false;
+            }
+        } else {
+            mt_enable = false;
+        }
+        if (boost::optional<int> val = Prm.get<int>("mt.degree")) {
+            if (*val == 0) {
+                mt_enable = false;
+                mt_degree = 0;
+            } else if (*val < 0) {
+                mt_degree = thread::hardware_concurrency();
+            } else if (*val > MAX_THREAD) {
+                mt_degree = thread::hardware_concurrency();
+            } else {
+                mt_degree = *val;
+            }
+        } else {
+            mt_degree = thread::hardware_concurrency();
         }
         
         if (boost::optional<int> val = Prm.get<int>("etc.sendMax")) {

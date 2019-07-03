@@ -57,6 +57,7 @@ namespace kgmod {
         void CheckEwah(Ewah& b);
         void CheckEwah(Ewah* b);
         bool MatchWild(const char* pat, const char* str);
+        bool StartWith(const string& str, const string& pref);
         double DiffTime(const timespec& Start, const timespec End);
         static inline void chomp(string &str) { // 後ろの余白（スペースや改行）を削除する
             str.erase(find_if(str.rbegin(), str.rend(), not1(ptr_fun<int, int>(isspace))).base(), str.end());

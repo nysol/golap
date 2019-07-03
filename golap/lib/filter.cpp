@@ -46,8 +46,8 @@ Ewah& kgmod::Filter::logicalnot(Ewah& bmp, const tra_item traitem) {
         throw kgError(msg.str());
     }
     
-    bmp.padWithZeroes(bmpMax + 1);
-    bmp = bmp.logicalnot();
+    bmp.padWithZeroes(bmpMax);
+    bmp.inplace_logicalnot();
     return bmp;
 }
 
@@ -194,19 +194,21 @@ Ewah kgmod::Filter::range(const string& key, const pair<string, string>& values,
 }
 
 // trafilter専用
-Ewah kgmod::Filter::sel_item(const string& key, const values_t& values, const tra_item traitem) {
+Ewah kgmod::Filter::sel_item(string& itemFilter, const tra_item traitem) {
     if (traitem != TRA) throw 0;
+    Ewah itemBmp = makeItemBitmap(itemFilter);
     Ewah out;
-    for (auto i = values.begin(); i != values.end(); i++) {
-        Ewah tmp = occ->bmpList.GetVal(key, *i);
+    for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
+        string tar = occ->itemAtt->item[*i];
+        Ewah tmp = occ->bmpList.GetVal(occ->occKey, tar);
         out = out | tmp;
     }
     return out;
 }
 
-Ewah kgmod::Filter::del_item(const string& key, const values_t& values, const tra_item traitem) {
+Ewah kgmod::Filter::del_item(string& itemFilter, const tra_item traitem) {
     if (traitem != TRA) throw 0;
-    Ewah out = sel_item(key, values, traitem);
+    Ewah out = sel_item(itemFilter, traitem);
     out = logicalnot(out, traitem);
     return out;
 }
@@ -215,6 +217,8 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     if (traitem != TRA) throw 0;
     Ewah itemBmp = makeItemBitmap(itemFilter);
     Ewah traBmp;
+    if (itemBmp.numberOfOnes() == 0) return traBmp;
+    
     transform(andor.cbegin(), andor.cend(), andor.begin(), ::toupper);
     if (andor == "AND") traBmp = logicalnot(traBmp, TRA);
     for (auto i = itemBmp.begin(); i != itemBmp.end(); i++) {
@@ -405,11 +409,9 @@ Ewah kgmod::Filter::runcmd(char** cmdPtr, const tra_item traitem) {
                 pair<string, string> fromto(st, ed);
                 out = range(key, fromto, traitem);
             } else if (func == "SEL_ITEM") {
-                string key = arg[0]; arg.erase(arg.begin());
-                out = sel_item(key, arg, traitem);
+                out = sel_item(arg[0], traitem);
             } else if (func == "DEL_ITEM") {
-                string key = arg[0]; arg.erase(arg.begin());
-                out = del_item(key, arg, traitem);
+                out = del_item(arg[0], traitem);
             } else if (func == "HAVING") {
                 bool stat = cache->get(func, arg, traitem, out);
                 if (! stat) {

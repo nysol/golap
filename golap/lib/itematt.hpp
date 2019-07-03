@@ -48,6 +48,8 @@ namespace kgmod {
         void save(bool clean = true);
         void load(void);
         void dump(bool debug);
+        vector<string> listAtt(void);
+        vector<string> evalKeyValue(string& key) {return bmpList.EvalKeyValue(key);}
     };
 }
 

@@ -60,6 +60,10 @@ namespace kgmod {
         size_t cmdCache_size;
         size_t cmdCache_saveInterval;
         
+#define MAX_THREAD 100
+        bool mt_enable;
+        size_t mt_degree;
+        
         size_t bottomSupport;
         
         size_t sendMax;

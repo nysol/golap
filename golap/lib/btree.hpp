@@ -66,6 +66,8 @@ namespace kgmod {
         void save(bool clean);
         void load(void);
         void dump(bool debug);
+        vector<string> EvalKeyValue(const string& Key, const Ewah* traFilter = NULL);
+        size_t CountKeyValue(const string& Key, const Ewah* traFilter = NULL);
     };
 }
 

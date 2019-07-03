@@ -22,6 +22,7 @@
 
 #include <pthread.h>
 #include <map>
+#include <boost/thread.hpp>
 #include <kgError.h>
 #include <kgMethod.h>
 #include <kgConfig.h>
@@ -33,6 +34,7 @@
 #include "btree.hpp"
 #include "filter.hpp"
 #include "http.hpp"
+#include "thread.hpp"
 
 using namespace std;
 using namespace kglib;
@@ -43,16 +45,17 @@ namespace kgmod {
         double minConf;
         double minLift;
         double minJac;
-        void dump(void) {cerr << "selCond: " << minSup << " " << minConf << " " << minLift << " " << minJac << endl;};
+        double minPMI;
+        void dump(void) {cerr << "selCond: " << minSup << " " << minConf << " " << minLift
+            << " " << minJac << " " << minPMI << endl;};
     };
     
-    enum sort_key {SORT_NONE, SORT_SUP, SORT_CONF, SORT_LIFT, SORT_JAC};
-    static bool isTimeOut;
+    enum sort_key {SORT_NONE, SORT_SUP, SORT_CONF, SORT_LIFT, SORT_JAC, SORT_PMI};
+//    static bool isTimeOut;
 
     class kgGolap : public kgMod {
     private:
         string opt_inf;
-        pthread_t pt;
         
     public:
         bool opt_debug = false;
@@ -68,27 +71,22 @@ namespace kgmod {
         kgGolap(void);
         ~kgGolap(void);
         
+        typedef struct {
+            string key;
+            map<string, Ewah> SliceBmpList;
+        } Slice;
+        Slice makeSliceBitmap(string& cmdline);
         typedef btree::btree_multimap<float, string> Result;
-        Result Enum(struct selCond& selCond, sort_key sortKey, Ewah& TraBmp, Ewah& ItemBmp);
+        size_t sizeOfResult(Result res) {
+            size_t out = 0;
+            for (auto i = res.begin(), ie = res.end(); i != ie; i++) {
+                out += i->second.size();
+            }
+            return out;
+        }
+//        Result Enum(struct selCond& selCond, sort_key sortKey, Ewah& TraBmp, Ewah& ItemBmp, Ewah& sliceBmp);
         void Output(Result& res);
         int run(void);
-
-        static void* timerHandle(void* timer) {
-            static unsigned int tt = *(unsigned int*)timer;
-            cerr << "setTimer: " << tt << " sec" << endl;
-            sleep(tt);
-            isTimeOut = true;
-            cerr << "time out" << endl;
-            return (void*)NULL;
-        }
-        void setTimer(unsigned int& timerInSec) {
-            isTimeOut = false;
-            pthread_create(&pt, NULL, &kgmod::kgGolap::timerHandle, &timerInSec);
-        }
-        void cancelTimer(void) {
-            pthread_cancel(pt);
-            if (! isTimeOut) cerr << "timer canceled" << endl;
-        }
     };
     
     //
@@ -108,6 +106,34 @@ namespace kgmod {
     private:
         void proc(void) override;
     };
+    
+    
+    static pthread_t pt;
+    static bool isTimeOut;
+    static void* timerHandle(void* timer) {
+        static unsigned int tt = *(unsigned int*)timer;
+        cerr << "setTimer: " << tt << " sec" << endl;
+        sleep(tt);
+        isTimeOut = true;
+        cerr << "time out" << endl;
+        return (void*)NULL;
+    }
+    static void setTimer(unsigned int& timerInSec) {
+        isTimeOut = false;
+        pthread_create(&pt, NULL, &timerHandle, &timerInSec);
+    }
+    static void cancelTimer(void) {
+        pthread_cancel(pt);
+        if (! isTimeOut) cerr << "timer canceled" << endl;
+    }
+    
+    static Config* mt_config;
+    static Occ* mt_occ;
+    kgGolap::Result Enum(struct selCond& selCond, sort_key sortKey, Ewah& TraBmp, Ewah& ItemBmp,
+                         string& uniqAtt, Ewah& sliceBmp);
+    typedef MtQueue<pair<string, Ewah*>> mq_t;
+    void MT_Enum(mq_t* mq, struct selCond selCond, sort_key sortKey, Ewah TraBmp, Ewah ItemBmp,
+                 string uniqAtt, map<string, kgGolap::Result>* res);
 }
 
 #endif /* mbindex_h */

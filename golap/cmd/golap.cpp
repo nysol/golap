@@ -16,6 +16,7 @@
  * for more details.
  
  ////////// LICENSE INFO ////////////////////*/
+// golap3
 
 #include "kggolap.hpp"
 

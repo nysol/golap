@@ -60,17 +60,37 @@ namespace kgmod {
         void loadCooccur(void);
         void load(void);
         
-        size_t itemFreq(size_t itemNo, Ewah& traFilter) {
+        size_t itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key = NULL) {
+            size_t cnt = 0;
+            unordered_map<string, int> checkedAttVal;
             Ewah tmp;
             tmp = bmpList[{config->traFile.itemFld, itemAtt->item[itemNo]}] & traFilter;
-            return tmp.numberOfOnes();
+            if (tra2key == NULL) {
+                cnt = tmp.numberOfOnes();
+            } else {
+                for (auto t = tmp.begin(), et = tmp.end(); t != et; t++) {
+                    string val = (*tra2key)[*t];
+                    if (checkedAttVal.find(val) == checkedAttVal.end()) {
+                        cnt++;
+                        checkedAttVal[val] = 1;
+                    }
+                }
+            }
+            return cnt;
         }
-        size_t itemFreq(size_t itemNo) {
+        size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL) {
             return bmpList[{config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
         }
         
         void occ_dump(const bool debug);
         void dump(const bool debug);
+        vector<string> evalKeyValue(string& key, Ewah* TraFilter = NULL) {
+            return bmpList.EvalKeyValue(key, TraFilter);
+        }
+        size_t countKeyValue(string& key, Ewah* TraFilter = NULL) {
+            return bmpList.CountKeyValue(key, TraFilter);
+        }
+        void getTra2KeyValue(string& key, vector<string>* tra2key);
     };
 }
 
