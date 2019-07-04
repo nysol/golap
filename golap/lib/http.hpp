@@ -71,8 +71,7 @@ private:
     }
 
     void set_header(size_t body_size) {
-        send_data_  = req_header_["method"];
-        send_data_ += req_header_["host"];
+        send_data_  = "HTTP/1.1 200 OK\r\n";
         send_data_ += "server: golap/0.1\r\n";
         send_data_ += "Content-Type: text/plain; charset=UTF-8\r\n";
         send_data_ += "Content-Length: " + to_string(body_size) + "\r\n";
