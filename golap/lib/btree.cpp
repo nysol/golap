@@ -111,6 +111,8 @@ void kgmod::BTree::SetVal(const string& Key, const string& KeyValue, Ewah& Bitma
 
 bool kgmod::BTree::GetVal(const string& Key, const string& KeyValue, Ewah*& Bitmap) {
     bool found = false;
+    static Ewah nullBmp;
+    Bitmap = &nullBmp;
     if (DataTypeMap[Key] == STR) {
         if (str_btree.find({Key,KeyValue}) != str_btree.end()) {
             Bitmap = &str_btree[{Key,KeyValue}];
