@@ -371,15 +371,15 @@ void kgmod::exec::proc(void) {
             }
             
 //            boost::thread_group thg;
-            vector<thread> thg;
+            vector<boost::thread> thg;
             for (int i = 0; i < mt_config->mt_degree; i++) {
 //                thg.create_thread(boost::bind(&MT_Enum, &mq, selCond, sortKey, TraBmp, ItemBmp, &res));
-                thg.push_back(thread([&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, &res] {
+                thg.push_back(boost::thread([&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, &res] {
                     MT_Enum(&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, &res);
                 }));
             }
 //            thg.join_all();
-            for (thread& th : thg) {
+            for (boost::thread& th : thg) {
                 th.join();
             }
         } else {
