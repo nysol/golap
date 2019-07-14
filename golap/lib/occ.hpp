@@ -37,9 +37,9 @@ using namespace kgmod;
 
 namespace kgmod {
     class Occ {
-        Config* config;
-        kgEnv* env;
-        string dbName;
+        Config* _config;
+        kgEnv* _env;
+        string _dbName;
         
     public:
         traAtt* traAtt;
@@ -64,7 +64,7 @@ namespace kgmod {
             size_t cnt = 0;
             unordered_map<string, int> checkedAttVal;
             Ewah tmp;
-            tmp = bmpList[{config->traFile.itemFld, itemAtt->item[itemNo]}];
+            tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}];
             tmp = tmp & traFilter;
             if (tra2key == NULL) {
                 cnt = tmp.numberOfOnes();
@@ -80,7 +80,7 @@ namespace kgmod {
             return cnt;
         }
         size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL) {
-            return bmpList[{config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
+            return bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
         }
         
         void occ_dump(const bool debug);

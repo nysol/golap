@@ -290,7 +290,7 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
     int argn = 0;
     char inQuote = '\0';
     bool isEscape = false;
-    (*cmdPtr)++;
+    (*cmdPtr)++;    // 先頭は必ず'('なので、kakkoDepth = 1から始まる
     for (int kakkoDepth = 1; kakkoDepth > 0; (*cmdPtr)++) {
         if (inQuote) {
             if (! isEscape) {
@@ -310,8 +310,8 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
                 if (kakkoDepth == 1) continue;
             } else if (**cmdPtr == ')') {
                 kakkoDepth--;
-                if (kakkoDepth == 0) continue;
                 if (kakkoDepth < 0) throw 0;
+                if (kakkoDepth == 0) continue;
             } else if (**cmdPtr == '"' || **cmdPtr == '\'') {
                 if (kakkoDepth == 1) {
                     inQuote = **cmdPtr;
@@ -319,19 +319,13 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
                     continue;
                 }
             } else if (**cmdPtr == ',') {
-                if (kakkoDepth == 1) {
-                    argn++;
-                    continue;
-                }
+                if (kakkoDepth == 1) {argn++; continue;}
             } else if (isspace(**cmdPtr)) {
                 continue;
             }
         }
         
-        if (arg.size() == argn) {
-            arg.push_back("");
-        }
-        
+        if (arg.size() == argn) arg.push_back("");
         char tmp[2];
         tmp[0] = **cmdPtr; tmp[1] = '\0';
         arg[argn] += tmp;
@@ -339,6 +333,7 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
         isEscape = false;
     }
     
+    if (arg.size() == argn) arg.push_back("");
     if (*(*cmdPtr - 1) != ')') throw 0;
     return arg;
 }
@@ -449,6 +444,7 @@ Ewah kgmod::Filter::makeTraBitmap(string& cmdline) {
     } else {
         char* cmd = (char*)cmdline.c_str();
         if (cmdline == "") {
+            cerr << "(tra) all transactions" << endl;
             bmp = allone(TRA);
         } else {
             cerr << "(tra) executing " << cmdline << endl;
@@ -469,6 +465,7 @@ Ewah kgmod::Filter::makeItemBitmap(string& cmdline) {
     } else {
         char* cmd = (char*)cmdline.c_str();
         if (cmdline == "") {
+            cerr << "(item) all items" << endl;
             bmp = allone(ITEM);
         } else {
             cerr << "(item) executing " << cmdline << endl;

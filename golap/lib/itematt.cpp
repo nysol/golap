@@ -30,24 +30,24 @@
 using namespace std;
 using namespace kgmod;
 
-kgmod::itemAtt::itemAtt(Config* config, kgEnv* env) : config(config), env(env), itemMax(-1) {
-    this->dbName = config->dbDir + "/itematt.dat";
-    string dtmDb = config->dbDir + "/item.dtm";
-    string itmDb = config->dbDir + "/item.dat";
+kgmod::itemAtt::itemAtt(Config* config, kgEnv* env) : _config(config), _env(env), itemMax(-1) {
+    this->_dbName = _config->dbDir + "/itematt.dat";
+    string dtmDb = _config->dbDir + "/item.dtm";
+    string itmDb = _config->dbDir + "/item.dat";
     bmpList.PutDbName(dtmDb, itmDb);
 }
 
 void kgmod::itemAtt::build(void) {
     kgCSVfld itemAttF;
-    itemAttF.open(config->itemAttFile.name, env, false);
+    itemAttF.open(_config->itemAttFile.name, _env, false);
     itemAttF.read_header();
     vector<string> fldName = itemAttF.fldName();
     
     cerr << "building item attribute index" << endl;
-    auto itemFld = find(fldName.begin(), fldName.end(), config->traFile.itemFld);
+    auto itemFld = find(fldName.begin(), fldName.end(), _config->traFile.itemFld);
     if (itemFld == fldName.end()) {
         stringstream msg;
-        msg << config->traFile.itemFld <<" not found in " << config->itemAttFile.name;
+        msg << _config->traFile.itemFld <<" not found in " << _config->itemAttFile.name;
         throw kgError(msg.str());
     }
     int itemFldPos = (int)(itemFld - fldName.begin());
@@ -61,7 +61,7 @@ void kgmod::itemAtt::build(void) {
         string val = itemAttF.getVal(itemFldPos);
         if (itemNo.find(val) != itemNo.end()) {
             stringstream ss;
-            ss << "#ERROR# " << config->traFile.itemFld << ":" << val << " is not unique on " << config->itemAttFile.name;
+            ss << "#ERROR# " << _config->traFile.itemFld << ":" << val << " is not unique on " << _config->itemAttFile.name;
             cerr << ss.str() << endl;
             isError = true;
             continue;
@@ -71,12 +71,12 @@ void kgmod::itemAtt::build(void) {
             int cnt = (int)(fld - fldName.begin());
             string val1 = itemAttF.getVal(cnt);
             if (isFirst[cnt]) {
-                bmpList.InitKey(*fld, config->itemDataType[*fld]);
+                bmpList.InitKey(*fld, _config->itemDataType[*fld]);
                 isFirst[cnt] = false;
             }
             bmpList.SetBit(*fld, val1, itemMax);
             
-            if (*fld == config->itemAttFile.itemName) {
+            if (*fld == _config->itemAttFile.itemName) {
                 itemName[itemMax] = val1;
             }
         }
@@ -92,21 +92,21 @@ void kgmod::itemAtt::build(void) {
 void kgmod::itemAtt::save(bool clean) {
     bmpList.save(clean);
     
-    cerr << "writing " << dbName << " ..." << endl;
+    cerr << "writing " << _dbName << " ..." << endl;
     if (clean) {
-        ofstream osf(dbName,ios::out);
+        ofstream osf(_dbName,ios::out);
         if (osf.fail()) {
             stringstream msg;
-            msg << "failed to open " + dbName;
+            msg << "failed to open " + _dbName;
             throw kgError(msg.str());
         }
         osf.close();
     }
     
-    ofstream ofs(dbName, ios::app);
+    ofstream ofs(_dbName, ios::app);
     if (ofs.fail()) {
         stringstream msg;
-        msg << "failed to open " + dbName;
+        msg << "failed to open " + _dbName;
         throw kgError(msg.str());
     }
     try {
@@ -116,7 +116,7 @@ void kgmod::itemAtt::save(bool clean) {
     } catch(...) {
         ofs.close();
         stringstream msg;
-        msg << "failed to read " << dbName;
+        msg << "failed to read " << _dbName;
         throw kgError(msg.str());
     }
     ofs.close();
@@ -131,10 +131,10 @@ void kgmod::itemAtt::load(void) {
     
     string it;
     size_t i = -1;
-    ifstream ifs(dbName);
+    ifstream ifs(_dbName);
     if (ifs.fail()) {
         stringstream msg;
-        msg << "failed to open " + dbName;
+        msg << "failed to open " + _dbName;
         throw kgError(msg.str());
     }
     try {
@@ -150,7 +150,7 @@ void kgmod::itemAtt::load(void) {
     } catch(...) {
         ifs.close();
         stringstream msg;
-        msg << "failed to read " + dbName;
+        msg << "failed to read " + _dbName;
         throw kgError(msg.str());
     }
     ifs.close();
@@ -190,9 +190,9 @@ vector<string> kgmod::itemAtt::listAtt(void) {
     //    siz += config->itemAttFile.catFields.size();
     //    out.reserve(siz);
     
-    vector<string> out = config->itemAttFile.numFields;
-    out.insert(out.end(), config->itemAttFile.strFields.begin(), config->itemAttFile.strFields.end());
-    out.insert(out.end(), config->itemAttFile.catFields.begin(), config->itemAttFile.catFields.end());
+    vector<string> out = _config->itemAttFile.numFields;
+    out.insert(out.end(), _config->itemAttFile.strFields.begin(), _config->itemAttFile.strFields.end());
+    out.insert(out.end(), _config->itemAttFile.catFields.begin(), _config->itemAttFile.catFields.end());
     sort(out.begin(), out.end());
     return out;
 }

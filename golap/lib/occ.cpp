@@ -33,8 +33,8 @@ using namespace std;
 using namespace kgmod;
 using namespace kglib;
 
-kgmod::Occ::Occ(Config* config, kgEnv* env) : config(config), env(env) {
-    this->dbName = config->dbDir + "/coitem.dat";
+kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
+    this->_dbName = config->dbDir + "/coitem.dat";
     
     string dtmDb = config->dbDir + "/occ.dtm";
     string occDb = config->dbDir + "/occ.dat";
@@ -57,7 +57,7 @@ void kgmod::Occ::build(void) {
     
     cerr << "building transaction index" << endl;
     kgCSVfld tra;
-    tra.open(config->traFile.name, env, false);
+    tra.open(_config->traFile.name, _env, false);
     tra.read_header();
     vector<string> fldName = tra.fldName();
     string traNameFld;
@@ -65,23 +65,23 @@ void kgmod::Occ::build(void) {
     string itemNameFld;
     int itemNameFldPos = -1;
     for (int i = 0; i < fldName.size(); i++) {
-        if (fldName[i] == config->traFile.traFld) {
-            traNameFld = config->traFile.traFld;
+        if (fldName[i] == _config->traFile.traFld) {
+            traNameFld = _config->traFile.traFld;
             traNameFldPos = i;
-        } else if (fldName[i] == config->traFile.itemFld) {
-            itemNameFld = config->traFile.itemFld;
+        } else if (fldName[i] == _config->traFile.itemFld) {
+            itemNameFld = _config->traFile.itemFld;
             itemNameFldPos = i;
         }
     }
     
     if (traNameFldPos == -1) {
         stringstream ss;
-        ss << traNameFld << " is not found on " << config->traFile.name;
+        ss << traNameFld << " is not found on " << _config->traFile.name;
         throw kgError(ss.str());
     }
     if (itemNameFldPos == -1) {
         stringstream ss;
-        ss << itemNameFld << " is not found on " << config->traFile.name;
+        ss << itemNameFld << " is not found on " << _config->traFile.name;
         throw kgError(ss.str());
     }
     
@@ -102,7 +102,7 @@ void kgmod::Occ::build(void) {
             string buf = traNameFld + ":" + traName;
             if (errKeyList.find(buf) == errKeyList.end()) {
                 stringstream ss;
-                ss << "#ERROR# " << buf << " is not found on " << config->traAttFile.name;
+                ss << "#ERROR# " << buf << " is not found on " << _config->traAttFile.name;
                 cerr << ss.str() << endl;
                 errKeyList.insert(buf);
             }
@@ -113,7 +113,7 @@ void kgmod::Occ::build(void) {
             string buf = itemNameFld + ":" + itemName;
             if (errKeyList.find(buf) == errKeyList.end()) {
                 stringstream ss;
-                ss << "#ERROR# " << buf << " is not found on " << config->itemAttFile.name;
+                ss << "#ERROR# " << buf << " is not found on " << _config->itemAttFile.name;
                 cerr << ss.str() << endl;
                 errKeyList.insert(buf);
             }
@@ -130,7 +130,7 @@ void kgmod::Occ::build(void) {
     
     for (auto i = checkedTra.begin(), ie = checkedTra.end(); i != ie; i++) {
         if (i->second) continue;
-        cerr << "#WARNING# " << traNameFld << ":" << i->first << " does not exist on " << config->traFile.name << endl;
+        cerr << "#WARNING# " << traNameFld << ":" << i->first << " does not exist on " << _config->traFile.name << endl;
     }
     
     if (isError) throw kgError("error occurred in building transaction index");
@@ -139,15 +139,15 @@ void kgmod::Occ::build(void) {
 void kgmod::Occ::saveCooccur(const bool clean) {
 //    cerr << occ.size() << endl;
     if (clean) {
-        FILE* fp = fopen(dbName.c_str(), "wb");
+        FILE* fp = fopen(_dbName.c_str(), "wb");
         fclose(fp);
     }
 
-    cerr << "writing " << dbName << " ..." << endl;
-    FILE* fp = fopen(dbName.c_str(), "ab");
+    cerr << "writing " << _dbName << " ..." << endl;
+    FILE* fp = fopen(_dbName.c_str(), "ab");
     if (fp == NULL) {
         stringstream msg;
-        msg << "failed to open " + dbName;
+        msg << "failed to open " + _dbName;
         throw kgError(msg.str());
     }
     try {
@@ -164,7 +164,7 @@ void kgmod::Occ::saveCooccur(const bool clean) {
     } catch(int e) {
         fclose(fp);
         stringstream msg;
-        msg << "failed to write " << dbName;
+        msg << "failed to write " << _dbName;
         throw kgError(msg.str());
     }
     fclose(fp);
@@ -181,10 +181,10 @@ void kgmod::Occ::loadCooccur(void) {
     cerr << "loading co-occurrence" << endl;
     occ.resize(traAtt->traMax + 1);
     
-    FILE* fp = fopen(dbName.c_str(), "rb");
+    FILE* fp = fopen(_dbName.c_str(), "rb");
     if (fp == NULL) {
         stringstream msg;
-        msg << "failed to open " + dbName;
+        msg << "failed to open " + _dbName;
         throw kgError(msg.str());
     }
     try {
@@ -208,7 +208,7 @@ void kgmod::Occ::loadCooccur(void) {
     } catch(int e) {
         fclose(fp);
         stringstream msg;
-        msg << "failed to read " << dbName;
+        msg << "failed to read " << _dbName;
         throw kgError(msg.str());
     }
     

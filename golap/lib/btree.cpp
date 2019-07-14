@@ -166,6 +166,7 @@ Ewah& kgmod::BTree::GetVal(const string& Key, const string& KeyValue) {
 }
 
 bool kgmod::BTree::GetValMulti(const string& Key, const string& LikeKey, Ewah& Bitmap) {
+    if (DataTypeMap[Key] != STR) return false;
     size_t FirstWild = min(LikeKey.find("*"), LikeKey.find("?"));
     string StartWith = LikeKey.substr(0, FirstWild);
     string EndOfSearch = StartWith;

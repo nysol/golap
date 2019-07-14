@@ -289,10 +289,8 @@ void kgmod::exec::proc(void) {
         
         try {
             if (c == 0) {
-                cerr << "transaction filter" << endl;
                 TraBmp = golap_->fil->makeTraBitmap(line);
             } else if (c == 1) {
-                cerr << "item filter" << endl;
                 ItemBmp = golap_->fil->makeItemBitmap(line);
             } else if (c == 2) {
                 for (size_t i = vec.size(); i < 5; i++) {
@@ -353,7 +351,6 @@ void kgmod::exec::proc(void) {
     Ewah allTraBmp;
     allTraBmp.padWithZeroes(golap_->occ->traAtt->traMax);
     allTraBmp = allTraBmp.logicalnot();
-    cerr << allTraBmp.numberOfOnes() << endl;
     
     if (slice.SliceBmpList.size() == 0) {
         res[""] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, allTraBmp);

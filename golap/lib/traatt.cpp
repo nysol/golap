@@ -35,21 +35,21 @@
 using namespace std;
 using namespace kgmod;
 
-kgmod::traAtt::traAtt(Config* config, kgEnv* env): config(config), env(env), traMax(-1) {
-    this->dbName = config->dbDir + "/traatt.dat";
+kgmod::traAtt::traAtt(Config* config, kgEnv* env): _config(config), _env(env), traMax(-1) {
+    this->_dbName = config->dbDir + "/traatt.dat";
 }
 
 void kgmod::traAtt::build(BTree& bmpList) {
     kgCSVfld traAttF;
-    traAttF.open(config->traAttFile.name, env, false);
+    traAttF.open(_config->traAttFile.name, _env, false);
     traAttF.read_header();
     vector<string> fldName = traAttF.fldName();
     
     cerr << "building transaction attribute index" << endl;
-    auto traFld = find(fldName.begin(), fldName.end(), config->traFile.traFld);
+    auto traFld = find(fldName.begin(), fldName.end(), _config->traFile.traFld);
     if (traFld == fldName.end()) {
         stringstream msg;
-        msg << config->traFile.traFld <<" not found in " << config->traFile.name;
+        msg << _config->traFile.traFld <<" not found in " << _config->traFile.name;
         throw kgError(msg.str());
     }
     int traFldPos = (int)(traFld - fldName.begin());
@@ -71,7 +71,7 @@ void kgmod::traAtt::build(BTree& bmpList) {
             string traVal = traAttF.getVal(traFldPos);
             if (traNo.find(traVal) != traNo.end()) {
                 stringstream ss;
-                ss << "#ERROR# " << config->traFile.traFld << ":" << traVal << " is not unique on " << config->traAttFile.name;
+                ss << "#ERROR# " << _config->traFile.traFld << ":" << traVal << " is not unique on " << _config->traAttFile.name;
                 cerr << ss.str() << endl;
                 isError = true;
                 continue;
@@ -139,7 +139,7 @@ void kgmod::traAtt::build(BTree& bmpList) {
     
     for (auto split = resList->begin(); split != resList->end(); split++) {
         for (auto fld = split->second->begin(); fld != split->second->end(); fld++) {
-            bmpList.InitKey(fld->first.first, config->traDataType[fld->first.first]);
+            bmpList.InitKey(fld->first.first, _config->traDataType[fld->first.first]);
             bmpList.SetVal(fld->first.first, fld->first.second, fld->second);
         }
     }
@@ -151,16 +151,16 @@ void kgmod::traAtt::build(BTree& bmpList) {
 }
 
 void kgmod::traAtt::save(bool clean) {
-    cerr << "writing " << dbName << " ..." << endl;
+    cerr << "writing " << _dbName << " ..." << endl;
     if (clean) {
-        ofstream osf(dbName,ios::out);
+        ofstream osf(_dbName,ios::out);
         osf.close();
     }
     
-    ofstream ofs(dbName, ios::app);
+    ofstream ofs(_dbName, ios::app);
     if (ofs.fail()) {
         stringstream msg;
-        msg << "failed to open " + dbName;
+        msg << "failed to open " + _dbName;
         throw kgError(msg.str());
     }
     try {
@@ -170,7 +170,7 @@ void kgmod::traAtt::save(bool clean) {
     } catch(...) {
         ofs.close();
         stringstream msg;
-        msg << "failed to read " << dbName;
+        msg << "failed to read " << _dbName;
         throw kgError(msg.str());
     }
     ofs.close();
@@ -183,10 +183,10 @@ void kgmod::traAtt::load(void) {
     
     string tr;
     size_t i = -1;
-    ifstream ifs(dbName);
+    ifstream ifs(_dbName);
     if (ifs.fail()) {
         stringstream msg;
-        msg << "failed to open " + dbName;
+        msg << "failed to open " + _dbName;
         throw kgError(msg.str());
     }
     try {
@@ -199,7 +199,7 @@ void kgmod::traAtt::load(void) {
     } catch(...) {
         ifs.close();
         stringstream msg;
-        msg << "failed to read " << dbName;
+        msg << "failed to read " << _dbName;
         throw kgError(msg.str());
     }
     ifs.close();
@@ -228,9 +228,9 @@ void kgmod::traAtt::dump(bool debug) {
 }
 
 vector<string> kgmod::traAtt::listAtt(void) {
-    vector<string> out = config->traAttFile.numFields;
-    out.insert(out.end(), config->traAttFile.strFields.begin(), config->traAttFile.strFields.end());
-    out.insert(out.end(), config->traAttFile.catFields.begin(), config->traAttFile.catFields.end());
+    vector<string> out = _config->traAttFile.numFields;
+    out.insert(out.end(), _config->traAttFile.strFields.begin(), _config->traAttFile.strFields.end());
+    out.insert(out.end(), _config->traAttFile.catFields.begin(), _config->traAttFile.catFields.end());
     sort(out.begin(), out.end());
     return out;
 }

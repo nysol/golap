@@ -30,9 +30,9 @@ using namespace kgmod;
 
 namespace kgmod {
     class itemAtt {
-        Config* config;
-        kgEnv* env;
-        string dbName;
+        Config* _config;
+        kgEnv* _env;
+        string _dbName;
         
     public:
         btree::btree_map<string, size_t> itemNo;    // マスターに示されたアイテムコード -> bitmapにおけるbit no.
