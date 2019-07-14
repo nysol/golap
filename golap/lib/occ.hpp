@@ -64,7 +64,8 @@ namespace kgmod {
             size_t cnt = 0;
             unordered_map<string, int> checkedAttVal;
             Ewah tmp;
-            tmp = bmpList[{config->traFile.itemFld, itemAtt->item[itemNo]}] & traFilter;
+            tmp = bmpList[{config->traFile.itemFld, itemAtt->item[itemNo]}];
+            tmp = tmp & traFilter;
             if (tra2key == NULL) {
                 cnt = tmp.numberOfOnes();
             } else {

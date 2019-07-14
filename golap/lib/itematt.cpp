@@ -43,7 +43,7 @@ void kgmod::itemAtt::build(void) {
     itemAttF.read_header();
     vector<string> fldName = itemAttF.fldName();
     
-    cerr << "<<< build itemAtt >>>" << endl;
+    cerr << "building item attribute index" << endl;
     auto itemFld = find(fldName.begin(), fldName.end(), config->traFile.itemFld);
     if (itemFld == fldName.end()) {
         stringstream msg;
@@ -55,17 +55,21 @@ void kgmod::itemAtt::build(void) {
     itemMax = -1;
     size_t fldCnt = fldName.size();
     vector<bool> isFirst(fldCnt, true);
+    bool isError = false;
     while (itemAttF.read() != EOF) {
         itemMax++;
         string val = itemAttF.getVal(itemFldPos);
+        if (itemNo.find(val) != itemNo.end()) {
+            stringstream ss;
+            ss << "#ERROR# " << config->traFile.itemFld << ":" << val << " is not unique on " << config->itemAttFile.name;
+            cerr << ss.str() << endl;
+            isError = true;
+            continue;
+        }
         itemNo[val] = itemMax;
-//        cerr << val << "," << itemNo[val] << " ";
         for (auto fld = fldName.begin(); fld != fldName.end(); fld++) {
-//            cerr << *fld;
             int cnt = (int)(fld - fldName.begin());
-//            if (cnt == itemFldPos) continue;
             string val1 = itemAttF.getVal(cnt);
-//            if (val1 == "") continue;
             if (isFirst[cnt]) {
                 bmpList.InitKey(*fld, config->itemDataType[*fld]);
                 isFirst[cnt] = false;
@@ -78,7 +82,7 @@ void kgmod::itemAtt::build(void) {
         }
     }
     itemAttF.close();
-    cerr << endl;
+    if (isError) throw kgError("error occuerred in building item attrbute index");
 
     for (auto i = itemNo.begin(); i != itemNo.end(); i++) {
         item[i->second] = i->first;
@@ -86,7 +90,6 @@ void kgmod::itemAtt::build(void) {
 }
 
 void kgmod::itemAtt::save(bool clean) {
-    cerr << "saving item attributes" << endl;
     bmpList.save(clean);
     
     cerr << "writing " << dbName << " ..." << endl;

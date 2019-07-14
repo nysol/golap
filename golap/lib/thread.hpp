@@ -22,7 +22,7 @@
 
 #include <queue>
 #include <boost/thread/mutex.hpp>
-#include "thread.hpp"
+//#include "thread.hpp"
 
 namespace kgmod {
     template<typename T>

@@ -86,7 +86,8 @@ namespace kgmod {
         Ewah del(const values_t& values, const tra_item traitem);                 // configのtra名、item名を用いてdel
         Ewah isin(const string& key, const values_t& values, const tra_item traitem);
         Ewah isnotin(const string& key, const values_t& values, const tra_item traitem);
-        Ewah search(string& mothod, const string& key, const values_t& values, const tra_item traitem);
+        Ewah like(const string& key, const values_t& values, const tra_item traitem);
+        Ewah search(const string& mothod, const string& key, const values_t& values, const tra_item traitem);
         Ewah range(const string& key, const pair<string, string>& values, const tra_item traitem);
         
         // tra専用

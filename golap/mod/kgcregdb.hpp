@@ -17,8 +17,8 @@
  
  ////////// LICENSE INFO ////////////////////*/
 
-#ifndef mbindex_h
-#define mbindex_h
+#ifndef kgcregdb_h
+#define kgcregdb_h
 
 #include <map>
 #include <kgError.h>
@@ -55,4 +55,4 @@ namespace kgmod {
     };
 }
 
-#endif /* mbindex_h */
+#endif /* kgcregdb_h */

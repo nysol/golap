@@ -149,7 +149,7 @@ kgmod::Config::Config(string& infile) {
                 mt_enable = false;
             }
         } else {
-            mt_enable = false;
+            mt_enable = true;
         }
         if (boost::optional<int> val = Prm.get<int>("mt.degree")) {
             if (*val == 0) {

@@ -195,6 +195,18 @@ bool kgmod::Cmn::StartWith(const string& str, const string& pref) {
     return equal(begin(pref), end(pref), std::begin(str));
 }
 
+vector<string> kgmod::Cmn::Split(const string& s, char delim) {
+    vector<string> elems;
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim)) {
+        if (!item.empty()) {
+            elems.push_back(item);
+        }
+    }
+    return elems;
+}
+
 double kgmod::Cmn::DiffTime(const timespec& Start, const timespec End) {
     const size_t nsec = 1000000000;     // 1,000,000,000
     double s = Start.tv_sec + (double)Start.tv_nsec / nsec;

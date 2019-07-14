@@ -44,7 +44,7 @@ using namespace kgmod;
 // -----------------------------------------------------------------------------
 kgmod::kgGolap::kgGolap(void)
 {
-    _name    = "kgbindex";
+    _name    = "golap";
     _version = "###VERSION###";
     
 #include <help/en/kggolapHelp.h>
@@ -108,9 +108,6 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
     if (traUniqAttKey != "") {
         traNum = mt_occ->countKeyValue(traUniqAttKey, &TraBmp);
     }
-    
-    cerr << "Target item: ";
-    Cmn::CheckEwah(ItemBmp);
     
     // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
     // 下のループ処理の先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
@@ -181,7 +178,7 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
             float pmi = Cmn::calcPmi(freq, itemFreq[*i], itemFreq[c->first], traNum);
             if (pmi < selCond.minPMI) continue;
             
-            char msg[512];
+            char msg[1024];
             // node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n
             const char* fmt = "%s,%s,%d,%d,%d,%d,%f,%f,%f,%f,%f,%s,%s";
             sprintf(msg, fmt, item1.c_str(), item2.c_str(), freq, itemFreq[*i], itemFreq[c->first], traNum,
@@ -233,17 +230,11 @@ void kgmod::MT_Enum(mq_t* mq, struct selCond selCond, sort_key sortKey, Ewah Tra
                     string traUniqAttKey, map<string, kgGolap::Result>* res) {
     mq_t::th_t* T = mq->pop();
     while (T != NULL) {
-        Cmn::CheckEwah(T->second.second);
+        cerr << "#" << T->first << ") tarTra:"; Cmn::CheckEwah(T->second.second);
         kgGolap::Result rr = Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, *(T->second.second));
         (*res)[T->second.first] = rr;
-        for (auto i = res->begin(); i != res->end(); i++) {
-            cerr << i->first << endl;
-            for (auto j = i->second.begin(); j != i->second.end(); j++) {
-                cerr << j->second << endl;
-            }
-        }
         delete T->second.second;
-//        delete T;
+        delete T;
         T = mq->pop();
     }
 }
@@ -267,14 +258,14 @@ void kgmod::exec::proc(void) {
     while (getline(ss, line)) {
         Cmn::chomp(line);
         vector<string> vec = Cmn::CsvStr::Parse(line);
-        if (line == "bye") {
+        if (boost::iequals(line, "bye")) {
             cerr << "bye message recieved" << endl;
             closing_ = true;
             string body = "terminated\n";
             put_send_data(body);
             Http::proc();
             return;
-        } else if (line == "ListTraAtt") {
+        } else if (boost::iequals(line, "ListTraAtt")) {
             cerr << vec[0] << endl;
             string body ="TraAtt\n";
             vector<string> traAtts = mt_occ->traAtt->listAtt();
@@ -284,10 +275,9 @@ void kgmod::exec::proc(void) {
             put_send_data(body);
             Http::proc();
             return;
-        } else if (vec.size() != 0 && vec[0] == "GetTraAtt") {
+        } else if (vec.size() != 0 && boost::iequals(vec[0], "GetTraAtt")) {
             cerr << vec[0] << endl;
             string body = vec[1];  body += "\n";
-            Http::proc();
             vector<string> attVal = mt_occ->evalKeyValue(vec[1]);
             for (auto att = attVal.begin(); att != attVal.end(); att++) {
                 body += *att; body += "\n";
@@ -299,8 +289,10 @@ void kgmod::exec::proc(void) {
         
         try {
             if (c == 0) {
+                cerr << "transaction filter" << endl;
                 TraBmp = golap_->fil->makeTraBitmap(line);
             } else if (c == 1) {
+                cerr << "item filter" << endl;
                 ItemBmp = golap_->fil->makeItemBitmap(line);
             } else if (c == 2) {
                 for (size_t i = vec.size(); i < 5; i++) {
@@ -311,17 +303,16 @@ void kgmod::exec::proc(void) {
                 selCond = {stod(vec[0]), stod(vec[1]), stod(vec[2]), stod(vec[3]), stod(vec[4])};
                 selCond.dump();
             } else if (c == 3) {
-                sortCond = line;
-                transform(sortCond.cbegin(), sortCond.cend(), sortCond.begin(), ::toupper);
-                if (sortCond == "SUP") {
+                // sortCond
+                if (boost::iequals(line, "SUP")) {
                     sortKey = SORT_SUP;
-                } else if (sortCond == "CONF") {
+                } else if (boost::iequals(line, "CONF")) {
                     sortKey = SORT_CONF;
-                } else if (sortCond == "LIFT") {
+                } else if (boost::iequals(line, "LIFT")) {
                     sortKey = SORT_LIFT;
-                } else if (sortCond == "JAC") {
+                } else if (boost::iequals(line, "JAC")) {
                     sortKey = SORT_JAC;
-                } else if (sortCond == "PMI") {
+                } else if (boost::iequals(line, "PMI")) {
                     sortKey = SORT_PMI;
                 } else {
                     sortKey = SORT_NONE;
@@ -329,8 +320,18 @@ void kgmod::exec::proc(void) {
                 cerr << "sortCond: " << sortCond << endl;
             } else if (c == 4) {
                 traUniqAttKey = line;
+                cerr << "traUniqAttKey: " << traUniqAttKey << endl;
             } else if (c == 5) {
                 slice = golap_->makeSliceBitmap(line);
+                cerr << "slice: " << line << endl;
+            } else if (c == 6) {
+                // デバッグ用
+                if (boost::iequals(line, "notExec")) {
+                    string body = line;
+                    put_send_data(body);
+                    Http::proc();
+                    return;
+                }
             } else {
                 break;
             }
@@ -357,28 +358,26 @@ void kgmod::exec::proc(void) {
     if (slice.SliceBmpList.size() == 0) {
         res[""] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, allTraBmp);
     } else {
-        mt_config->mt_enable = false; // multi-threadをとりあえず殺しておく
+        mq_t::th_t *th;
         if (mt_config->mt_enable) {
             mq_t mq;
             size_t threadNo = 0;
             for (auto i = slice.SliceBmpList.begin(); i != slice.SliceBmpList.end(); i++) {
-                mq_t::th_t th;
-                th.first = threadNo;
-                th.second.first = i->first;
-                th.second.second = new Ewah;
-                th.second.second->expensive_copy(i->second);
-                mq.push(&th);
+                th = new mq_t::th_t;
+                th->first = threadNo;
+                th->second.first = i->first;
+                th->second.second = new Ewah;
+                th->second.second->expensive_copy(i->second);
+                mq.push(th);
             }
             
-//            boost::thread_group thg;
             vector<boost::thread> thg;
             for (int i = 0; i < mt_config->mt_degree; i++) {
-//                thg.create_thread(boost::bind(&MT_Enum, &mq, selCond, sortKey, TraBmp, ItemBmp, &res));
                 thg.push_back(boost::thread([&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, &res] {
                     MT_Enum(&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, &res);
                 }));
             }
-//            thg.join_all();
+            
             for (boost::thread& th : thg) {
                 th.join();
             }

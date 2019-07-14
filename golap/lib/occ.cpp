@@ -22,6 +22,7 @@
 #include <string>
 #include <vector>
 #include "kgCSV.h"
+#include <kgError.h>
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
 #include "cmn.hpp"
@@ -30,6 +31,7 @@
 
 using namespace std;
 using namespace kgmod;
+using namespace kglib;
 
 kgmod::Occ::Occ(Config* config, kgEnv* env) : config(config), env(env) {
     this->dbName = config->dbDir + "/coitem.dat";
@@ -53,7 +55,7 @@ void kgmod::Occ::build(void) {
     traAtt->build(bmpList);
     itemAtt->build();
     
-    cerr << "<<< build transaction >>>" << endl;
+    cerr << "building transaction index" << endl;
     kgCSVfld tra;
     tra.open(config->traFile.name, env, false);
     tra.read_header();
@@ -67,25 +69,71 @@ void kgmod::Occ::build(void) {
             traNameFld = config->traFile.traFld;
             traNameFldPos = i;
         } else if (fldName[i] == config->traFile.itemFld) {
-            traNameFld = config->traFile.itemFld;
+            itemNameFld = config->traFile.itemFld;
             itemNameFldPos = i;
         }
     }
-    if (traNameFldPos == -1 || itemNameFldPos == -1) {
+    
+    if (traNameFldPos == -1) {
         stringstream ss;
-        ss << "error in " << config->traFile.name;
-        throw new Cmn::Exception(ss.str());
+        ss << traNameFld << " is not found on " << config->traFile.name;
+        throw kgError(ss.str());
+    }
+    if (itemNameFldPos == -1) {
+        stringstream ss;
+        ss << itemNameFld << " is not found on " << config->traFile.name;
+        throw kgError(ss.str());
     }
     
+    map<string, bool> checkedTra;
+    for (auto i = traAtt->traNo.begin(), ie = traAtt->traNo.end(); i != ie; i++) {
+        checkedTra[i->first] = false;
+    }
+    
+    bool isError = false;
+    set<string> errKeyList;
     while (tra.read() != EOF) {
         string traName = tra.getVal(traNameFldPos);
         string itemName = tra.getVal(itemNameFldPos);
         
+        bool errThisTime = false;
+        if (traAtt->traNo.find(traName) == traAtt->traNo.end()) {
+            isError = true;
+            string buf = traNameFld + ":" + traName;
+            if (errKeyList.find(buf) == errKeyList.end()) {
+                stringstream ss;
+                ss << "#ERROR# " << buf << " is not found on " << config->traAttFile.name;
+                cerr << ss.str() << endl;
+                errKeyList.insert(buf);
+            }
+            errThisTime = true;
+        }
+        if (itemAtt->itemNo.find(itemName) == itemAtt->itemNo.end()) {
+            isError = true;
+            string buf = itemNameFld + ":" + itemName;
+            if (errKeyList.find(buf) == errKeyList.end()) {
+                stringstream ss;
+                ss << "#ERROR# " << buf << " is not found on " << config->itemAttFile.name;
+                cerr << ss.str() << endl;
+                errKeyList.insert(buf);
+            }
+            errThisTime = true;
+        }
+        if (errThisTime) continue;
+        
         bmpList.SetBit(occKey, itemName, traAtt->traNo[traName]);
         if (traAtt->traNo[traName] >= occ.size()) occ.resize(traAtt->traNo[traName] + 1);
         occ[traAtt->traNo[traName]].set(itemAtt->itemNo[itemName]);
+        checkedTra[traName] = true;
     }
     tra.close();
+    
+    for (auto i = checkedTra.begin(), ie = checkedTra.end(); i != ie; i++) {
+        if (i->second) continue;
+        cerr << "#WARNING# " << traNameFld << ":" << i->first << " does not exist on " << config->traFile.name << endl;
+    }
+    
+    if (isError) throw kgError("error occurred in building transaction index");
 }
 
 void kgmod::Occ::saveCooccur(const bool clean) {

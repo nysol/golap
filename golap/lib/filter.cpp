@@ -132,40 +132,40 @@ Ewah kgmod::Filter::isnotin(const string& key, const values_t& values, const tra
     return out;
 }
 
-Ewah kgmod::Filter::search(string& method, const string& key, const values_t& values, const tra_item traitem) {
+Ewah kgmod::Filter::like(const string& key, const values_t& values, const tra_item traitem) {
     Ewah out;
-    BTree* bmpList;
-    
-    transform(method.cbegin(), method.cend(), method.begin(), ::toupper);
+    if (traitem != TRA) return out;
+    for (auto i = values.begin(); i != values.end(); i++) {
+        Ewah tmp;
+        bool stat = occ->bmpList.GetValMulti(key, *i, tmp);
+        if (! stat) throw kgError("error occures in search");
+        out = out | tmp;
+    }
+    return out;
+}
+
+
+Ewah kgmod::Filter::search(const string& method, const string& key, const values_t& values, const tra_item traitem) {
+    Ewah out;
+    if (traitem != TRA) return out;
     for (auto i = values.begin(); i != values.end(); i++) {
         string kv;
-        if (method == "COMPLATE") {
+        if (boost::iequals(method, "COMPLATE")) {
             kv = *i;
-        } else if (method == "SUBSTRING") {
+        } else if (boost::iequals(method, "SUBSTRING")) {
             kv = "*" + *i + "*";
-        } else if (method == "HEAD") {
+        } else if (boost::iequals(method, "HEAD")) {
             kv = *i + "*";
-        } else if (method == "TAIL") {
+        } else if (boost::iequals(method, "TAIL")) {
             kv = "*" + *i;
-        }
-        
-        string k;
-        if (traitem == TRA) {
-            bmpList = &(occ->bmpList);
-            k = config->traFile.traFld;
-        } else if (traitem == ITEM) {
-            bmpList = &(occ->itemAtt->bmpList);
-            k = config->traFile.itemFld;
         } else {
-            stringstream msg;
-            msg << "invalid tra_item: " << traitem;
-            throw kgError(msg.str());
+            kv = *i;
         }
         
         Ewah tmp;
-        bool stat = bmpList->GetValMulti(k, kv, tmp);
+        bool stat = occ->bmpList.GetValMulti(key, kv, tmp);
         if (! stat) throw kgError("error occures in search");
-        out = out & tmp;
+        out = out | tmp;
     }
     return out;
 }
@@ -219,8 +219,7 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     Ewah traBmp;
     if (itemBmp.numberOfOnes() == 0) return traBmp;
     
-    transform(andor.cbegin(), andor.cend(), andor.begin(), ::toupper);
-    if (andor == "AND") traBmp = logicalnot(traBmp, TRA);
+    if (boost::iequals(andor, "AND")) traBmp = logicalnot(traBmp, TRA);
     for (auto i = itemBmp.begin(); i != itemBmp.end(); i++) {
         Ewah tmp = occ->bmpList.GetVal(occ->occKey, occ->itemAtt->item[*i]);
         if (andor == "AND") {
@@ -280,7 +279,6 @@ string kgmod::Filter::getFunc(char** cmdPtr) {
         func += **cmdPtr;
         (*cmdPtr)++;
     }
-    transform(func.cbegin(), func.cend(), func.begin(), ::toupper);
     return func;
 }
 
@@ -317,6 +315,7 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
             } else if (**cmdPtr == '"' || **cmdPtr == '\'') {
                 if (kakkoDepth == 1) {
                     inQuote = **cmdPtr;
+                    arg.push_back("");
                     continue;
                 }
             } else if (**cmdPtr == ',') {
@@ -354,12 +353,12 @@ Ewah kgmod::Filter::runcmd(char** cmdPtr, const tra_item traitem) {
             if (debug) cerr << func << ": ";
             vector<string> arg = getArg(cmdPtr);
             if (debug) {for (auto i = arg.begin(); i != arg.end(); i++) cerr << *i << " "; cerr << endl;}
-            if (func == "NOT") {
+            if (boost::iequals(func, "NOT")) {
                 if (arg.size() != 1) throw 0;
                 char* cmd = (char*)arg[0].c_str();
                 Ewah tmp = runcmd(&cmd, traitem);
                 out = logicalnot(tmp, traitem);
-            } else if (func == "AND") {
+            } else if (boost::iequals(func, "AND")) {
                 if (arg.size() < 2) throw 0;
                 char* cmd = (char*)arg[0].c_str();
                 out  = runcmd(&cmd, traitem);
@@ -368,7 +367,7 @@ Ewah kgmod::Filter::runcmd(char** cmdPtr, const tra_item traitem) {
                     Ewah tmp = runcmd(&cmd, traitem);
                     out = out & tmp;
                 }
-            } else if (func == "OR") {
+            } else if (boost::iequals(func, "OR")) {
                 if (arg.size() < 2) throw 0;
                 char* cmd = (char*)arg[0].c_str();
                 out  = runcmd(&cmd, traitem);
@@ -377,7 +376,7 @@ Ewah kgmod::Filter::runcmd(char** cmdPtr, const tra_item traitem) {
                     Ewah tmp = runcmd(&cmd, traitem);
                     out = out | tmp;
                 }
-            } else if (func == "MINUS") {
+            } else if (boost::iequals(func, "MINUS")) {
                 if (arg.size() < 2) throw 0;
                 char* cmd = (char*)arg[0].c_str();
                 out  = runcmd(&cmd, traitem);
@@ -386,33 +385,42 @@ Ewah kgmod::Filter::runcmd(char** cmdPtr, const tra_item traitem) {
                     Ewah tmp = runcmd(&cmd, traitem);
                     out = out - tmp;
                 }
-            } else if (func == "SEL") {
+            } else if (boost::iequals(func, "SEL")) {
                 out = sel(arg, traitem);
-            } else if (func == "DEL") {
+            } else if (boost::iequals(func, "DEL")) {
                 out = del(arg, traitem);
-            } else if (func == "ISIN") {
+            } else if (boost::iequals(func, "ISIN")) {
                 string key = arg[0];
                 arg.erase(arg.begin());
                 out = isin(key, arg, traitem);
-            } else if (func == "ISNOTIN") {
+            } else if (boost::iequals(func, "ISNOTIN")) {
                 string key = arg[0];
                 arg.erase(arg.begin());
                 out = isnotin(key, arg, traitem);
-            } else if (func == "SEARCH") {
+            } else if (boost::iequals(func, "LIKE")) {
+                string key    = arg[0]; arg.erase(arg.begin());
+                out = like(key, arg, traitem);
+            } else if (boost::iequals(func, "SEARCH")) {
                 string method = arg[0]; arg.erase(arg.begin());
                 string key    = arg[0]; arg.erase(arg.begin());
                 out = search(method, key, arg, traitem);
-            } else if (func == "RANGE") {
+            } else if (boost::iequals(func, "RANGE")) {
+                if (arg.size() <= 1) {
+                    arg.resize(3);
+                } else if (arg.size() == 2) {
+                    arg.resize(3);
+                    arg[2] = arg[1][0] + 1;
+                }
                 string key = arg[0]; arg.erase(arg.begin());
                 string st  = arg[0]; arg.erase(arg.begin());
                 string ed  = arg[0]; arg.erase(arg.begin());
                 pair<string, string> fromto(st, ed);
                 out = range(key, fromto, traitem);
-            } else if (func == "SEL_ITEM") {
+            } else if (boost::iequals(func, "SEL_ITEM")) {
                 out = sel_item(arg[0], traitem);
-            } else if (func == "DEL_ITEM") {
+            } else if (boost::iequals(func, "DEL_ITEM")) {
                 out = del_item(arg[0], traitem);
-            } else if (func == "HAVING") {
+            } else if (boost::iequals(func, "HAVING")) {
                 bool stat = cache->get(func, arg, traitem, out);
                 if (! stat) {
                     if (arg.size() != 3) throw 0;
@@ -438,7 +446,6 @@ Ewah kgmod::Filter::makeTraBitmap(string& cmdline) {
     if (cache->get(cmdline, {}, TRA, bmp)) {
         cerr << "(tra) executing " << cmdline << endl;
         cerr << "found in cache" << endl;
-        cerr << "(tra) result: "; Cmn::CheckEwah(bmp);
     } else {
         char* cmd = (char*)cmdline.c_str();
         if (cmdline == "") {
@@ -447,9 +454,9 @@ Ewah kgmod::Filter::makeTraBitmap(string& cmdline) {
             cerr << "(tra) executing " << cmdline << endl;
             bmp = runcmd(&cmd, TRA);
             cache->put(cmdline, {}, TRA, bmp);
-            cerr << "(tra) result: "; Cmn::CheckEwah(bmp);
         }
     }
+    cerr << "(tra) result: "; Cmn::CheckEwah(bmp);
     return bmp;
 }
 
@@ -459,7 +466,6 @@ Ewah kgmod::Filter::makeItemBitmap(string& cmdline) {
     if (cache->get(cmdline, {}, ITEM, bmp)) {
         cerr << "(item) executing " << cmdline << endl;
         cerr << "found in cache" << endl;
-        cerr << "(item) result: "; Cmn::CheckEwah(bmp);
     } else {
         char* cmd = (char*)cmdline.c_str();
         if (cmdline == "") {
@@ -468,8 +474,8 @@ Ewah kgmod::Filter::makeItemBitmap(string& cmdline) {
             cerr << "(item) executing " << cmdline << endl;
             bmp = runcmd(&cmd, ITEM);
             cache->put(cmdline, {}, ITEM, bmp);
-            cerr << "(item) result: "; Cmn::CheckEwah(bmp);
         }
+        cerr << "(item) result: "; Cmn::CheckEwah(bmp);
     }
     return bmp;
 }

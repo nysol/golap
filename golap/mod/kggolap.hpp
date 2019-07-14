@@ -17,8 +17,8 @@
  
  ////////// LICENSE INFO ////////////////////*/
 
-#ifndef mbindex_h
-#define mbindex_h
+#ifndef mkgolap_h
+#define mkgolap_h
 
 #include <pthread.h>
 #include <map>
@@ -112,10 +112,12 @@ namespace kgmod {
     static bool isTimeOut;
     static void* timerHandle(void* timer) {
         static unsigned int tt = *(unsigned int*)timer;
-        cerr << "setTimer: " << tt << " sec" << endl;
-        sleep(tt);
-        isTimeOut = true;
-        cerr << "time out" << endl;
+        if (tt != 0) {
+            cerr << "setTimer: " << tt << " sec" << endl;
+            sleep(tt);
+            isTimeOut = true;
+            cerr << "time out" << endl;
+        }
         return (void*)NULL;
     }
     static void setTimer(unsigned int& timerInSec) {
@@ -136,4 +138,4 @@ namespace kgmod {
                  string uniqAtt, map<string, kgGolap::Result>* res);
 }
 
-#endif /* mbindex_h */
+#endif /* kggolap_h */

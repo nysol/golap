@@ -45,7 +45,7 @@ void kgmod::traAtt::build(BTree& bmpList) {
     traAttF.read_header();
     vector<string> fldName = traAttF.fldName();
     
-    cerr << "<<< build traAtt >>>" << endl;
+    cerr << "building transaction attribute index" << endl;
     auto traFld = find(fldName.begin(), fldName.end(), config->traFile.traFld);
     if (traFld == fldName.end()) {
         stringstream msg;
@@ -62,24 +62,28 @@ void kgmod::traAtt::build(BTree& bmpList) {
     typedef btree::btree_map<size_t, res*> res_list;
     res_list* resList;
     resList = new res_list;
-//    cerr << "tra: ";
+    bool isError = false;
     size_t split;
     for (split = 0; fstat != EOF; split++) {
         (*resList)[split] = new res;
         vector<bool> isFirst(fldCnt, true);
         while ((fstat = traAttF.read()) != EOF) {
             string traVal = traAttF.getVal(traFldPos);
+            if (traNo.find(traVal) != traNo.end()) {
+                stringstream ss;
+                ss << "#ERROR# " << config->traFile.traFld << ":" << traVal << " is not unique on " << config->traAttFile.name;
+                cerr << ss.str() << endl;
+                isError = true;
+                continue;
+            }
             traNo[traVal] = traAttF.recNo() - 1;
             traMax = traAttF.recNo() - 1;
             
-//            cerr << traVal << "," << traNo[traVal] << " ";
             for (auto fld = fldName.begin(); fld != fldName.end(); fld++) {
                 int cnt = (int)(fld - fldName.begin());
                 if (cnt == traFldPos) continue;
                 string fldVal = traAttF.getVal(cnt);
-//                if (fldVal == "") continue;
                 
-//                cerr << *fld << ":" << fldVal << endl;
                 if (isFirst[cnt]) {
                     Ewah bmp;
                     bmp.set(traMax);
@@ -94,8 +98,8 @@ void kgmod::traAtt::build(BTree& bmpList) {
         }
     }
     traAttF.close();
-    cerr << endl;
-    
+    if (isError) throw kgError("error occuerred in building transaction attrbute index");
+
     // gathering result
     while (resList->size() > 1) {
         res_list* tmp = new res_list;
@@ -133,10 +137,8 @@ void kgmod::traAtt::build(BTree& bmpList) {
         resList = tmp;
     }
     
-    cerr << "result" << endl;
     for (auto split = resList->begin(); split != resList->end(); split++) {
         for (auto fld = split->second->begin(); fld != split->second->end(); fld++) {
-//            cerr << fld->first.first << ":" << config->traDataType[fld->first.first] << ":" << fld->first.second << endl;
             bmpList.InitKey(fld->first.first, config->traDataType[fld->first.first]);
             bmpList.SetVal(fld->first.first, fld->first.second, fld->second);
         }
@@ -144,7 +146,6 @@ void kgmod::traAtt::build(BTree& bmpList) {
     delete resList;
     
     for (auto i = traNo.begin(); i != traNo.end(); i++) {
-//        cerr << i->first << " : " << i->second << endl;
         tra[i->second] = i->first;
     }
 }

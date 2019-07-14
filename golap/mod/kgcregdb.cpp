@@ -36,7 +36,7 @@ using namespace kgmod;
 // -----------------------------------------------------------------------------
 kgmod::kgCreGdb::kgCreGdb(void)
 {
-    _name    = "kgbindex";
+    _name    = "cregdb";
     _version = "###VERSION###";
     
 #include <help/en/kggolapHelp.h>

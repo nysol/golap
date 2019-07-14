@@ -65,11 +65,14 @@ private:
         string line;
         while (getline(ss, line)) {
             if (line.size() == 1) break;
-            if (Cmn::StartWith(line, "POST")) req_header_["method"] = line + "\n";
-            else if (Cmn::StartWith(line, "Host:")) req_header_["host"] = line + "\n";
+            if (Cmn::StartWith(line, "POST")) {
+                vector<string> tmp = Cmn::Split(line, ' ');
+            } else if (Cmn::StartWith(line, "Host:")) {
+                req_header_["host"] = line + "\n";
+            }
         }
     }
-
+    
     void set_header(size_t body_size) {
         send_data_  = "HTTP/1.1 200 OK\r\n";
         send_data_ += "server: golap/0.1\r\n";
@@ -113,6 +116,12 @@ private:
         asio::async_write(socket_, asio::buffer(send_data_), //asio::transfer_at_least(1),
                           boost::bind(&Http::on_send, this, asio::placeholders::error,
                                       asio::placeholders::bytes_transferred));
+//        asio::write(socket_, asio::buffer(send_data_), error);
+//        if (error) {
+//            cout << "failed to send: " << error.message() << endl;
+//        } else {
+//            //            cout << bytes_transferred << " bytes transfered" << endl;
+//        }
     }
     
     void on_send(const boost::system::error_code& error, size_t bytes_transferred) {

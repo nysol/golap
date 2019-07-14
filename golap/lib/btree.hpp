@@ -58,10 +58,10 @@ namespace kgmod {
         bool GetVal(const string& Key, const string& KeyValue, Ewah& Bitmap);
         Ewah& GetVal(const string& Key, const string& KeyValue);
         Ewah& operator[](const pair<string, string>& Key) {return GetVal(Key.first, Key.second);}
-        bool GetValMulti(const string Key, const string LikeKey, Ewah& Bitmap);
-        bool GetValMulti(const string Key, const string Kakko, const string FromKey,
-                         const string Kokka, const string ToKey, Ewah& Bitmap);
-        bool GetValMulti(const string Key, const string Operator, const string KeyValue, Ewah& Bitmap);
+        bool GetValMulti(const string& Key, const string& LikeKey, Ewah& Bitmap);
+        bool GetValMulti(const string& Key, const string& Kakko, const string& FromKey,
+                         const string& Kokka, const string& ToKey, Ewah& Bitmap);
+        bool GetValMulti(const string& Key, const string& Operator, const string& KeyValue, Ewah& Bitmap);
         pair<string, Ewah> GetAllKeyValue(const string& Key, size_t& Cursor);
         void save(bool clean);
         void load(void);
