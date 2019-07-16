@@ -92,6 +92,8 @@ namespace kgmod {
             return bmpList.CountKeyValue(key, TraFilter);
         }
         void getTra2KeyValue(string& key, vector<string>* tra2key);
+        
+        int sendMax(void) {return _config->sendMax;}
     };
 }
 

@@ -87,7 +87,7 @@ kgmod::kgGolap::Slice kgmod::kgGolap::makeSliceBitmap(string& cmdline) {
 }
 
 kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
-                                   Ewah& TraBmp, Ewah& ItemBmp, string& traUniqAttKey, Ewah& sliceBmp) {
+                                   Ewah& TraBmp, Ewah& ItemBmp, string& traUniqAttKey, Ewah& sliceBmp, int sendMax) {
     cerr << "filtering" << endl;
     size_t hit = 0;
     bool notSort = false;
@@ -201,7 +201,7 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
             }
             res.insert(make_pair(skey, string(msg)));
 
-            if (res.size() > mt_config->sendMax) {
+            if (res.size() > sendMax) {
                 auto pos = res.end();
                 pos--;
                 res.erase(pos);
@@ -227,11 +227,11 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
 
 //***
 void kgmod::MT_Enum(mq_t* mq, struct selCond selCond, sort_key sortKey, Ewah TraBmp, Ewah ItemBmp,
-                    string traUniqAttKey, map<string, kgGolap::Result>* res) {
+                    string traUniqAttKey, int sendMax, map<string, kgGolap::Result>* res) {
     mq_t::th_t* T = mq->pop();
     while (T != NULL) {
         cerr << "#" << T->first << ") tarTra:"; Cmn::CheckEwah(T->second.second);
-        kgGolap::Result rr = Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, *(T->second.second));
+        kgGolap::Result rr = Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, *(T->second.second), sendMax);
         (*res)[T->second.first] = rr;
         delete T->second.second;
         delete T;
@@ -250,8 +250,8 @@ void kgmod::exec::proc(void) {
     Ewah TraBmp;
     Ewah ItemBmp;
     selCond selCond;
-    string sortCond;
     enum sort_key sortKey = SORT_NONE;
+    int sendMax = mt_occ->sendMax();
     string traUniqAttKey;
     kgGolap::Slice slice;
     
@@ -301,21 +301,25 @@ void kgmod::exec::proc(void) {
                 selCond = {stod(vec[0]), stod(vec[1]), stod(vec[2]), stod(vec[3]), stod(vec[4])};
                 selCond.dump();
             } else if (c == 3) {
-                // sortCond
-                if (boost::iequals(line, "SUP")) {
+                // sortKey
+                if (boost::iequals(vec[0], "SUP")) {
                     sortKey = SORT_SUP;
-                } else if (boost::iequals(line, "CONF")) {
+                } else if (boost::iequals(vec[0], "CONF")) {
                     sortKey = SORT_CONF;
-                } else if (boost::iequals(line, "LIFT")) {
+                } else if (boost::iequals(vec[0], "LIFT")) {
                     sortKey = SORT_LIFT;
-                } else if (boost::iequals(line, "JAC")) {
+                } else if (boost::iequals(vec[0], "JAC")) {
                     sortKey = SORT_JAC;
-                } else if (boost::iequals(line, "PMI")) {
+                } else if (boost::iequals(vec[0], "PMI")) {
                     sortKey = SORT_PMI;
                 } else {
                     sortKey = SORT_NONE;
                 }
-                cerr << "sortCond: " << sortCond << endl;
+                cerr << "sortKey: " << vec[0] << endl;
+                
+                // sendMax
+                if (vec.size() == 2) sendMax = stoi(vec[1]);
+                cerr << "sendMax: " << sendMax << endl;
             } else if (c == 4) {
                 traUniqAttKey = line;
                 cerr << "traUniqAttKey: " << traUniqAttKey << endl;
@@ -353,7 +357,7 @@ void kgmod::exec::proc(void) {
     allTraBmp = allTraBmp.logicalnot();
     
     if (slice.SliceBmpList.size() == 0) {
-        res[""] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, allTraBmp);
+        res[""] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, allTraBmp, sendMax);
     } else {
         mq_t::th_t *th;
         if (mt_config->mt_enable) {
@@ -370,8 +374,8 @@ void kgmod::exec::proc(void) {
             
             vector<boost::thread> thg;
             for (int i = 0; i < mt_config->mt_degree; i++) {
-                thg.push_back(boost::thread([&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, &res] {
-                    MT_Enum(&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, &res);
+                thg.push_back(boost::thread([&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, sendMax, &res] {
+                    MT_Enum(&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, sendMax, &res);
                 }));
             }
             
@@ -380,7 +384,7 @@ void kgmod::exec::proc(void) {
             }
         } else {
             for (auto i = slice.SliceBmpList.begin(); i != slice.SliceBmpList.end(); i++) {
-                res[i->first] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, i->second);
+                res[i->first] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, i->second, sendMax);
             }
         }
     }

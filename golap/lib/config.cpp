@@ -169,7 +169,7 @@ kgmod::Config::Config(string& infile) {
         if (boost::optional<int> val = Prm.get<int>("etc.sendMax")) {
             sendMax = *val;
         } else {
-            sendMax = 10000;
+            sendMax = 1000;
         }
         if (boost::optional<unsigned int> val = Prm.get<unsigned int>("etc.deadlineTimer")) {
             deadlineTimer = *val;
