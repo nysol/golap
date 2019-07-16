@@ -404,7 +404,9 @@ Ewah kgmod::Filter::runcmd(char** cmdPtr, const tra_item traitem) {
                     arg.resize(3);
                 } else if (arg.size() == 2) {
                     arg.resize(3);
-                    arg[2] = arg[1][0] + 1;
+                    arg[2] = arg[1];
+                    size_t l = arg[2].size();
+                    if (l != 0) arg[2][l - 1]++;
                 }
                 string key = arg[0]; arg.erase(arg.begin());
                 string st  = arg[0]; arg.erase(arg.begin());
