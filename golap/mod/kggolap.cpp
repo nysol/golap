@@ -26,6 +26,7 @@
 #include <cfloat>
 #include <set>
 #include <boost/algorithm/string.hpp>
+#include <boost/functional/hash.hpp>
 #include "kgCSV.h"
 #include "bidx-ewah.hpp"
 #include "cmn.hpp"

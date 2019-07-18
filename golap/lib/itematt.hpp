@@ -21,6 +21,7 @@
 #define itematt_hpp
 
 #include <boost/algorithm/string.hpp>
+#include <boost/functional/hash.hpp>
 #include <kgConfig.h>
 #include <kgmod.h>
 #include "btree.hpp"
@@ -35,7 +36,7 @@ namespace kgmod {
         kgEnv* _env;
         string _dbName;
         unordered_map<pair<size_t, string>, string, boost::hash<pair<size_t, string>>> key2att_map;
-
+        
     public:
         btree::btree_map<string, size_t> itemNo;    // マスターに示されたアイテムコード -> bitmapにおけるbit no.
         btree::btree_map<size_t, string> item;      // bitmapにおけるbit no. -> マスターに示されたアイテムコード
