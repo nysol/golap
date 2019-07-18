@@ -63,8 +63,7 @@ namespace kgmod {
         size_t itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key = NULL) {
             size_t cnt = 0;
             unordered_map<string, int> checkedAttVal;
-            Ewah tmp;
-            tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}];
+            Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}];
             tmp = tmp & traFilter;
             if (tra2key == NULL) {
                 cnt = tmp.numberOfOnes();
@@ -79,8 +78,45 @@ namespace kgmod {
             }
             return cnt;
         }
+        
         size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL) {
             return bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
+        }
+        
+        size_t attFreq(string attKey, string attVal, const Ewah& traFilter, const vector<string>* tra2key = NULL) {
+            Ewah traBmp;
+            Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
+            for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
+                Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}];
+                traBmp = traBmp | tmp;
+            }
+            traBmp = traBmp & traFilter;
+            
+            size_t cnt = 0;
+            unordered_map<string, int> checkedAttVal;
+            if (tra2key == NULL) {
+                cnt = traBmp.numberOfOnes();
+            } else {
+                for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+                    string val = (*tra2key)[*t];
+                    if (checkedAttVal.find(val) == checkedAttVal.end()) {
+                        cnt++;
+                        checkedAttVal[val] = 1;
+                    }
+                }
+            }
+            return cnt;
+        }
+        
+        size_t attFreq(string attKey, string attVal, const vector<string>* tra2key = NULL) {
+            size_t out = 0;
+            Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
+            for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
+                size_t c = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}].numberOfOnes();
+            //    itemFreq(*i, tra2key);
+                out += c;
+            }
+            return out;
         }
         
         void occ_dump(const bool debug);
@@ -93,7 +129,7 @@ namespace kgmod {
         }
         void getTra2KeyValue(string& key, vector<string>* tra2key);
         
-        int sendMax(void) {return _config->sendMax;}
+        size_t sendMax(void) {return _config->sendMax;}
     };
 }
 

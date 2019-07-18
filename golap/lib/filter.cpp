@@ -222,9 +222,9 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     if (boost::iequals(andor, "AND")) traBmp = logicalnot(traBmp, TRA);
     for (auto i = itemBmp.begin(); i != itemBmp.end(); i++) {
         Ewah tmp = occ->bmpList.GetVal(occ->occKey, occ->itemAtt->item[*i]);
-        if (andor == "AND") {
+        if (boost::iequals(andor, "AND")) {
             traBmp = traBmp & tmp;
-        } else if (andor == "OR") {
+        } else if (boost::iequals(andor, "OR")) {
             traBmp = traBmp | tmp;
         } else {
             throw 0;
@@ -233,10 +233,9 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     
     vector<string> values;
     btree::btree_map<string, bool> uniqCheck;
-    pair<string, Ewah> ret;
-    size_t cur = 0;
-    ret = occ->bmpList.GetAllKeyValue(key, cur);
-    while (cur != -1) {
+    BTree::kvHandle* kvh = NULL;
+    pair<string, Ewah> ret = occ->bmpList.GetAllKeyValue(key, kvh);
+    while (kvh != NULL) {
         Ewah tmp = traBmp & ret.second;
         if (tmp.numberOfOnes() != 0) {
             if (uniqCheck.find(ret.first) == uniqCheck.end()) {
@@ -244,7 +243,7 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
                 uniqCheck[ret.first] = true;
             }
         }
-        ret = occ->bmpList.GetAllKeyValue(key, cur);
+        ret = occ->bmpList.GetAllKeyValue(key, kvh);
     }
     
     if (debug) {

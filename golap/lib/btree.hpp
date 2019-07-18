@@ -45,8 +45,6 @@ namespace kgmod {
         typedef btree::btree_map<pair<string, double>, Ewah> num_btree_t;
         str_btree_t str_btree;
         num_btree_t num_btree;
-        str_btree_t::iterator str_iter;
-        num_btree_t::iterator num_iter;
         unordered_map<double, string> num_str;
         
     public:
@@ -62,7 +60,11 @@ namespace kgmod {
         bool GetValMulti(const string& Key, const string& Kakko, const string& FromKey,
                          const string& Kokka, const string& ToKey, Ewah& Bitmap);
         bool GetValMulti(const string& Key, const string& Operator, const string& KeyValue, Ewah& Bitmap);
-        pair<string, Ewah> GetAllKeyValue(const string& Key, size_t& Cursor);
+        struct kvHandle {
+            str_btree_t::iterator str_iter;
+            num_btree_t::iterator num_iter;
+        };
+        pair<string, Ewah> GetAllKeyValue(const string& Key, kvHandle*& kvh);
         void save(bool clean);
         void load(void);
         void dump(bool debug);

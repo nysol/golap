@@ -279,61 +279,69 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& Operator, const 
     return true;
 }
 
-pair<string, Ewah> kgmod::BTree::GetAllKeyValue(const string& Key, size_t& Cursor) {
+pair<string, Ewah> kgmod::BTree::GetAllKeyValue(const string& Key, kvHandle*& kvh) {
     pair<string, Ewah> out;
     out.first = "";
     out.second.reset();
-    if (Cursor == 0) {
+    
+    if (kvh == NULL) {
+        kvh = new kvHandle;
         if (DataTypeMap[Key] == STR) {
-            str_iter = str_btree.lower_bound({Key, ""});
-            if (str_iter == str_btree.end()) {
-                Cursor = -1;
-            } else if (str_iter->first.first == Key) {
-                Cursor++;
-                out.first = str_iter->first.second;
-                out.second = str_iter->second;
+            kvh->str_iter = str_btree.lower_bound({Key, ""});
+            if (kvh->str_iter == str_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->str_iter->first.first == Key) {
+                out.first  = kvh->str_iter->first.second;
+                out.second = kvh->str_iter->second;
             } else {
-                Cursor = -1;
+                delete kvh;
+                kvh = NULL;
             }
         } else if (DataTypeMap[Key] == NUM) {
-            num_iter = num_btree.lower_bound({Key, -DBL_MAX});
-            if (num_iter == num_btree.end()) {
-                Cursor = -1;
-            } else if (num_iter->first.first == Key) {
-                Cursor++;
-                out.first = num_str[num_iter->first.second];
-                out.second = num_iter->second;
+            kvh->num_iter = num_btree.lower_bound({Key, -DBL_MAX});
+            if (kvh->num_iter == num_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->num_iter->first.first == Key) {
+                out.first  = num_str[kvh->num_iter->first.second];
+                out.second = kvh->num_iter->second;
             } else {
-                Cursor = -1;
+                delete kvh;
+                kvh = NULL;
             }
         } else {
-            Cursor = -1;
+            delete kvh;
+            kvh = NULL;
         }
     } else {
         if (DataTypeMap[Key] == STR) {
-            str_iter++;
-            if (str_iter == str_btree.end()) {
-                Cursor = -1;
-            } else if (str_iter->first.first == Key) {
-                Cursor++;
-                out.first = str_iter->first.second;
-                out.second = str_iter->second;
+            kvh->str_iter++;
+            if (kvh->str_iter == str_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->str_iter->first.first == Key) {
+                out.first  = kvh->str_iter->first.second;
+                out.second = kvh->str_iter->second;
             } else {
-                Cursor = -1;
+                delete kvh;
+                kvh = NULL;
             }
         } else if (DataTypeMap[Key] == NUM) {
-            num_iter++;
-            if (num_iter == num_btree.end()) {
-                Cursor = -1;
-            } else if (num_iter->first.first == Key) {
-                Cursor++;
-                out.first = num_str[num_iter->first.second];
-                out.second = num_iter->second;
+            kvh->num_iter++;
+            if (kvh->num_iter == num_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->num_iter->first.first == Key) {
+                out.first  = num_str[kvh->num_iter->first.second];
+                out.second = kvh->num_iter->second;
             } else {
-                Cursor = -1;
+                delete kvh;
+                kvh = NULL;
             }
         } else {
-            Cursor = -1;
+            delete kvh;
+            kvh = NULL;
         }
     }
     return out;
@@ -379,10 +387,9 @@ void kgmod::BTree::save(bool clean) {
     }
     try {
         for (auto i = DataTypeMap.begin(); i != DataTypeMap.end(); i++) {
-            pair<string, Ewah> ret;
-            size_t cur = 0;
-            ret = GetAllKeyValue(i->first, cur);
-            while (cur != -1) {
+            kvHandle* kvh = NULL;
+            pair<string, Ewah> ret = GetAllKeyValue(i->first, kvh);
+            while (kvh != NULL) {
 //                cerr << "{" << i->first << "," << ret.first << "} ";
 //                ret.second.printout(cerr);
                 // key ('\0'まで書き込む）
@@ -402,7 +409,7 @@ void kgmod::BTree::save(bool clean) {
                 fwrite(ss.str().c_str(), size, 1, fp);
                 if (rc == 0) throw 0;
 
-                ret = GetAllKeyValue(i->first, cur);
+                ret = GetAllKeyValue(i->first, kvh);
             }
         }
     } catch(int e) {
@@ -510,13 +517,13 @@ void kgmod::BTree::dump(bool debug) {
     cerr << endl;
     
     for (auto i = DataTypeMap.begin(); i != DataTypeMap.end(); i++) {
-        size_t cur = 0;
-        pair<string, Ewah> ret = GetAllKeyValue(i->first, cur);
-        while (cur != -1) {
+        kvHandle* kvh = NULL;
+        pair<string, Ewah> ret = GetAllKeyValue(i->first, kvh);
+        while (kvh != NULL) {
             cerr << "{" << i->first << "," << ret.first << "} ";
 //            ret.second.printout(cerr);
             Cmn::CheckEwah(ret.second);
-            ret = GetAllKeyValue(i->first, cur);
+            ret = GetAllKeyValue(i->first, kvh);
         }
     }
 }

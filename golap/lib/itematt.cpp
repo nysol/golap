@@ -184,15 +184,33 @@ void kgmod::itemAtt::dump(bool debug) {
 }
 
 vector<string> kgmod::itemAtt::listAtt(void) {
-    //    vector<string> out;
-    //    size_t siz = config->itemAttFile.numFields.size();
-    //    siz += config->itemAttFile.strFields.size();
-    //    siz += config->itemAttFile.catFields.size();
-    //    out.reserve(siz);
-    
     vector<string> out = _config->itemAttFile.numFields;
     out.insert(out.end(), _config->itemAttFile.strFields.begin(), _config->itemAttFile.strFields.end());
     out.insert(out.end(), _config->itemAttFile.catFields.begin(), _config->itemAttFile.catFields.end());
     sort(out.begin(), out.end());
     return out;
+}
+
+void kgmod::itemAtt::buildKey2attMap(void) {
+    cerr << "making key2att map" << endl;
+    vector<string> attName = listAtt();
+    for (auto k = attName.begin(), ek = attName.end(); k != ek; k++) {
+        BTree::kvHandle* kvs = NULL;
+        pair<string, Ewah> res = bmpList.GetAllKeyValue(*k, kvs);
+        while (kvs != NULL) {
+            for (auto i = res.second.begin(), ei = res.second.end(); i != ei; i++) {
+                key2att_map[{*i, *k}] = res.first;
+            }
+            res = bmpList.GetAllKeyValue(*k, kvs);
+        }
+    }
+}
+
+void kgmod::itemAtt::dumpKey2attMap(bool debug) {
+    if (! debug) return;
+    
+    cerr << "<<< key2att map >>>" << endl;
+    for (auto i = key2att_map.begin(), ei = key2att_map.end(); i != ei; i++) {
+        cerr << item[i->first.first] << "(" << i->first.first << ")," << i->first.second << "->" << i->second << endl;
+    }
 }

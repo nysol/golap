@@ -87,7 +87,10 @@ kgmod::kgGolap::Slice kgmod::kgGolap::makeSliceBitmap(string& cmdline) {
 }
 
 kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
-                                   Ewah& TraBmp, Ewah& ItemBmp, string& traUniqAttKey, Ewah& sliceBmp, int sendMax) {
+                                   Ewah& TraBmp, Ewah& ItemBmp, pair<string, string>& granularity,
+                                   // granularity.first:Frequencyのカウント単位、granularity.second:ノードの単位
+                                   Ewah& sliceBmp, size_t sendMax) {
+    const string csvHeader = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
     cerr << "filtering" << endl;
     size_t hit = 0;
     bool notSort = false;
@@ -100,46 +103,61 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
     if (traNum == 0) {
         cerr << "trabitmap is empty" << endl;
         res.insert(make_pair(0, "status:0,sent:0,hit:0"));
-        res.insert(make_pair(1, "trabitmap is empty"));
+        res.insert(make_pair(1, csvHeader));
         return res;
     }
     
     // traUniqAttKeyを指定していた場合は、traNumをtraUniqAttKeyのデータ数で上書き
-    if (traUniqAttKey != "") {
-        traNum = mt_occ->countKeyValue(traUniqAttKey, &TraBmp);
+    if (granularity.first != mt_config->traFile.traFld) {
+        traNum = mt_occ->countKeyValue(granularity.first, &TraBmp);
     }
     
     // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
     // 下のループ処理の先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
     setTimer(mt_config->deadlineTimer);
     
-//    vector<size_t> vec;
-//    vec.reserve(ItemBmp.numberOfOnes());
+    unordered_map<string, bool> checked_node2;
     vector<string> tra2key;
-    if (traUniqAttKey != "") mt_occ->getTra2KeyValue(traUniqAttKey, &tra2key);
-    map<size_t, size_t> coitems;
+    if (granularity.first != mt_config->traFile.traFld) {
+        mt_occ->getTra2KeyValue(granularity.first, &tra2key);
+    }
     for (auto i = ItemBmp.begin(), ei = ItemBmp.end(); i != ei; i++) {
         if (isTimeOut) {stat = 2; break;}
-        coitems.clear();
+        string node1;
+        string node2 = mt_occ->itemAtt->key2att(*i, granularity.second);
+        if (checked_node2.find(node2) == checked_node2.end()) {
+            checked_node2[node2] = true;
+        } else {
+            continue;
+        }
+        
+        map<size_t, size_t> coitems;
         Ewah* tra_i_tmp;
         mt_occ->bmpList.GetVal(mt_occ->occKey, mt_occ->itemAtt->item[*i], tra_i_tmp);
-        Ewah tra_i;
-        tra_i = *tra_i_tmp & tarTraBmp;
+        Ewah tra_i = *tra_i_tmp & tarTraBmp;
         
-        unordered_map<pair<string, size_t>, int, boost::hash<pair<string, size_t>>> checkedAttVal;
+        unordered_map<pair<string, size_t>, bool, boost::hash<pair<string, size_t>>> checked_traAttVal;
         for (auto t = tra_i.begin(), et = tra_i.end(); t != et; t++) {
             if (isTimeOut) {stat = 2; break;}
-            string& attVal = tra2key[*t];
-            Ewah item_ii;
-            item_ii = mt_occ->occ[*t] & ItemBmp;
+            unordered_map<string, bool> checked_node1;
+            string& traAttVal = tra2key[*t];
+            Ewah item_ii = mt_occ->occ[*t] & ItemBmp;
             for (auto ii = item_ii.begin(), eii = item_ii.end(); ii != eii; ii++) {
                 if (*ii >= *i) break;
-                if (traUniqAttKey == "") {
+                
+                string node1 = mt_occ->itemAtt->key2att(*ii, granularity.second);
+                if (checked_node1.find(node1) == checked_node1.end()) {
+                    checked_node1[node1] = true;
+                } else {
+                    continue;
+                }
+                
+                if (granularity.first == mt_config->traFile.traFld) {
                     coitems[*ii]++;
                 } else {
-                    if (checkedAttVal.find({attVal, *ii}) == checkedAttVal.end()) {
+                    if (checked_traAttVal.find({traAttVal, *ii}) == checked_traAttVal.end()) {
                         coitems[*ii]++;
-                        checkedAttVal[{attVal, *ii}] = 1;
+                        checked_traAttVal[{traAttVal, *ii}] = true;
                     }
                 }
             }
@@ -147,24 +165,49 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
         
         for (auto c = coitems.begin(), ec = coitems.end(); c != ec; c++) {
             if (isTimeOut) {stat = 2; break;}
-            string item1 = mt_occ->itemAtt->item[c->first];
-            string item2 = mt_occ->itemAtt->item[*i];
-            string itemName1 = mt_occ->itemAtt->itemName[c->first];
-            string itemName2 = mt_occ->itemAtt->itemName[*i];
+            string item1, item2;
+            string itemName1, itemName2;
+            if (granularity.second == mt_config->traFile.itemFld) {
+                item1 = mt_occ->itemAtt->item[c->first];
+                item2 = mt_occ->itemAtt->item[*i];
+                itemName1 = mt_occ->itemAtt->itemName[c->first];
+                itemName2 = mt_occ->itemAtt->itemName[*i];
+            } else {
+                item1 = mt_occ->itemAtt->key2att(c->first, granularity.second);
+                item2 = mt_occ->itemAtt->key2att(*i, granularity.second);
+                itemName1 = item1;
+                itemName2 = item2;
+            }
             size_t freq = c->second;
             float sup = (float)freq / traNum;
             if (sup < selCond.minSup) continue;
             
-            if (traUniqAttKey == "") {
-                if (itemFreq.find(c->first) == itemFreq.end())
-                    itemFreq[c->first] = mt_occ->itemFreq(c->first, tarTraBmp);
-                if (itemFreq.find(*i) == itemFreq.end())
-                    itemFreq[*i] = mt_occ->itemFreq(*i, tarTraBmp);
+            if (granularity.second == mt_config->traFile.itemFld) {
+                if (granularity.first == mt_config->traFile.traFld) {
+                    if (itemFreq.find(c->first) == itemFreq.end())
+                        itemFreq[c->first] = mt_occ->itemFreq(c->first, tarTraBmp);
+                    if (itemFreq.find(*i) == itemFreq.end())
+                        itemFreq[*i] = mt_occ->itemFreq(*i, tarTraBmp);
+                } else {
+                    if (itemFreq.find(c->first) == itemFreq.end())
+                        itemFreq[c->first] = mt_occ->itemFreq(c->first, tarTraBmp, &tra2key);
+                    if (itemFreq.find(*i) == itemFreq.end())
+                        itemFreq[*i] = mt_occ->itemFreq(*i, tarTraBmp, &tra2key);
+                }
             } else {
-                if (itemFreq.find(c->first) == itemFreq.end())
-                    itemFreq[c->first] = mt_occ->itemFreq(c->first, tarTraBmp, &tra2key);
-                if (itemFreq.find(*i) == itemFreq.end())
-                    itemFreq[*i] = mt_occ->itemFreq(*i, tarTraBmp, &tra2key);
+                string attVal1 = mt_occ->itemAtt->key2att(c->first, granularity.second);
+                string attVal2 = mt_occ->itemAtt->key2att(*i, granularity.second);
+                if (granularity.first == mt_config->traFile.traFld) {
+                    if (itemFreq.find(c->first) == itemFreq.end())
+                        itemFreq[c->first] = mt_occ->attFreq(granularity.second, attVal1, tarTraBmp);
+                    if (itemFreq.find(*i) == itemFreq.end())
+                        itemFreq[*i] = mt_occ->attFreq(granularity.second, attVal2, tarTraBmp);
+                } else {
+                    if (itemFreq.find(c->first) == itemFreq.end())
+                        itemFreq[c->first] = mt_occ->attFreq(granularity.second, attVal1, tarTraBmp, &tra2key);
+                    if (itemFreq.find(*i) == itemFreq.end())
+                        itemFreq[*i] = mt_occ->attFreq(granularity.second, attVal2, &tra2key);
+                }
             }
             float conf1 = (float)freq / itemFreq[*i];
             if (conf1 < selCond.minConf) continue;
@@ -200,7 +243,7 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
                 skey = -10;
             }
             res.insert(make_pair(skey, string(msg)));
-
+            
             if (res.size() > sendMax) {
                 auto pos = res.end();
                 pos--;
@@ -214,7 +257,6 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
     // タイマをキャンセル
     cancelTimer();
 
-    const string csvHeader = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
     string buf = "status:" + to_string(stat);
     buf += ",sent:" + to_string(res.size());
     buf += ",hit:" + to_string(hit);
@@ -227,11 +269,11 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
 
 //***
 void kgmod::MT_Enum(mq_t* mq, struct selCond selCond, sort_key sortKey, Ewah TraBmp, Ewah ItemBmp,
-                    string traUniqAttKey, int sendMax, map<string, kgGolap::Result>* res) {
+                    pair<string, string> granularity, size_t sendMax, map<string, kgGolap::Result>* res) {
     mq_t::th_t* T = mq->pop();
     while (T != NULL) {
         cerr << "#" << T->first << ") tarTra:"; Cmn::CheckEwah(T->second.second);
-        kgGolap::Result rr = Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, *(T->second.second), sendMax);
+        kgGolap::Result rr = Enum(selCond, sortKey, TraBmp, ItemBmp, granularity, *(T->second.second), sendMax);
         (*res)[T->second.first] = rr;
         delete T->second.second;
         delete T;
@@ -251,8 +293,10 @@ void kgmod::exec::proc(void) {
     Ewah ItemBmp;
     selCond selCond;
     enum sort_key sortKey = SORT_NONE;
-    int sendMax = mt_occ->sendMax();
-    string traUniqAttKey;
+    size_t sendMax = mt_occ->sendMax();
+    pair<string, string> granularity;  // first:Frequencyのカウント単位、second:ノードの単位
+    granularity.first  = mt_config->traFile.traFld;     // default
+    granularity.second = mt_config->traFile.itemFld;    // default
     kgGolap::Slice slice;
     
     while (getline(ss, line)) {
@@ -321,8 +365,16 @@ void kgmod::exec::proc(void) {
                 if (vec.size() == 2) sendMax = stoi(vec[1]);
                 cerr << "sendMax: " << sendMax << endl;
             } else if (c == 4) {
-                traUniqAttKey = line;
-                cerr << "traUniqAttKey: " << traUniqAttKey << endl;
+                if (vec.size() >= 1) {
+                    boost::trim(vec[0]);
+                    if (vec[0] != "") granularity.first = vec[0];
+                }
+                if (vec.size() >= 2) {
+                    boost::trim(vec[1]);
+                    if (vec[1] != "") granularity.second = vec[1];
+                }
+                cerr << "granuarity(transaction): " << granularity.first << endl;
+                cerr << "granuarity(node): " << granularity.second << endl;
             } else if (c == 5) {
                 slice = golap_->makeSliceBitmap(line);
                 cerr << "slice: " << line << endl;
@@ -357,7 +409,7 @@ void kgmod::exec::proc(void) {
     allTraBmp = allTraBmp.logicalnot();
     
     if (slice.SliceBmpList.size() == 0) {
-        res[""] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, allTraBmp, sendMax);
+        res[""] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, granularity, allTraBmp, sendMax);
     } else {
         mq_t::th_t *th;
         if (mt_config->mt_enable) {
@@ -374,8 +426,8 @@ void kgmod::exec::proc(void) {
             
             vector<boost::thread> thg;
             for (int i = 0; i < mt_config->mt_degree; i++) {
-                thg.push_back(boost::thread([&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, sendMax, &res] {
-                    MT_Enum(&mq, selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, sendMax, &res);
+                thg.push_back(boost::thread([&mq, selCond, sortKey, TraBmp, ItemBmp, granularity, sendMax, &res] {
+                    MT_Enum(&mq, selCond, sortKey, TraBmp, ItemBmp, granularity, sendMax, &res);
                 }));
             }
             
@@ -384,7 +436,7 @@ void kgmod::exec::proc(void) {
             }
         } else {
             for (auto i = slice.SliceBmpList.begin(); i != slice.SliceBmpList.end(); i++) {
-                res[i->first] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, traUniqAttKey, i->second, sendMax);
+                res[i->first] = kgmod::Enum(selCond, sortKey, TraBmp, ItemBmp, granularity, i->second, sendMax);
             }
         }
     }

@@ -132,10 +132,10 @@ namespace kgmod {
     static Config* mt_config;
     static Occ* mt_occ;
     kgGolap::Result Enum(struct selCond& selCond, sort_key sortKey, Ewah& TraBmp, Ewah& ItemBmp,
-                         string& uniqAtt, Ewah& sliceBmp, int sendMax);
+                         pair<string, string>& granularity, Ewah& sliceBmp, size_t sendMax);
     typedef MtQueue<pair<string, Ewah*>> mq_t;
     void MT_Enum(mq_t* mq, struct selCond selCond, sort_key sortKey, Ewah TraBmp, Ewah ItemBmp,
-                 string uniqAtt, int sendMax, map<string, kgGolap::Result>* res);
+                 pair<string, string> granularity, size_t sendMax, map<string, kgGolap::Result>* res);
 }
 
 #endif /* kggolap_h */

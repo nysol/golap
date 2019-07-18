@@ -220,18 +220,23 @@ void kgmod::Occ::load(void) {
     itemAtt->load();
     bmpList.load();
     loadCooccur();
+    itemAtt->buildKey2attMap();
 }
 
 void kgmod::Occ::dump(const bool debug) {
     if (! debug) return;
     
-    traAtt->dump(debug);
-    itemAtt->dump(debug);
+//    traAtt->dump(debug);
+//    itemAtt->dump(debug);
     
-    cerr << "<<< dump occ>>>" << endl;
+    cerr << "<<< dump occ >>>" << endl;
     bmpList.dump(debug);
     cerr << endl;
-    
+
+    cerr << "<<< dump key2attmap >>>" << endl;
+    itemAtt->dumpKey2attMap(debug);
+    cerr << endl;
+
 /********
     for (size_t i = 0; i < occ.size(); i++) {
         cerr << "occ[" << i << "] ";
