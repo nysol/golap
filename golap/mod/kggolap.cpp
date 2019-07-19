@@ -115,7 +115,7 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
     
     // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
     // 下のループ処理の先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
-    setTimer(mt_config->deadlineTimer);
+//    setTimer(mt_config->deadlineTimer);
     
     unordered_map<string, bool> checked_node2;
     vector<string> tra2key;
@@ -256,7 +256,7 @@ kgmod::kgGolap::Result kgmod::Enum(struct selCond& selCond, sort_key sortKey,
         }
     }
     // タイマをキャンセル
-    cancelTimer();
+//    cancelTimer();
 
     string buf = "status:" + to_string(stat);
     buf += ",sent:" + to_string(res.size());

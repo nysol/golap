@@ -131,14 +131,24 @@ size_t kgmod::Cmn::FileSize(const string Path) {
 
 bool kgmod::Cmn::MkDir(const string Path) {
     if (kgmod::Cmn::FileExists(Path)) return true;
+    boost::system::error_code error;
     boost::filesystem::path pn(Path);
-    return boost::filesystem::create_directory(pn);
+    bool stat = boost::filesystem::create_directories(pn, error);
+    if (!stat || error) {
+        cerr << "#ERROR# filed to create directory " << Path << endl;
+    }
+    return stat;
 }
 
 bool kgmod::Cmn::DelFile(const string Path) {
     if (! kgmod::Cmn::FileExists(Path)) return true;
+    boost::system::error_code error;
     boost::filesystem::path fn(Path);
-    return boost::filesystem::remove(fn);
+    bool stat =  boost::filesystem::remove(fn, error);
+    if (!stat || error) {
+        cerr << "#ERROR# filed to create directory " << Path << endl;
+    }
+    return stat;
 }
 
 
