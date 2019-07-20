@@ -246,7 +246,7 @@ void kgmod::Occ::dump(const bool debug) {
 }
 
 void kgmod::Occ::getTra2KeyValue(string& key, vector<string>* tra2key) {
-    tra2key->resize(traAtt->traMax);
+    tra2key->resize(traAtt->traMax + 1);
     vector<string> vals = evalKeyValue(key);
     for (auto& val : vals) {
         Ewah tras;
