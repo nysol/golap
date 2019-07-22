@@ -82,7 +82,7 @@ private:
         
         request_.body.clear();
         while (getline(ss, line)) {
-            request_.body += line;
+            request_.body += line; request_.body += "\n";
         }
     }
     

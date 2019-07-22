@@ -470,14 +470,27 @@ bool kgmod::exec::evalRequestJson(Query& query) {
 }
 
 bool kgmod::exec::evalRequestFlat(Query& query) {
+//    stringstream ss;
+//    get_receive_buff(ss);
+//    while (getline(ss, line)) if (line.size() == 1) break;
+    
     string line;
-    stringstream ss;
-    get_receive_buff(ss);
-    while (getline(ss, line)) if (line.size() == 1) break;
+    string body = req_body();
+    cerr << body << endl;
+    stringstream ss(body);
     
     int c = 0;
-    query.granularity.first  = mt_config->traFile.traFld;     // default
-    query.granularity.second = mt_config->traFile.itemFld;    // default
+// default
+    query.deadlineTimer = mt_config->deadlineTimer;
+    query.traFilter.padWithZeroes(golap_->occ->traAtt->traMax);
+    query.traFilter.inplace_logicalnot();
+    query.itemFilter.padWithZeroes(golap_->occ->itemAtt->itemMax);
+    query.itemFilter.inplace_logicalnot();
+    query.selCond = {0, 0, 0, 0, -1};
+    query.debug_mode = 0;
+    query.granularity.first  = mt_config->traFile.traFld;
+    query.granularity.second = mt_config->traFile.itemFld;
+    query.sendMax = mt_config->sendMax;
     
     while (getline(ss, line)) {
         Cmn::chomp(line);
@@ -578,14 +591,9 @@ bool kgmod::exec::evalRequestFlat(Query& query) {
 }
 
 bool kgmod::exec::evalRequest(Query& query) {
-    string line;
-    stringstream ss;
-    get_receive_buff(ss);
-    while (getline(ss, line)) if (line.size() == 1) break;
-    
-    if (! getline(ss, line)) return false;
     bool stat;
-    if (line[0] != '{') {
+    string body = req_body();
+    if (body[0] != '{') {
         stat = evalRequestFlat(query);
     } else {
         stat = evalRequestJson(query);
