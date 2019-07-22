@@ -141,11 +141,14 @@ bool kgmod::BTree::GetVal(const string& Key, const string& KeyValue, Ewah& Bitma
 }
 
 Ewah& kgmod::BTree::GetVal(const string& Key, const string& KeyValue) {
-//    Ewah Zero;
-//    Zero.reset();
+    static Ewah Zero; Zero.reset();
     if (DataTypeMap[Key] == STR) {
 //        if (str_btree.find({Key, KeyValue}) == str_btree.end()) str_btree[{Key, KeyValue}] = Zero;
-        return str_btree[{Key, KeyValue}];
+        if (str_btree.find({Key, KeyValue}) == str_btree.end()) {
+            return Zero;
+        } else {
+            return str_btree[{Key, KeyValue}];
+        }
     } else if (DataTypeMap[Key] == NUM) {
         double dbl;
         if (KeyValue.length() == 0) {
@@ -154,7 +157,11 @@ Ewah& kgmod::BTree::GetVal(const string& Key, const string& KeyValue) {
             dbl = stod(KeyValue);
         }
 //        if (num_btree.find({Key, dbl}) == num_btree.end()) num_btree[{Key, dbl}] = Zero;
-        return num_btree[{Key, dbl}];
+        if (num_btree.find({Key, dbl}) == num_btree.end()) {
+            return Zero;
+        } else {
+            return num_btree[{Key, dbl}];
+        }
     } else {
         stringstream msg;
 //        msg << "invalid DataTypeMap: " << DataTypeMap[Key];

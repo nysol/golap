@@ -40,8 +40,8 @@ kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
     string occDb = config->dbDir + "/occ.dat";
     bmpList.PutDbName(dtmDb, occDb);
     
-    traAtt = new class traAtt(config, env);
-    itemAtt = new class itemAtt(config, env);
+    traAtt = new class TraAtt(config, env);
+    itemAtt = new class ItemAtt(config, env);
     occKey = config->traFile.itemFld;
     bmpList.InitKey(occKey, config->itemDataType[occKey]);
 }

@@ -40,7 +40,7 @@ using namespace std;
 using namespace kglib;
 
 namespace kgmod {
-    struct selCond {
+    typedef struct {
         double minSup;
         double minConf;
         double minLift;
@@ -48,11 +48,77 @@ namespace kgmod {
         double minPMI;
         void dump(void) {cerr << "selCond: " << minSup << " " << minConf << " " << minLift
             << " " << minJac << " " << minPMI << endl;};
-    };
+    } sel_cond;
     
-    enum sort_key {SORT_NONE, SORT_SUP, SORT_CONF, SORT_LIFT, SORT_JAC, SORT_PMI};
-//    static bool isTimeOut;
+    typedef enum {SORT_NONE, SORT_SUP, SORT_CONF, SORT_LIFT, SORT_JAC, SORT_PMI} sort_key;
+    typedef btree::btree_multimap<float, string> Result;
+    typedef struct {string key; map<string, Ewah> DimBmpList;} Dimension;
 
+    typedef struct {
+        Ewah traFilter;
+        Ewah itemFilter;
+        sel_cond selCond;
+        sort_key sortKey;
+        size_t sendMax;
+        pair<string, string> granularity;   // first:transaction granurality, second:node granurality
+        Dimension dimension;
+        unsigned int deadlineTimer;
+        size_t debug_mode;
+        void dump(void) {
+//            cerr << "traFilter; ";  Cmn::CheckEwah(traFilter);
+//            cerr << "itemFilter; "; Cmn::CheckEwah(itemFilter);
+            selCond.dump();
+            if (sortKey == SORT_SUP)  cerr << "sortKey: SUP"  << endl;
+            else if (sortKey == SORT_CONF) cerr << "sortKey: CONF" << endl;
+            else if (sortKey == SORT_LIFT) cerr << "sortKey: LIFT" << endl;
+            else if (sortKey == SORT_JAC)  cerr << "sortKey: JAC"  << endl;
+            else if (sortKey == SORT_PMI)  cerr << "sortKey: PMI"  << endl;
+            cerr << "sendMax: " << sendMax << endl;
+            cerr << "granularity(transaction): " << granularity.first << endl;
+            cerr << "granularity(node): "        << granularity.second << endl;
+            if (dimension.key.length() != 0) {
+                cerr << "dimension: " << dimension.key << "=";
+                for (auto i = dimension.DimBmpList.begin(); i != dimension.DimBmpList.end(); i++) {
+                    cerr << i->first << " ";
+                }
+                cerr << endl;
+            }
+        }
+    } Query;
+    
+    static pthread_t pt;
+    static bool isTimeOut;
+    static void* timerHandle(void* timer) {
+        static unsigned int tt = *(unsigned int*)timer;
+        if (tt != 0) {
+            sleep(tt);
+            isTimeOut = true;
+            cerr << "time out" << endl;
+        }
+        return (void*)NULL;
+    }
+    static void setTimer(unsigned int& timerInSec) {
+        if (timerInSec == 0) {
+            cerr << "setTimer: infinite" << endl;
+        } else {
+            cerr << "setTimer: " << timerInSec << " sec" << endl;
+        }
+        isTimeOut = false;
+        pthread_create(&pt, NULL, &timerHandle, &timerInSec);
+    }
+    static void cancelTimer(void) {
+        pthread_cancel(pt);
+        if (! isTimeOut) cerr << "timer canceled" << endl;
+    }
+    
+    static Config* mt_config;
+    static Occ* mt_occ;
+    Result Enum(Query& query, Ewah& dimBmp);
+    typedef MtQueue<pair<string, Ewah*>> mq_t;
+    void MT_Enum(mq_t* mq, Query* query, map<string, Result>* res);
+
+    //
+    // kgGolap 定義
     class kgGolap : public kgMod {
     private:
         string opt_inf;
@@ -71,12 +137,7 @@ namespace kgmod {
         kgGolap(void);
         ~kgGolap(void);
         
-        typedef struct {
-            string key;
-            map<string, Ewah> SliceBmpList;
-        } Slice;
-        Slice makeSliceBitmap(string& cmdline);
-        typedef btree::btree_multimap<float, string> Result;
+        Dimension makeDimBitmap(string& cmdline);
         size_t sizeOfResult(Result res) {
             size_t out = 0;
             for (auto i = res.begin(), ie = res.end(); i != ie; i++) {
@@ -84,13 +145,13 @@ namespace kgmod {
             }
             return out;
         }
-//        Result Enum(struct selCond& selCond, sort_key sortKey, Ewah& TraBmp, Ewah& ItemBmp, Ewah& sliceBmp);
+//        Result Enum(Query& query, Ewah& DimBmp);
         void Output(Result& res);
         int run(void);
     };
     
     //
-    //
+    // exec 定義
     class exec : public Http {
         kgGolap* golap_;
         u_short port;
@@ -99,43 +160,15 @@ namespace kgmod {
     public:
         exec(kgGolap* golap, asio::io_service& io_service, u_short port)
         : golap_(golap), Http(io_service, port), port(port), closing_(false) {};
-//        timerInSec_(10), isTimeOut_(false) {};
         
         bool isClosing(void) {return closing_;}
+        bool evalRequestJson(Query& query);
+        bool evalRequestFlat(Query& query);
+        bool evalRequest(Query& query);
         
     private:
         void proc(void) override;
     };
-    
-    
-    static pthread_t pt;
-    static bool isTimeOut;
-    static void* timerHandle(void* timer) {
-        static unsigned int tt = *(unsigned int*)timer;
-        if (tt != 0) {
-            cerr << "setTimer: " << tt << " sec" << endl;
-            sleep(tt);
-            isTimeOut = true;
-            cerr << "time out" << endl;
-        }
-        return (void*)NULL;
-    }
-    static void setTimer(unsigned int& timerInSec) {
-        isTimeOut = false;
-        pthread_create(&pt, NULL, &timerHandle, &timerInSec);
-    }
-    static void cancelTimer(void) {
-        pthread_cancel(pt);
-        if (! isTimeOut) cerr << "timer canceled" << endl;
-    }
-    
-    static Config* mt_config;
-    static Occ* mt_occ;
-    kgGolap::Result Enum(struct selCond& selCond, sort_key sortKey, Ewah& TraBmp, Ewah& ItemBmp,
-                         pair<string, string>& granularity, Ewah& sliceBmp, size_t sendMax);
-    typedef MtQueue<pair<string, Ewah*>> mq_t;
-    void MT_Enum(mq_t* mq, struct selCond selCond, sort_key sortKey, Ewah TraBmp, Ewah ItemBmp,
-                 pair<string, string> granularity, size_t sendMax, map<string, kgGolap::Result>* res);
 }
 
 #endif /* kggolap_h */

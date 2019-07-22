@@ -35,11 +35,11 @@
 using namespace std;
 using namespace kgmod;
 
-kgmod::traAtt::traAtt(Config* config, kgEnv* env): _config(config), _env(env), traMax(-1) {
+kgmod::TraAtt::TraAtt(Config* config, kgEnv* env): _config(config), _env(env), traMax(-1) {
     this->_dbName = config->dbDir + "/traatt.dat";
 }
 
-void kgmod::traAtt::build(BTree& bmpList) {
+void kgmod::TraAtt::build(BTree& bmpList) {
     kgCSVfld traAttF;
     traAttF.open(_config->traAttFile.name, _env, false);
     traAttF.read_header();
@@ -150,7 +150,7 @@ void kgmod::traAtt::build(BTree& bmpList) {
     }
 }
 
-void kgmod::traAtt::save(bool clean) {
+void kgmod::TraAtt::save(bool clean) {
     cerr << "writing " << _dbName << " ..." << endl;
     if (clean) {
         ofstream osf(_dbName,ios::out);
@@ -176,7 +176,7 @@ void kgmod::traAtt::save(bool clean) {
     ofs.close();
 }
 
-void kgmod::traAtt::load(void) {
+void kgmod::TraAtt::load(void) {
     cerr << "loading transaction attributes" << endl;
     tra.clear();
     traNo.clear();
@@ -205,7 +205,7 @@ void kgmod::traAtt::load(void) {
     ifs.close();
 }
 
-void kgmod::traAtt::dump(bool debug) {
+void kgmod::TraAtt::dump(bool debug) {
     if (! debug) return;
     
     cerr << "<<< dump traAtt >>>" << endl;
@@ -227,7 +227,7 @@ void kgmod::traAtt::dump(bool debug) {
     cerr << endl;
 }
 
-vector<string> kgmod::traAtt::listAtt(void) {
+vector<string> kgmod::TraAtt::listAtt(void) {
     vector<string> out = _config->traAttFile.numFields;
     out.insert(out.end(), _config->traAttFile.strFields.begin(), _config->traAttFile.strFields.end());
     out.insert(out.end(), _config->traAttFile.catFields.begin(), _config->traAttFile.catFields.end());

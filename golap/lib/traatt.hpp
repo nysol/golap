@@ -30,7 +30,7 @@ using namespace std;
 using namespace kgmod;
 
 namespace kgmod {
-    class traAtt {
+    class TraAtt {
         Config* _config;
         kgEnv* _env;
         string _dbName;
@@ -41,7 +41,7 @@ namespace kgmod {
         size_t traMax;
         
     public:
-        traAtt(Config* config, kgEnv* env);
+        TraAtt(Config* config, kgEnv* env);
         
         void build(BTree& BmpList);
         void save(bool clean = true);

@@ -21,6 +21,7 @@
 #define config_hpp
 
 #include <iostream>
+#include <unordered_map>
 #include <vector>
 #include "btree_map.h"
 
@@ -53,6 +54,8 @@ namespace kgmod {
             vector<string> strFields;
             vector<string> numFields;
             vector<string> catFields;
+            unordered_map<string, string> code2name_map;
+            unordered_map<string, string> name2code_map;
         } itemAttFile;
         btree::btree_map<string, DataType> itemDataType;
         

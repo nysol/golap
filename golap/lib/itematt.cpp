@@ -30,14 +30,14 @@
 using namespace std;
 using namespace kgmod;
 
-kgmod::itemAtt::itemAtt(Config* config, kgEnv* env) : _config(config), _env(env), itemMax(-1) {
+kgmod::ItemAtt::ItemAtt(Config* config, kgEnv* env) : _config(config), _env(env), itemMax(-1) {
     this->_dbName = _config->dbDir + "/itematt.dat";
     string dtmDb = _config->dbDir + "/item.dtm";
     string itmDb = _config->dbDir + "/item.dat";
     bmpList.PutDbName(dtmDb, itmDb);
 }
 
-void kgmod::itemAtt::build(void) {
+void kgmod::ItemAtt::build(void) {
     kgCSVfld itemAttF;
     itemAttF.open(_config->itemAttFile.name, _env, false);
     itemAttF.read_header();
@@ -89,7 +89,7 @@ void kgmod::itemAtt::build(void) {
     }
 }
 
-void kgmod::itemAtt::save(bool clean) {
+void kgmod::ItemAtt::save(bool clean) {
     bmpList.save(clean);
     
     cerr << "writing " << _dbName << " ..." << endl;
@@ -122,7 +122,7 @@ void kgmod::itemAtt::save(bool clean) {
     ofs.close();
 }
 
-void kgmod::itemAtt::load(void) {
+void kgmod::ItemAtt::load(void) {
     cerr << "loading item attributes" << endl;
     bmpList.load();
     
@@ -156,7 +156,7 @@ void kgmod::itemAtt::load(void) {
     ifs.close();
 }
 
-void kgmod::itemAtt::dump(bool debug) {
+void kgmod::ItemAtt::dump(bool debug) {
     if (! debug) return;
     
     cerr << "<<< dump itemAtt >>>" << endl;
@@ -183,7 +183,7 @@ void kgmod::itemAtt::dump(bool debug) {
     cerr << endl;
 }
 
-vector<string> kgmod::itemAtt::listAtt(void) {
+vector<string> kgmod::ItemAtt::listAtt(void) {
     vector<string> out = _config->itemAttFile.numFields;
     out.insert(out.end(), _config->itemAttFile.strFields.begin(), _config->itemAttFile.strFields.end());
     out.insert(out.end(), _config->itemAttFile.catFields.begin(), _config->itemAttFile.catFields.end());
@@ -191,7 +191,15 @@ vector<string> kgmod::itemAtt::listAtt(void) {
     return out;
 }
 
-void kgmod::itemAtt::buildKey2attMap(void) {
+string kgmod::ItemAtt::key2att(const size_t _itemNo, const string& attKey) {
+    if (attKey == _config->traFile.itemFld) {
+        string out = item[_itemNo];
+        return out;
+    }
+    return key2att_map[{_itemNo, attKey}];
+}
+
+void kgmod::ItemAtt::buildKey2attMap(void) {
     cerr << "making key2att map" << endl;
     vector<string> attName = listAtt();
     for (auto k = attName.begin(), ek = attName.end(); k != ek; k++) {
@@ -206,11 +214,37 @@ void kgmod::itemAtt::buildKey2attMap(void) {
     }
 }
 
-void kgmod::itemAtt::dumpKey2attMap(bool debug) {
+void kgmod::ItemAtt::dumpKey2attMap(bool debug) {
     if (! debug) return;
     
     cerr << "<<< key2att map >>>" << endl;
     for (auto i = key2att_map.begin(), ei = key2att_map.end(); i != ei; i++) {
         cerr << item[i->first.first] << "(" << i->first.first << ")," << i->first.second << "->" << i->second << endl;
     }
+}
+
+string kgmod::ItemAtt::code2name(const string& codeFld, const string& code) {
+    string out;
+    if (_config->itemAttFile.code2name_map.find(codeFld) == _config->itemAttFile.code2name_map.end()) {
+        out = code;
+    } else {
+        Ewah bmp = bmpList.GetVal(codeFld, code);
+        auto i = bmp.begin();
+        string nameFld = _config->itemAttFile.code2name_map[codeFld];
+        out = key2att(i.answer, nameFld);
+    }
+    return out;
+}
+
+string kgmod::ItemAtt::name2code(const string& nameFld, const string& name) {
+    string out;
+    if (_config->itemAttFile.name2code_map.find(nameFld) == _config->itemAttFile.name2code_map.end()) {
+        out = name;
+    } else {
+        Ewah bmp = bmpList.GetVal(nameFld, name);
+        auto i = bmp.begin();
+        string codeFld = _config->itemAttFile.name2code_map[nameFld];
+        out = key2att(i.answer, codeFld);
+    }
+    return out;
 }

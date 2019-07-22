@@ -42,8 +42,8 @@ namespace kgmod {
         string _dbName;
         
     public:
-        traAtt* traAtt;
-        itemAtt* itemAtt;
+        TraAtt* traAtt;
+        ItemAtt* itemAtt;
         string occKey;              // OCCで使用するBmpListのKey名
         BTree bmpList;
         
@@ -83,11 +83,13 @@ namespace kgmod {
             return bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
         }
         
-        size_t attFreq(string attKey, string attVal, const Ewah& traFilter, const vector<string>* tra2key = NULL) {
+        size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter, const vector<string>* tra2key = NULL) {
             Ewah traBmp;
             Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
             for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
                 Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}];
+//                cerr << "tmp"; Cmn::CheckEwah(tmp);
+//                cerr << "tra"; Cmn::CheckEwah(traBmp);
                 traBmp = traBmp | tmp;
             }
             traBmp = traBmp & traFilter;

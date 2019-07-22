@@ -31,7 +31,7 @@ using namespace std;
 using namespace kgmod;
 
 namespace kgmod {
-    class itemAtt {
+    class ItemAtt {
         Config* _config;
         kgEnv* _env;
         string _dbName;
@@ -45,7 +45,7 @@ namespace kgmod {
         BTree bmpList;
         
     public:
-        itemAtt(Config* config, kgEnv* env);
+        ItemAtt(Config* config, kgEnv* env);
         
         void build(void);
         void save(bool clean = true);
@@ -56,13 +56,9 @@ namespace kgmod {
         void dumpKey2attMap(bool debug);
         vector<string> listAtt(void);
         vector<string> evalKeyValue(const string& key) {return bmpList.EvalKeyValue(key);}
-        string key2att(const size_t _itemNo, const string& attKey) {
-            if (attKey == _config->traFile.itemFld) {
-                string out = item[_itemNo];
-                return out;
-            }
-            return key2att_map[{_itemNo, attKey}];
-        }
+        string key2att(const size_t _itemNo, const string& attKey);
+        string code2name(const string& codeFld, const string& code);
+        string name2code(const string& nameFld, const string& name);
     };
 }
 

@@ -95,9 +95,12 @@ kgmod::Config::Config(string& infile) {
         }
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.itemName")) {
             itemAttFile.itemName = *val;
+            itemAttFile.code2name_map[traFile.itemFld] = *val;
+            itemAttFile.name2code_map[*val] = traFile.itemFld;
         } else {
             throw kgError("itemAttFile.itemName is mandatory: " + infile);
         }
+        
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.strFields")) {
             itemAttFile.strFields = Cmn::CsvStr::Parse(*val);
         }
@@ -107,7 +110,6 @@ kgmod::Config::Config(string& infile) {
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.catFields")) {
             itemAttFile.catFields = Cmn::CsvStr::Parse(*val);
         }
-        
         for (auto i = itemAttFile.strFields.begin(); i != itemAttFile.strFields.end(); i++) {
             itemDataType[*i] = STR;
         }
@@ -118,6 +120,18 @@ kgmod::Config::Config(string& infile) {
             itemDataType[*i] = STR;
         }
         
+        if (boost::optional<string> val = Prm.get<string>("itemAttFile.Code-Name")) {
+            vector<string> code_name_list = Cmn::CsvStr::Parse(*val);
+            for (auto& code_name : code_name_list) {
+                vector<string> dat = Cmn::Split(code_name, ':');
+                if (dat.size() != 2) throw kgError("invalid format of code-name: " + infile);
+                if (itemAttFile.code2name_map.find(dat[0]) == itemAttFile.name2code_map.end()) {
+                    itemAttFile.code2name_map[dat[0]] = dat[1];
+                    itemAttFile.name2code_map[dat[1]] = dat[0];
+                }
+            }
+        }
+
         if (boost::optional<string> val = Prm.get<string>("cmdCache.enable")) {
             string tmp = *val;
             transform(tmp.cbegin(), tmp.cend(), tmp.begin(), ::toupper);
@@ -149,7 +163,7 @@ kgmod::Config::Config(string& infile) {
                 mt_enable = false;
             }
         } else {
-            mt_enable = true;
+            mt_enable = false;
         }
         if (boost::optional<int> val = Prm.get<int>("mt.degree")) {
             if (*val == 0) {
@@ -241,6 +255,16 @@ void kgmod::Config::dump(bool debug) {
     }
     cerr << endl;
     
+    cerr << "itemAtt code -> name: ";
+    for (auto i = itemAttFile.code2name_map.begin(); i != itemAttFile.code2name_map.end(); i++) {
+        cerr << i->first << ":" << i->second << " ";
+    }
+    cerr << endl;
+//    for (auto i = itemAttFile.name2code_map.begin(); i != itemAttFile.name2code_map.end(); i++) {
+//        cerr << i->first << ":" << i->second << " ";
+//    }
+//    cerr << endl;
+
     cerr << "etc.sendMax: " << sendMax <<endl;
     cerr << "etc.daedlineTimer: " << deadlineTimer <<endl;
     cerr << "etc.port: " << port <<endl;

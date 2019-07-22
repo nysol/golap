@@ -34,20 +34,23 @@ class Http {
     tcp::socket socket_;
     asio::streambuf receive_buff_;
     string send_data_;
-    map<string, string> req_header_;
-//    asio::steady_timer timer_; // タイムアウト用のタイマー
-//    bool isTimerCanceled_;
-//    size_t waitTimeInSec;
-
+    struct {
+        string method;
+        string host;
+        size_t contLen;
+        string body;
+    } request_;
+    
 public:
     Http(asio::io_service& io_service, size_t port)
     : io_service_(io_service),
     acceptor_(io_service, tcp::endpoint(tcp::v4(), port)),
     socket_(io_service) {}
-//    timer_(io_service), isTimerCanceled_(false), waitTimeInSec(10) {}
     
     void start(void) {start_accept();}
     void stop(void) {acceptor_.close();}
+    
+    string& req_body(void) {return request_.body;};
     void get_receive_buff(stringstream& ss) {ss << boost::asio::buffer_cast<const char*>(receive_buff_.data());}
     void put_send_data(string& body) {
         set_header(body.size());
@@ -57,9 +60,9 @@ public:
     void reserve_send_data(size_t size) {
         if (send_data_.capacity() < size) send_data_.reserve(size);
     }
-
+    
 private:
-    void parse_req_header(void) {
+    void parse_request(void) {
         stringstream ss;
         ss << boost::asio::buffer_cast<const char*>(receive_buff_.data());
         string line;
@@ -67,9 +70,19 @@ private:
             if (line.size() == 1) break;
             if (Cmn::StartWith(line, "POST")) {
                 vector<string> tmp = Cmn::Split(line, ' ');
+                request_.method = line;
             } else if (Cmn::StartWith(line, "Host:")) {
-                req_header_["host"] = line + "\n";
+                vector<string> tmp = Cmn::Split(line, ' ');
+                request_.host = tmp[1];
+            } else if (Cmn::StartWith(line, "Content-Length:")) {
+                vector<string> tmp = Cmn::Split(line, ' ');
+                request_.contLen = stoi(tmp[1]);
             }
+        }
+        
+        request_.body.clear();
+        while (getline(ss, line)) {
+            request_.body += line;
         }
     }
     
@@ -105,10 +118,14 @@ private:
         if (error && error != asio::error::eof) {
             cout << "failed to receive: " << error.message() << std::endl;
         } else {
-//            timer_.expires_from_now(chrono::seconds(waitTimeInSec));
-//            timer_.async_wait(boost::bind(&Http::on_timer, this, _1));
-            parse_req_header();
-            proc();
+            parse_request();
+            if (request_.body.length() < request_.contLen) {
+//                cerr << boost::asio::buffer_cast<const char*>(receive_buff_.data()) << endl;
+                start_receive();
+            } else {
+//                cerr << boost::asio::buffer_cast<const char*>(receive_buff_.data()) << endl;
+                proc();
+            }
         }
     }
     
