@@ -320,17 +320,7 @@ void kgmod::MT_Enum(mq_t* mq, Query* query, map<string, Result>* res) {
     }
 }
 
-bool kgmod::exec::evalRequestJson(Query& query) {
-//    string line;
-//    stringstream ss;
-//    get_receive_buff(ss);
-//    cerr << ss.str().size() << ":" << ss.str() << endl;
-//    while (getline(ss, line)) if (line.size() == 1) break;
-//    getline(ss, req_body());
-    stringstream json(req_body());
-//    json << line;
-    
-    // default
+void kgmod::exec::setQueryDefault(Query& query) {
     query.deadlineTimer = mt_config->deadlineTimer;
     query.traFilter.padWithZeroes(golap_->occ->traAtt->traMax);
     query.traFilter.inplace_logicalnot();
@@ -341,14 +331,19 @@ bool kgmod::exec::evalRequestJson(Query& query) {
     query.granularity.first  = mt_config->traFile.traFld;
     query.granularity.second = mt_config->traFile.itemFld;
     query.sendMax = mt_config->sendMax;
-    
+}
+
+bool kgmod::exec::evalRequestJson(Query& query) {
+    cerr << "request: " << req_body() << endl;
+    setQueryDefault(query);
     bool stat = true;
-    string body;
+    string res_body;
     try {
+        stringstream json(req_body());
         boost::property_tree::ptree pt;
         boost::property_tree::read_json(json, pt);
-        cerr << "request: " << endl;
-        boost::property_tree::write_json(cerr, pt, true);
+//        cerr << "request: " << endl;
+//        boost::property_tree::write_json(cerr, pt, true);
         
         if (boost::optional<unsigned int> val = pt.get_optional<unsigned int>("deadlineTimer")) {
             query.deadlineTimer = *val;
@@ -358,33 +353,33 @@ bool kgmod::exec::evalRequestJson(Query& query) {
             if (boost::iequals(*val, "bye")) {
                 cerr << "bye message recieved" << endl;
                 closing_ = true;
-                body = "terminated\n";
+                res_body = "terminated\n";
             } else {
                 cerr << "unknown control request" << endl;
-                body = "unknown control request\n";
+                res_body = "unknown control request\n";
             }
             stat = false;
         } else if (boost::optional<string> val = pt.get_optional<string>("retrieve")) {
             vector<string> vec = Cmn::CsvStr::Parse(*val);
             if (boost::iequals(vec[0], "ListTraAtt")) {
                 cerr << vec[0] << endl;
-                body ="TraAtt\n";
+                res_body ="TraAtt\n";
                 vector<string> traAtts = mt_occ->traAtt->listAtt();
                 for (auto att = traAtts.begin(); att != traAtts.end(); att++) {
-                    body += *att; body += "\n";
+                    res_body += *att; res_body += "\n";
                 }
     //        } else if (boost::iequals(vec[0], "ListItemAtt")) {
             } else if (boost::iequals(vec[0], "GetTraAtt")) {
                 cerr << vec[0] << endl;
-                body = vec[1];  body += "\n";
+                res_body = vec[1];  res_body += "\n";
                 vector<string> attVal = mt_occ->evalKeyValue(vec[1]);
                 for (auto att = attVal.begin(); att != attVal.end(); att++) {
-                    body += *att; body += "\n";
+                    res_body += *att; res_body += "\n";
                 }
     //        } else if (boost::iequals(vec[0], "GetItemAtt")) {
             } else {
                 cerr << "unknown control request" << endl;
-                body = "unknown control request\n";
+                res_body = "unknown control request\n";
             }
             stat = false;
         } else if (boost::optional<string> val = pt.get_optional<string>("query")) {
@@ -453,73 +448,56 @@ bool kgmod::exec::evalRequestJson(Query& query) {
             }
         } else {
             cerr << "unknown control request" << endl;
-            body = "unknown control request\n";
+            res_body = "unknown control request\n";
             stat = false;
         }
     } catch (boost::property_tree::json_parser_error& e) {
-        body = "#ERROR# "; body += e.what();
-        cerr << body << endl;
+        res_body = "#ERROR# "; res_body += e.what();
+        cerr << res_body << endl;
         stat = false;
     }
     
     if (! stat) {
-        put_send_data(body);
+        put_send_data(res_body);
         Http::proc();
     }
     return stat;
 }
 
 bool kgmod::exec::evalRequestFlat(Query& query) {
-//    stringstream ss;
-//    get_receive_buff(ss);
-//    while (getline(ss, line)) if (line.size() == 1) break;
-    
+    setQueryDefault(query);
     string line;
-    string body = req_body();
-    cerr << body << endl;
-    stringstream ss(body);
-    
+    cerr << "request: \n\"" << req_body() << "\"" << endl;
+    stringstream ss(req_body());
     int c = 0;
-// default
-    query.deadlineTimer = mt_config->deadlineTimer;
-    query.traFilter.padWithZeroes(golap_->occ->traAtt->traMax);
-    query.traFilter.inplace_logicalnot();
-    query.itemFilter.padWithZeroes(golap_->occ->itemAtt->itemMax);
-    query.itemFilter.inplace_logicalnot();
-    query.selCond = {0, 0, 0, 0, -1};
-    query.debug_mode = 0;
-    query.granularity.first  = mt_config->traFile.traFld;
-    query.granularity.second = mt_config->traFile.itemFld;
-    query.sendMax = mt_config->sendMax;
-    
     while (getline(ss, line)) {
         Cmn::chomp(line);
         vector<string> vec = Cmn::CsvStr::Parse(line);
         if (boost::iequals(line, "bye")) {
             cerr << "bye message recieved" << endl;
             closing_ = true;
-            string body = "terminated\n";
-            put_send_data(body);
+            string res_body = "terminated\n";
+            put_send_data(res_body);
             Http::proc();
             return false;
         } else if (boost::iequals(line, "ListTraAtt")) {
             cerr << vec[0] << endl;
-            string body ="TraAtt\n";
+            string res_body ="TraAtt\n";
             vector<string> traAtts = mt_occ->traAtt->listAtt();
             for (auto att = traAtts.begin(); att != traAtts.end(); att++) {
-                body += *att; body += "\n";
+                res_body += *att; res_body += "\n";
             }
-            put_send_data(body);
+            put_send_data(res_body);
             Http::proc();
             return false;
         } else if (vec.size() != 0 && boost::iequals(vec[0], "GetTraAtt")) {
             cerr << vec[0] << endl;
-            string body = vec[1];  body += "\n";
+            string res_body = vec[1];  res_body += "\n";
             vector<string> attVal = mt_occ->evalKeyValue(vec[1]);
             for (auto att = attVal.begin(); att != attVal.end(); att++) {
-                body += *att; body += "\n";
+                res_body += *att; res_body += "\n";
             }
-            put_send_data(body);
+            put_send_data(res_body);
             Http::proc();
             return false;
         }

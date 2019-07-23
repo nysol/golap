@@ -167,6 +167,7 @@ namespace kgmod {
         bool evalRequest(Query& query);
         
     private:
+        void setQueryDefault(Query& query);
         void proc(void) override;
     };
 }

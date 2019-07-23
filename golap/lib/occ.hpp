@@ -87,7 +87,9 @@ namespace kgmod {
             Ewah traBmp;
             Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
             for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
-                Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}];
+//                Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}];
+                Ewah tmp;
+                if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*i], tmp)) continue;
 //                cerr << "tmp"; Cmn::CheckEwah(tmp);
 //                cerr << "tra"; Cmn::CheckEwah(traBmp);
                 traBmp = traBmp | tmp;
