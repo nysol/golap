@@ -62,7 +62,6 @@ namespace kgmod {
         size_t sendMax;
         pair<string, string> granularity;   // first:transaction granurality, second:node granurality
         Dimension dimension;
-        unsigned int deadlineTimer;
         size_t debug_mode;
         void dump(void) {
 //            cerr << "traFilter; ";  Cmn::CheckEwah(traFilter);
@@ -85,6 +84,35 @@ namespace kgmod {
             }
         }
     } Query;
+    typedef struct {
+        Ewah traFilter;
+        Ewah itemFilter;
+        typedef vector<pair<char, string>> axis_t;      // first:[I|T] second:attName
+        pair<axis_t, axis_t> axes;                      // first:x-axis second:y-axis
+        void dump (void) {
+            cerr << "x-axis: ";
+            for (auto i : axes.first) {
+                cerr << i.first << ":" << i.second << " ";
+            }
+            cerr << endl;
+            cerr << "y-axis: ";
+            for (auto i : axes.second) {
+                cerr << i.first << ":" << i.second << " ";
+            }
+            cerr << endl;
+        }
+    } Pivot;
+    typedef struct {
+        string mode;    // "query" | "pivot"
+        Query query;
+        Pivot pivot;
+        unsigned int deadlineTimer;
+        void dump(void) {
+            if (mode == "query") query.dump();
+            else if (mode == "pivot") pivot.dump();
+            cerr << "deadlineTimer: " << deadlineTimer << endl;
+        }
+    } Request;
     
     static pthread_t pt;
     static bool isTimeOut;
@@ -162,12 +190,16 @@ namespace kgmod {
         : golap_(golap), Http(io_service, port), port(port), closing_(false) {};
         
         bool isClosing(void) {return closing_;}
-        bool evalRequestJson(Query& query);
-        bool evalRequestFlat(Query& query);
-        bool evalRequest(Query& query);
+        bool evalRequestJson(Request& request);
+        bool evalRequestFlat(Request& request);
+        bool evalRequest(Request& request);
         
     private:
         void setQueryDefault(Query& query);
+        void co_occurrence(Query& query, map<string, Result>& res);
+        void axisValsList(vector<pair<char, string>>& flds, vector<vector<string>>& valsList);
+        void item2traBmp(string itemKey, string itemVal, Ewah& traBmp);
+        void pivot(Pivot& pivot, map<string, Result>& res);
         void proc(void) override;
     };
 }
