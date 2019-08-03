@@ -33,6 +33,7 @@ namespace kgmod {
     
     struct Config {
         string dbDir;
+        string outDir;
         
         struct traFile {
             string name;
@@ -45,6 +46,7 @@ namespace kgmod {
             vector<string> strFields;
             vector<string> numFields;
             vector<string> catFields;
+            vector<string> granuFields;
         } traAttFile;
         btree::btree_map<string, DataType> traDataType;
         

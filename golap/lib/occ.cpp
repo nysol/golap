@@ -34,7 +34,8 @@ using namespace kgmod;
 using namespace kglib;
 
 kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
-    this->_dbName = config->dbDir + "/coitem.dat";
+    _dbName = config->dbDir + "/coitem.dat";
+    _liveTraFile = config->dbDir + "/livetra.dat";
     
     string dtmDb = config->dbDir + "/occ.dtm";
     string occDb = config->dbDir + "/occ.dat";
@@ -128,12 +129,42 @@ void kgmod::Occ::build(void) {
     }
     tra.close();
     
+    liveTra.padWithZeroes(traAtt->traMax + 1); liveTra.inplace_logicalnot();
     for (auto i = checkedTra.begin(), ie = checkedTra.end(); i != ie; i++) {
         if (i->second) continue;
         cerr << "#WARNING# " << traNameFld << ":" << i->first << " does not exist on " << _config->traFile.name << endl;
+        
+        Ewah tmp; tmp.set(traAtt->traNo[i->first]);
+        liveTra = liveTra - tmp;
     }
     
     if (isError) throw kgError("error occurred in building transaction index");
+}
+
+void kgmod::Occ::saveLiveTra(void) {
+    cerr << "number of transactions: " << LiveTraCnt() << endl;
+    FILE* fp = fopen(_liveTraFile.c_str(), "wb");
+    if (fp == NULL) {
+        stringstream msg;
+        msg << "failed to open " + _liveTraFile;
+        throw kgError(msg.str());
+    }
+    try {
+        size_t rc;
+        stringstream ss;
+        liveTra.write(ss);
+        size_t size = ss.str().length();
+        rc = fwrite(&size, sizeof(size_t), 1, fp);
+        if (rc == 0) throw 0;
+        rc = fwrite(ss.str().c_str(), size, 1, fp);
+        if (rc == 0) throw 0;
+    } catch(int e) {
+        fclose(fp);
+        stringstream msg;
+        msg << "failed to write " << _liveTraFile;
+        throw kgError(msg.str());
+    }
+    fclose(fp);
 }
 
 void kgmod::Occ::saveCooccur(const bool clean) {
@@ -175,6 +206,39 @@ void kgmod::Occ::save(const bool clean) {
     itemAtt->save(clean);
     bmpList.save(clean);
     saveCooccur(clean);
+    saveLiveTra();
+}
+
+void kgmod::Occ::loadActTra(void) {
+    cerr << "reading actual transactions bitmap" << endl;
+    FILE* fp = fopen(_liveTraFile.c_str(), "rb");
+    if (fp == NULL) {
+        stringstream msg;
+        msg << "failed to open " + _liveTraFile;
+        throw kgError(msg.str());
+    }
+    try {
+        size_t size = 0;
+        size_t rc = 0;
+        rc = fread(&size, sizeof(size_t), 1, fp);
+        if (rc == 0) throw 0;
+        char* buf = (char *)malloc(size);
+        rc = fread(buf, size, 1, fp);
+        if (rc == 0) {free(buf); throw 0;}
+        
+        stringstream ss;
+        ss.write(buf, size);
+        liveTra.read(ss);
+        
+        free(buf);
+    } catch(int e) {
+        fclose(fp);
+        stringstream msg;
+        msg << "failed to read " << _liveTraFile;
+        throw kgError(msg.str());
+    }
+    fclose(fp);
+    cerr << "number of transactions: " << LiveTraCnt() << endl;
 }
 
 void kgmod::Occ::loadCooccur(void) {
@@ -211,7 +275,6 @@ void kgmod::Occ::loadCooccur(void) {
         msg << "failed to read " << _dbName;
         throw kgError(msg.str());
     }
-    
     fclose(fp);
 }
 
@@ -221,7 +284,89 @@ void kgmod::Occ::load(void) {
     bmpList.load();
     loadCooccur();
     itemAtt->buildKey2attMap();
+    loadActTra();
 }
+
+void kgmod::Occ::expandItemByGranu(const size_t traNo, const string& traAttKey, Ewah& traFilter, Ewah& itemBmp) {
+    itemBmp.reset();
+    string traAttVal;
+    traAtt->traNo2traAtt(traNo, traAttKey, traAttVal);
+    if (ex_occ.find({traAttKey, traAttVal}) == ex_occ.end()) {
+        Ewah granuBmp;
+        bmpList.GetVal(traAttKey, traAttVal, granuBmp);
+        granuBmp = granuBmp & traFilter;
+        for (auto t = granuBmp.begin(), et = granuBmp.end(); t != et; t++) {
+            itemBmp = itemBmp | occ[*t];
+        }
+        ex_occ[{traAttKey, traAttVal}] = itemBmp;
+    } else {
+        itemBmp = ex_occ[{traAttKey, traAttVal}];
+    }
+}
+
+size_t kgmod::Occ::itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key) {
+    size_t cnt = 0;
+    unordered_map<string, int> checkedAttVal;
+    Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}];
+    tmp = tmp & traFilter;
+    if (tra2key == NULL) {
+        cnt = tmp.numberOfOnes();
+    } else {
+        for (auto t = tmp.begin(), et = tmp.end(); t != et; t++) {
+            string val = (*tra2key)[*t];
+            if (checkedAttVal.find(val) == checkedAttVal.end()) {
+                cnt++;
+                checkedAttVal[val] = 1;
+            }
+        }
+    }
+    return cnt;
+}
+
+size_t kgmod::Occ::itemFreq(size_t itemNo, vector<string>* tra2key) {
+    return bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
+}
+
+size_t kgmod::Occ::attFreq(string& attKey, string& attVal, const Ewah& traFilter, const vector<string>* tra2key) {
+    Ewah traBmp;
+    Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
+    for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
+        //                Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}];
+        Ewah tmp;
+        if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*i], tmp)) continue;
+        //                cerr << "tmp"; Cmn::CheckEwah(tmp);
+        //                cerr << "tra"; Cmn::CheckEwah(traBmp);
+        traBmp = traBmp | tmp;
+    }
+    traBmp = traBmp & traFilter;
+    
+    size_t cnt = 0;
+    unordered_map<string, int> checkedAttVal;
+    if (tra2key == NULL) {
+        cnt = traBmp.numberOfOnes();
+    } else {
+        for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+            string val = (*tra2key)[*t];
+            if (checkedAttVal.find(val) == checkedAttVal.end()) {
+                cnt++;
+                checkedAttVal[val] = 1;
+            }
+        }
+    }
+    return cnt;
+}
+
+size_t kgmod::Occ::attFreq(string attKey, string attVal, const vector<string>* tra2key) {
+    size_t out = 0;
+    Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
+    for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
+        size_t c = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}].numberOfOnes();
+        //    itemFreq(*i, tra2key);
+        out += c;
+    }
+    return out;
+}
+
 
 void kgmod::Occ::dump(const bool debug) {
     if (! debug) return;

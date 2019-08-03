@@ -64,7 +64,7 @@ namespace kgmod {
             str_btree_t::iterator str_iter;
             num_btree_t::iterator num_iter;
         };
-        pair<string, Ewah> GetAllKeyValue(const string& Key, kvHandle*& kvh);
+        void GetAllKeyValue(const string& Key, pair<string, Ewah>& out, kvHandle*& kvh);
         void save(bool clean);
         void load(void);
         void dump(bool debug);

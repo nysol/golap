@@ -204,12 +204,13 @@ void kgmod::ItemAtt::buildKey2attMap(void) {
     vector<string> attName = listAtt();
     for (auto k = attName.begin(), ek = attName.end(); k != ek; k++) {
         BTree::kvHandle* kvs = NULL;
-        pair<string, Ewah> res = bmpList.GetAllKeyValue(*k, kvs);
+        pair<string, Ewah> res;
+        bmpList.GetAllKeyValue(*k, res, kvs);
         while (kvs != NULL) {
             for (auto i = res.second.begin(), ei = res.second.end(); i != ei; i++) {
                 key2att_map[{*i, *k}] = res.first;
             }
-            res = bmpList.GetAllKeyValue(*k, kvs);
+            bmpList.GetAllKeyValue(*k, res, kvs);
         }
     }
 }

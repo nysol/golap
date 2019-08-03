@@ -64,8 +64,8 @@ namespace kgmod {
         Dimension dimension;
         size_t debug_mode;
         void dump(void) {
-//            cerr << "traFilter; ";  Cmn::CheckEwah(traFilter);
-//            cerr << "itemFilter; "; Cmn::CheckEwah(itemFilter);
+            cerr << "traFilter; ";  Cmn::CheckEwah(traFilter);
+            cerr << "itemFilter; "; Cmn::CheckEwah(itemFilter);
             selCond.dump();
             if (sortKey == SORT_SUP)  cerr << "sortKey: SUP"  << endl;
             else if (sortKey == SORT_CONF) cerr << "sortKey: CONF" << endl;
@@ -130,9 +130,9 @@ namespace kgmod {
             cerr << "setTimer: infinite" << endl;
         } else {
             cerr << "setTimer: " << timerInSec << " sec" << endl;
+            isTimeOut = false;
+            pthread_create(&pt, NULL, &timerHandle, &timerInSec);
         }
-        isTimeOut = false;
-        pthread_create(&pt, NULL, &timerHandle, &timerInSec);
     }
     static void cancelTimer(void) {
         pthread_cancel(pt);
@@ -190,9 +190,6 @@ namespace kgmod {
         : golap_(golap), Http(io_service, port), port(port), closing_(false) {};
         
         bool isClosing(void) {return closing_;}
-        bool evalRequestJson(Request& request);
-        bool evalRequestFlat(Request& request);
-        bool evalRequest(Request& request);
         
     private:
         void setQueryDefault(Query& query);
@@ -200,6 +197,12 @@ namespace kgmod {
         void axisValsList(vector<pair<char, string>>& flds, vector<vector<string>>& valsList);
         void item2traBmp(string itemKey, string itemVal, Ewah& traBmp);
         void pivot(Pivot& pivot, map<string, Result>& res);
+        bool evalRequestJson(Request& request);
+        bool evalRequestFlat(Request& request);
+        bool evalRequest(Request& request);
+        void saveFilters(Query& query);
+        void co_occrence_mcmd(Query& query);
+        void diff_res_vs_mcmd(void);
         void proc(void) override;
     };
 }

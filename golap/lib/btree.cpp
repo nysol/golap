@@ -286,8 +286,7 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& Operator, const 
     return true;
 }
 
-pair<string, Ewah> kgmod::BTree::GetAllKeyValue(const string& Key, kvHandle*& kvh) {
-    pair<string, Ewah> out;
+void kgmod::BTree::GetAllKeyValue(const string& Key, pair<string, Ewah>& out, kvHandle*& kvh) {
     out.first = "";
     out.second.reset();
     
@@ -351,7 +350,6 @@ pair<string, Ewah> kgmod::BTree::GetAllKeyValue(const string& Key, kvHandle*& kv
             kvh = NULL;
         }
     }
-    return out;
 }
 
 void kgmod::BTree::save(bool clean) {
@@ -395,7 +393,8 @@ void kgmod::BTree::save(bool clean) {
     try {
         for (auto i = DataTypeMap.begin(); i != DataTypeMap.end(); i++) {
             kvHandle* kvh = NULL;
-            pair<string, Ewah> ret = GetAllKeyValue(i->first, kvh);
+            pair<string, Ewah> ret;
+            GetAllKeyValue(i->first, ret, kvh);
             while (kvh != NULL) {
 //                cerr << "{" << i->first << "," << ret.first << "} ";
 //                ret.second.printout(cerr);
@@ -416,7 +415,7 @@ void kgmod::BTree::save(bool clean) {
                 fwrite(ss.str().c_str(), size, 1, fp);
                 if (rc == 0) throw 0;
 
-                ret = GetAllKeyValue(i->first, kvh);
+                GetAllKeyValue(i->first, ret, kvh);
             }
         }
     } catch(int e) {
@@ -525,12 +524,13 @@ void kgmod::BTree::dump(bool debug) {
     
     for (auto i = DataTypeMap.begin(); i != DataTypeMap.end(); i++) {
         kvHandle* kvh = NULL;
-        pair<string, Ewah> ret = GetAllKeyValue(i->first, kvh);
+        pair<string, Ewah> ret;
+        GetAllKeyValue(i->first, ret, kvh);
         while (kvh != NULL) {
             cerr << "{" << i->first << "," << ret.first << "} ";
 //            ret.second.printout(cerr);
             Cmn::CheckEwah(ret.second);
-            ret = GetAllKeyValue(i->first, kvh);
+            GetAllKeyValue(i->first, ret, kvh);
         }
     }
 }

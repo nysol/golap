@@ -21,11 +21,12 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <boost/optional.hpp>
 #include <kgError.h>
 #include <kgMethod.h>
 #include <kgConfig.h>
 #include <kgMessage.h>
-#include "kgCSV.h"
+#include <kgCSV.h>
 #include "btree_map.h"
 #include "btree.hpp"
 #include "bidx-ewah.hpp"
@@ -54,96 +55,36 @@ void kgmod::TraAtt::build(BTree& bmpList) {
     }
     int traFldPos = (int)(traFld - fldName.begin());
     
-    const size_t stlipEvery = 10000;
     size_t fldCnt = fldName.size();
     int fstat = EOF + 1;    // EOFでない値で初期化
-//    typedef btree::btree_map<pair<string, size_t>, Ewah> res;
-    typedef btree::btree_map<pair<string, string>, Ewah> res;
-    typedef btree::btree_map<size_t, res*> res_list;
-    res_list* resList;
-    resList = new res_list;
     bool isError = false;
-    size_t split;
-    for (split = 0; fstat != EOF; split++) {
-        (*resList)[split] = new res;
-        vector<bool> isFirst(fldCnt, true);
-        while ((fstat = traAttF.read()) != EOF) {
-            string traVal = traAttF.getVal(traFldPos);
-            if (traNo.find(traVal) != traNo.end()) {
-                stringstream ss;
-                ss << "#ERROR# " << _config->traFile.traFld << ":" << traVal << " is not unique on " << _config->traAttFile.name;
-                cerr << ss.str() << endl;
-                isError = true;
-                continue;
-            }
-            traNo[traVal] = traAttF.recNo() - 1;
-            traMax = traAttF.recNo() - 1;
+    vector<bool> isFirst(fldCnt, true);
+    while ((fstat = traAttF.read()) != EOF) {
+        string traVal = traAttF.getVal(traFldPos);
+        if (traNo.find(traVal) != traNo.end()) {
+            stringstream ss;
+            ss << "#ERROR# " << _config->traFile.traFld << ":" << traVal << " is not unique on " << _config->traAttFile.name;
+            cerr << ss.str() << endl;
+            isError = true;
+            continue;
+        }
+        traNo[traVal] = traAttF.recNo() - 1;
+        traMax = traAttF.recNo() - 1;
+        
+        for (auto fld = fldName.begin(); fld != fldName.end(); fld++) {
+            int cnt = (int)(fld - fldName.begin());
+            if (cnt == traFldPos) continue;
+            string fldVal = traAttF.getVal(cnt);
             
-            for (auto fld = fldName.begin(); fld != fldName.end(); fld++) {
-                int cnt = (int)(fld - fldName.begin());
-                if (cnt == traFldPos) continue;
-                string fldVal = traAttF.getVal(cnt);
-                
-                if (isFirst[cnt]) {
-                    Ewah bmp;
-                    bmp.set(traMax);
-                    (*(*resList)[split])[{*fld, fldVal}] = bmp;
-                    isFirst[cnt] = false;
-                } else {
-                    (*(*resList)[split])[{*fld, fldVal}].set(traMax);
-                }
-                
-                if (traMax % stlipEvery == stlipEvery - 1) break;
+            if (isFirst[cnt]) {
+                bmpList.InitKey(*fld, _config->traDataType[*fld]);
+                isFirst[cnt] = false;
             }
+            bmpList.SetBit(*fld, fldVal, traMax);
         }
     }
     traAttF.close();
     if (isError) throw kgError("error occuerred in building transaction attrbute index");
-
-    // gathering result
-    while (resList->size() > 1) {
-        res_list* tmp = new res_list;
-        for (auto split = resList->begin(); split != resList->end(); split++) {
-            auto split1 = split;
-            split++;
-            auto split2 = split;
-            if (split2 == resList->end()) split--;
-            
-            (*tmp)[split->first] = new res;
-            
-            for (auto fld = fldName.begin(); fld != fldName.end(); fld++) {
-                auto s1 = split1->second->lower_bound({*fld, ""});
-                auto s2 = split2->second->lower_bound({*fld, ""});
-                while (s1 != split1->second->end() | s2 != split2->second->end()) {
-                    if (s1->first.second == s2->first.second) {   // val
-                        (*(*tmp)[split->first])[{s1->first}] = s1->second | s2->second;
-                        s1++;
-                        s2++;
-                    } else if (s1 != split1->second->end() | s1->first.second > s2->first.second) {
-                        (*(*tmp)[split->first])[{s2->first}] = s2->second;
-                        s2++;
-                    } else if (s2 != split2->second->end() | s1->first.second < s2->first.second) {
-                        (*(*tmp)[split->first])[{s1->first}] = s1->second;
-                        s1++;
-                    }
-                }
-            }
-        }
-        
-        for (auto i = resList->begin(); i != resList->end(); i++) {
-            delete i->second;
-        }
-        delete resList;
-        resList = tmp;
-    }
-    
-    for (auto split = resList->begin(); split != resList->end(); split++) {
-        for (auto fld = split->second->begin(); fld != split->second->end(); fld++) {
-            bmpList.InitKey(fld->first.first, _config->traDataType[fld->first.first]);
-            bmpList.SetVal(fld->first.first, fld->first.second, fld->second);
-        }
-    }
-    delete resList;
     
     for (auto i = traNo.begin(); i != traNo.end(); i++) {
         tra[i->second] = i->first;
@@ -176,6 +117,37 @@ void kgmod::TraAtt::save(bool clean) {
     ofs.close();
 }
 
+void kgmod::TraAtt::loadCsv(void) {
+    kgCSVfld traAtt;
+    traAtt.open(_config->traAttFile.name, _env, false);
+    traAtt.read_header();
+    vector<string> fldName = traAtt.fldName();
+    int traNoFldPos = -1;
+    string traNoFld;
+    for (int i = 0; i < fldName.size(); i++) {
+        FldPos[fldName[i]] = i;
+        if (fldName[i] == _config->traFile.traFld) {
+            traNoFldPos = i;
+        }
+    }
+    
+    traAttMap.reserve(traMax + 1);
+    while (traAtt.read() != EOF) {
+        vector<char*> vec(_config->traAttFile.granuFields.size());
+        for (int i = 0; i < fldName.size(); i++) {
+            boost::optional<size_t> pos = Cmn::posInVector(_config->traAttFile.granuFields, fldName[i]);
+            if (pos) {
+                string tmp = traAtt.getVal(i);
+                size_t bufsiz = tmp.size() + 1;
+                vec[*pos] = (char*)malloc(bufsiz);
+                memcpy(vec[*pos], tmp.c_str(), bufsiz);
+            }
+        }
+        traAttMap.push_back(vec);
+    }
+    traAtt.close();
+}
+
 void kgmod::TraAtt::load(void) {
     cerr << "loading transaction attributes" << endl;
     tra.clear();
@@ -203,6 +175,8 @@ void kgmod::TraAtt::load(void) {
         throw kgError(msg.str());
     }
     ifs.close();
+
+    loadCsv();
 }
 
 void kgmod::TraAtt::dump(bool debug) {
@@ -233,4 +207,15 @@ vector<string> kgmod::TraAtt::listAtt(void) {
     out.insert(out.end(), _config->traAttFile.catFields.begin(), _config->traAttFile.catFields.end());
     sort(out.begin(), out.end());
     return out;
+}
+
+void kgmod::TraAtt::traNo2traAtt(const size_t traNo, const string& traAttKey, string& traAttVal) {
+    boost::optional<size_t> traAttKeyPos = Cmn::posInVector(_config->traAttFile.granuFields, traAttKey);
+    if (traAttKeyPos) {
+        traAttVal = traAttMap[traNo][*traAttKeyPos];
+    } else {
+        stringstream ss;
+        ss << traAttKey << " is not in granuFields";
+        throw kgError(ss.str());
+    }
 }

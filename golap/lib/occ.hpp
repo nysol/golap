@@ -40,14 +40,17 @@ namespace kgmod {
         Config* _config;
         kgEnv* _env;
         string _dbName;
+        string _liveTraFile;
+        unordered_map<pair<string, string>, Ewah, boost::hash<pair<string, string>>> ex_occ;
         
     public:
         TraAtt* traAtt;
         ItemAtt* itemAtt;
         string occKey;              // OCCで使用するBmpListのKey名
         BTree bmpList;
+        Ewah liveTra;
         
-        typedef vector<Ewah> occ_t;
+        typedef vector<Ewah> occ_t; // traNo -> item bitmap
         occ_t occ;
         
     public:
@@ -55,73 +58,19 @@ namespace kgmod {
         ~Occ(void);
         
         void build(void);
+        void saveLiveTra(void);
         void saveCooccur(const bool clean);
         void save(const bool clean);
+        void loadActTra(void);
         void loadCooccur(void);
         void load(void);
+        size_t LiveTraCnt(void) {return liveTra.numberOfOnes();}
         
-        size_t itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key = NULL) {
-            size_t cnt = 0;
-            unordered_map<string, int> checkedAttVal;
-            Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}];
-            tmp = tmp & traFilter;
-            if (tra2key == NULL) {
-                cnt = tmp.numberOfOnes();
-            } else {
-                for (auto t = tmp.begin(), et = tmp.end(); t != et; t++) {
-                    string val = (*tra2key)[*t];
-                    if (checkedAttVal.find(val) == checkedAttVal.end()) {
-                        cnt++;
-                        checkedAttVal[val] = 1;
-                    }
-                }
-            }
-            return cnt;
-        }
-        
-        size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL) {
-            return bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
-        }
-        
-        size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter, const vector<string>* tra2key = NULL) {
-            Ewah traBmp;
-            Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
-            for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
-//                Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}];
-                Ewah tmp;
-                if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*i], tmp)) continue;
-//                cerr << "tmp"; Cmn::CheckEwah(tmp);
-//                cerr << "tra"; Cmn::CheckEwah(traBmp);
-                traBmp = traBmp | tmp;
-            }
-            traBmp = traBmp & traFilter;
-            
-            size_t cnt = 0;
-            unordered_map<string, int> checkedAttVal;
-            if (tra2key == NULL) {
-                cnt = traBmp.numberOfOnes();
-            } else {
-                for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
-                    string val = (*tra2key)[*t];
-                    if (checkedAttVal.find(val) == checkedAttVal.end()) {
-                        cnt++;
-                        checkedAttVal[val] = 1;
-                    }
-                }
-            }
-            return cnt;
-        }
-        
-        size_t attFreq(string attKey, string attVal, const vector<string>* tra2key = NULL) {
-            size_t out = 0;
-            Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
-            for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
-                size_t c = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}].numberOfOnes();
-            //    itemFreq(*i, tra2key);
-                out += c;
-            }
-            return out;
-        }
+        void expandItemByGranu(const size_t traNo, const string& key, Ewah& traFilter, Ewah& itemBmp);
+        size_t itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key = NULL);
+        size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL);
+        size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter, const vector<string>* tra2key = NULL);
+        size_t attFreq(string attKey, string attVal, const vector<string>* tra2key = NULL);
         
         void occ_dump(const bool debug);
         void dump(const bool debug);

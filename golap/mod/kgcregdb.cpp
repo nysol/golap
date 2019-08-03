@@ -72,7 +72,6 @@ int kgmod::kgCreGdb::run() {
         cerr << "reading config..." << endl;
         config = new Config(opt_inf);
         config->dump(opt_debug);
-        if (! Cmn::MkDir(config->dbDir)) cerr << "failed to create dir " + config->dbDir << endl;
         
         occ = new Occ(config, _env);
         cerr << "creating gdb..." << endl;

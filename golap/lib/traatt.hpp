@@ -38,7 +38,12 @@ namespace kgmod {
     public:
         btree::btree_map<string, size_t> traNo;
         btree::btree_map<size_t, string> tra;
+        unordered_map<string, size_t> FldPos;
+        vector<vector<char*>> traAttMap;
         size_t traMax;
+        
+    private:
+        void loadCsv(void);
         
     public:
         TraAtt(Config* config, kgEnv* env);
@@ -48,6 +53,7 @@ namespace kgmod {
         void load(void);
         void dump(bool debug);
         vector<string> listAtt(void);
+        void traNo2traAtt(const size_t traNo, const string& traAttKey, string& traAttVal);
         // traattのevalKeyValueはoccのものを用いる
     };
 }

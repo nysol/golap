@@ -35,18 +35,18 @@ using namespace std;
 using namespace kgmod;
 
 Ewah& kgmod::Filter::logicalnot(Ewah& bmp, const tra_item traitem) {
-    size_t bmpMax;
+    size_t bmpCnt;
     if (traitem == TRA) {
-        bmpMax = occ->traAtt->traMax;
+        bmpCnt = occ->traAtt->traMax + 1;
     } else if (traitem == ITEM) {
-        bmpMax = occ->itemAtt->itemMax;
+        bmpCnt = occ->itemAtt->itemMax + 1;
     } else {
         stringstream msg;
         msg << "invalid tra_item: " << traitem;
         throw kgError(msg.str());
     }
     
-    bmp.padWithZeroes(bmpMax);
+    bmp.padWithZeroes(bmpCnt);
     bmp.inplace_logicalnot();
     return bmp;
 }
@@ -234,7 +234,8 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     vector<string> values;
     btree::btree_map<string, bool> uniqCheck;
     BTree::kvHandle* kvh = NULL;
-    pair<string, Ewah> ret = occ->bmpList.GetAllKeyValue(key, kvh);
+    pair<string, Ewah> ret;
+    occ->bmpList.GetAllKeyValue(key, ret, kvh);
     while (kvh != NULL) {
         Ewah tmp = traBmp & ret.second;
         if (tmp.numberOfOnes() != 0) {
@@ -243,7 +244,7 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
                 uniqCheck[ret.first] = true;
             }
         }
-        ret = occ->bmpList.GetAllKeyValue(key, kvh);
+        occ->bmpList.GetAllKeyValue(key, ret, kvh);
     }
     
     if (debug) {

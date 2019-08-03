@@ -20,6 +20,7 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
+#include <time.h>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -252,4 +253,24 @@ float kgmod::Cmn::calcPmi(size_t freq, size_t freq1, size_t freq2, size_t total)
     float x2 = (-1) * log(P_u_v);
     float pmi = x1 / x2;
     return pmi;
+}
+
+void kgmod::Cmn::timeStamp(string& datetime) {
+    char buf[20];
+    time_t timer = time(NULL);
+    struct tm* tim = localtime(&timer);
+    strftime(buf, sizeof(buf), "%Y%m%d%H%M%S", tim);
+    datetime = buf;
+}
+
+//template <class T>
+//boost::optional<size_t> kgmod::Cmn::posInVector(vector<T> vec, T target) {
+boost::optional<size_t> kgmod::Cmn::posInVector(vector<string> vec, string target) {
+    boost::optional<size_t> ret;
+    auto it = find(vec.begin(), vec.end(), target);
+    if (it == vec.end()) {
+        return boost::none;
+    } else {
+        return distance(vec.begin(), it);
+    }
 }

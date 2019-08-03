@@ -40,9 +40,17 @@ kgmod::Config::Config(string& infile) {
         
         if (boost::optional<string> val = Prm.get<string>("dbDir")) {
             dbDir = *val;
+            Cmn::MkDir(dbDir);
         } else {
             throw kgError("dbDir is mandatory: " + infile);
         }
+        if (boost::optional<string> val = Prm.get<string>("outDir")) {
+            outDir = *val;
+            Cmn::MkDir(outDir);
+        } else {
+            outDir = "/var/tmp";
+        }
+        
         if (boost::optional<string> val = Prm.get<string>("traFile.name")) {
             traFile.name = *val;
         } else {
@@ -77,7 +85,10 @@ kgmod::Config::Config(string& infile) {
         if (boost::optional<string> val = Prm.get<string>("traAttFile.catFields")) {
             traAttFile.catFields = Cmn::CsvStr::Parse(*val);
         }
-
+        if (boost::optional<string> val = Prm.get<string>("traAttFile.granuFields")) {
+            traAttFile.granuFields = Cmn::CsvStr::Parse(*val);
+        }
+        
         for (auto i = traAttFile.strFields.begin(); i != traAttFile.strFields.end(); i++) {
             traDataType[*i] = STR;
         }
