@@ -577,9 +577,9 @@ size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
             if (filter == NULL) {
                 cnt++;
             } else {
-                Ewah tmp;
-                tmp = i->second & *filter;
-                if (tmp.numberOfOnes() != 0) cnt++;
+                Ewah zero;
+                Ewah tmp = i->second & *filter;
+                if (tmp != zero) cnt++;
             }
         }
     } else {
@@ -588,9 +588,9 @@ size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
             if (filter == NULL) {
                 cnt++;
             } else {
-                Ewah tmp;
-                tmp = i->second & *filter;
-                if (tmp.numberOfOnes() != 0) cnt++;
+                Ewah zero;
+                Ewah tmp = i->second & *filter;
+                if (tmp != zero) cnt++;
             }
         }
     }
