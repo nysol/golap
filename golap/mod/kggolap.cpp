@@ -571,7 +571,14 @@ bool kgmod::exec::evalRequestJson(Request& request) {
             }
             if (boost::optional<string> val2 = pt.get_optional<string>("query.granularity")) {
                 if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.transaction")) {
-                    request.query.granularity.first = *val3;
+                    if (Cmn::posInVector(mt_config->traAttFile.granuFields, *val3)) {
+                        request.query.granularity.first = *val3;
+                    } else {
+                        res_body  = "#ERROR# query.granularity.transaction(";
+                        res_body += *val3;
+                        res_body += ") must be set in config file (traAttFile.granuFields)\n";
+                        stat = false;
+                    }
                 }
                 if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.node")) {
                     request.query.granularity.second = *val3;
@@ -706,7 +713,17 @@ bool kgmod::exec::evalRequestFlat(Request& request) {
             } else if (c == 4) {
                 if (vec.size() >= 1) {
                     boost::trim(vec[0]);
-                    if (vec[0] != "") request.query.granularity.first = vec[0];
+                    if (vec[0] != "") {
+                        if (! Cmn::posInVector(mt_config->traAttFile.granuFields, vec[0])) {
+                            string res_body = "#ERROR# query.granularity.transaction(";
+                            res_body += vec[0];
+                            res_body += ") must be set in config file (traAttFile.granuFields)\n";
+                            put_send_data(res_body);
+                            Http::proc();
+                            return false;
+                        }
+                        request.query.granularity.first = vec[0];
+                    }
                 }
                 if (vec.size() >= 2) {
                     boost::trim(vec[1]);
