@@ -34,88 +34,18 @@
 #include "btree.hpp"
 #include "filter.hpp"
 #include "http.hpp"
+#include "request.hpp"
 #include "thread.hpp"
 
 using namespace std;
 using namespace kglib;
 
 namespace kgmod {
-    typedef struct {
-        double minSup;
-        double minConf;
-        double minLift;
-        double minJac;
-        double minPMI;
-        void dump(void) {cerr << "selCond: " << minSup << " " << minConf << " " << minLift
-            << " " << minJac << " " << minPMI << endl;};
-    } sel_cond;
-    
-    typedef enum {SORT_NONE, SORT_SUP, SORT_CONF, SORT_LIFT, SORT_JAC, SORT_PMI} sort_key;
     typedef btree::btree_multimap<float, string> Result;
-    typedef struct {string key; map<string, Ewah> DimBmpList;} Dimension;
-
-    typedef struct {
-        Ewah traFilter;
-        Ewah itemFilter;
-        sel_cond selCond;
-        sort_key sortKey;
-        size_t sendMax;
-        pair<string, string> granularity;   // first:transaction granurality, second:node granurality
-        Dimension dimension;
-        size_t debug_mode;
-        void dump(void) {
-            cerr << "traFilter; ";  Cmn::CheckEwah(traFilter);
-            cerr << "itemFilter; "; Cmn::CheckEwah(itemFilter);
-            selCond.dump();
-            if (sortKey == SORT_SUP)  cerr << "sortKey: SUP"  << endl;
-            else if (sortKey == SORT_CONF) cerr << "sortKey: CONF" << endl;
-            else if (sortKey == SORT_LIFT) cerr << "sortKey: LIFT" << endl;
-            else if (sortKey == SORT_JAC)  cerr << "sortKey: JAC"  << endl;
-            else if (sortKey == SORT_PMI)  cerr << "sortKey: PMI"  << endl;
-            cerr << "sendMax: " << sendMax << endl;
-            cerr << "granularity(transaction): " << granularity.first << endl;
-            cerr << "granularity(node): "        << granularity.second << endl;
-            if (dimension.key.length() != 0) {
-                cerr << "dimension: " << dimension.key << "=";
-                for (auto i = dimension.DimBmpList.begin(); i != dimension.DimBmpList.end(); i++) {
-                    cerr << i->first << " ";
-                }
-                cerr << endl;
-            }
-        }
-    } Query;
-    typedef struct {
-        Ewah traFilter;
-        Ewah itemFilter;
-        typedef vector<pair<char, string>> axis_t;      // first:[I|T] second:attName
-        pair<axis_t, axis_t> axes;                      // first:x-axis second:y-axis
-        void dump (void) {
-            cerr << "x-axis: ";
-            for (auto i : axes.first) {
-                cerr << i.first << ":" << i.second << " ";
-            }
-            cerr << endl;
-            cerr << "y-axis: ";
-            for (auto i : axes.second) {
-                cerr << i.first << ":" << i.second << " ";
-            }
-            cerr << endl;
-        }
-    } Pivot;
-    typedef struct {
-        string mode;    // "query" | "pivot"
-        Query query;
-        Pivot pivot;
-        unsigned int deadlineTimer;
-        void dump(void) {
-            if (mode == "query") query.dump();
-            else if (mode == "pivot") pivot.dump();
-            cerr << "deadlineTimer: " << deadlineTimer << endl;
-        }
-    } Request;
     
     static pthread_t pt;
     static bool isTimeOut;
+    static bool isWaiting = false;
     static void* timerHandle(void* timer) {
         static unsigned int tt = *(unsigned int*)timer;
         if (tt != 0) {
@@ -128,15 +58,21 @@ namespace kgmod {
     static void setTimer(unsigned int& timerInSec) {
         if (timerInSec == 0) {
             cerr << "setTimer: infinite" << endl;
+            isWaiting = false;
         } else {
             cerr << "setTimer: " << timerInSec << " sec" << endl;
             isTimeOut = false;
             pthread_create(&pt, NULL, &timerHandle, &timerInSec);
+            isWaiting = true;
         }
     }
     static void cancelTimer(void) {
-        pthread_cancel(pt);
-        if (! isTimeOut) cerr << "timer canceled" << endl;
+        if (! isWaiting) return;
+        if (! isTimeOut) {
+            pthread_cancel(pt);
+            cerr << "timer canceled" << endl;
+        }
+        isWaiting = false;
     }
     
     static Config* mt_config;
@@ -192,14 +128,13 @@ namespace kgmod {
         bool isClosing(void) {return closing_;}
         
     private:
+        void doControl(EtcReq& etcReq);
+        void doRetrieve(EtcReq& etcReq);
         void setQueryDefault(Query& query);
         void co_occurrence(Query& query, map<string, Result>& res);
-        void axisValsList(vector<pair<char, string>>& flds, vector<vector<string>>& valsList);
-        void item2traBmp(string itemKey, string itemVal, Ewah& traBmp);
+        void axisValsList(Pivot::axis_t& flds, vector<vector<Pivot::pivAtt_t>>& valsList);
+        void combiAtt(vector<vector<Pivot::pivAtt_t>>& valsList, vector<vector<Pivot::pivAtt_t>>& hdr, vector<Pivot::pivAtt_t> tmp);
         void pivot(Pivot& pivot, map<string, Result>& res);
-        bool evalRequestJson(Request& request);
-        bool evalRequestFlat(Request& request);
-        bool evalRequest(Request& request);
         void saveFilters(Query& query);
         void co_occrence_mcmd(Query& query);
         void diff_res_vs_mcmd(void);

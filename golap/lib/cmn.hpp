@@ -71,7 +71,7 @@ namespace kgmod {
         float calcPmi(size_t freq, size_t freq1, size_t freq2, size_t total);
         void timeStamp(string& datetime);
 //        template <class T> boost::optional<size_t> posInVector(vector<T> vec, T target);
-        boost::optional<size_t> posInVector(vector<string> vec, string target);
+        boost::optional<size_t> posInVector(const vector<string>& vec, const string& target);
     }
 }
 #endif /* cmn_hpp */

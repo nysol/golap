@@ -34,6 +34,24 @@
 using namespace std;
 using namespace kgmod;
 
+bool kgmod::Filter::existsFldName(const string& fldName, const tra_item traitem) {
+    bool stat;
+    if (traitem == TRA) {
+        stat =  Cmn::posInVector(config->traAttFile.numFields, fldName) ||
+                Cmn::posInVector(config->traAttFile.strFields, fldName) ||
+                Cmn::posInVector(config->traAttFile.catFields, fldName);
+    } else if (traitem == ITEM) {
+        stat =  Cmn::posInVector(config->itemAttFile.numFields, fldName) ||
+                Cmn::posInVector(config->itemAttFile.strFields, fldName) ||
+                Cmn::posInVector(config->itemAttFile.catFields, fldName);
+    } else {
+        stringstream msg;
+        msg << "invalid tra_item: " << traitem;
+        throw kgError(msg.str());
+    }
+    return stat;
+}
+
 Ewah& kgmod::Filter::logicalnot(Ewah& bmp, const tra_item traitem) {
     size_t bmpCnt;
     if (traitem == TRA) {
@@ -127,25 +145,27 @@ Ewah kgmod::Filter::isin(const string& key, const values_t& values, const tra_it
 }
 
 Ewah kgmod::Filter::isnotin(const string& key, const values_t& values, const tra_item traitem) {
+    if (! existsFldName(key, traitem)) throw kgError(key + " does not exist");
     Ewah bmp = isin(key, values, traitem);
     Ewah out = logicalnot(bmp, traitem);
     return out;
 }
 
 Ewah kgmod::Filter::like(const string& key, const values_t& values, const tra_item traitem) {
+    if (! existsFldName(key, traitem)) throw kgError(key + " does not exist");
+    BTree* bmpList = setModeTraItem(traitem);
     Ewah out;
-    if (traitem != TRA) return out;
     for (auto i = values.begin(); i != values.end(); i++) {
         Ewah tmp;
-        bool stat = occ->bmpList.GetValMulti(key, *i, tmp);
+        bool stat = bmpList->GetValMulti(key, *i, tmp);
         if (! stat) throw kgError("error occures in search");
         out = out | tmp;
     }
     return out;
 }
 
-
 Ewah kgmod::Filter::search(const string& method, const string& key, const values_t& values, const tra_item traitem) {
+    if (! existsFldName(key, traitem)) throw kgError(key + " does not exist");
     Ewah out;
     if (traitem != TRA) return out;
     for (auto i = values.begin(); i != values.end(); i++) {
@@ -171,9 +191,9 @@ Ewah kgmod::Filter::search(const string& method, const string& key, const values
 }
 
 Ewah kgmod::Filter::range(const string& key, const pair<string, string>& values, const tra_item traitem) {
+    if (! existsFldName(key, traitem)) throw kgError(key + " does not exist");
     Ewah out;
     BTree* bmpList;
-    
     string k;
     if (traitem == TRA) {
         bmpList = &(occ->bmpList);
@@ -214,6 +234,7 @@ Ewah kgmod::Filter::del_item(string& itemFilter, const tra_item traitem) {
 }
 
 Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter, const tra_item traitem) {
+    if (! existsFldName(key, traitem)) throw kgError(key + " does not exist");
     if (traitem != TRA) throw 0;
     Ewah itemBmp = makeItemBitmap(itemFilter);
     Ewah traBmp;
@@ -434,6 +455,13 @@ Ewah kgmod::Filter::runcmd(char** cmdPtr, const tra_item traitem) {
         stringstream msg;
         msg << "syntax error: " << rcmd;
         throw kgError(msg.str());
+    }
+    catch(kgError& err){
+        auto msg = err.message();
+        stringstream buf;
+        for (auto& m : msg) buf << m << "\n";
+        buf << "error occerred in " << rcmd;
+        throw kgError(buf.str());
     }
 }
 

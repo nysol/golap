@@ -77,31 +77,15 @@ void kgmod::kgGolap::setArgs(void) {
     opt_debug = _args.toBool("-d");
 }
 
-Dimension kgmod::kgGolap::makeDimBitmap(string& cmdline) {
-    boost::trim(cmdline);
-    Dimension out;
-    if (cmdline == "") {
-        out.key = "";
-        return out;
-    }
-    vector<string> param = Cmn::CsvStr::Parse(cmdline);
-    out.key = param[0];
-    for (size_t i = 1; i < param.size(); i++) {
-        out.DimBmpList[param[i]] =  occ->bmpList.GetVal(out.key, param[i]);
-    }
-    return out;
-}
-
 Result kgmod::Enum(Query& query, Ewah& dimBmp) {
     const string csvHeader = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
-    cerr << "filtering" << endl;
+    cerr << "enumerating" << endl;
     size_t hit = 0;
     bool notSort = false;
     signed int stat = 0;
     Result res;
     unordered_map<size_t, size_t> itemFreq;
     
-    cerr << query.traFilter.numberOfOnes() << "," << dimBmp.numberOfOnes() << "," << mt_occ->liveTra.numberOfOnes() << endl;
     Ewah tarTraBmp = query.traFilter & dimBmp & mt_occ->liveTra;
     size_t traNum = tarTraBmp.numberOfOnes();
     if (traNum == 0) {
@@ -114,10 +98,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
     bool isTraGranu  = (query.granularity.first != mt_config->traFile.traFld);
     bool isNodeGranu = (query.granularity.second != mt_config->traFile.traFld);
     // transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書き
-    if (isTraGranu) {
-        cerr << "count key value" << endl;
-        traNum = mt_occ->countKeyValue(query.granularity.first, &tarTraBmp);
-    }
+    if (isTraGranu) traNum = mt_occ->countKeyValue(query.granularity.first, &tarTraBmp);
     
     unordered_map<string, bool> checked_node2;  // [node] -> exists
     vector<string> tra2key;
@@ -367,406 +348,138 @@ void kgmod::exec::co_occurrence(Query& query, map<string, Result>& res) {
     }
 }
 
-void kgmod::exec::axisValsList(vector<pair<char, string>>& flds, vector<vector<string>>& valsList) {
-    valsList.resize(flds.size());
+void kgmod::exec::axisValsList(Pivot::axis_t& flds, vector<vector<Pivot::pivAtt_t>>& valsList) {
+    valsList.reserve(flds.size());
     for (size_t i = 0; i < flds.size(); i++) {
-        vector<string> val;
+        vector<Pivot::pivAtt_t> vals;
+        vector<string> tmp;
         if (flds[i].first == 'T') {
-            val = mt_occ->bmpList.EvalKeyValue(flds[i].second);
+            tmp = mt_occ->bmpList.EvalKeyValue(flds[i].second);
+            vals.reserve(tmp.size());
         } else if (flds[i].first == 'I') {
-            val = mt_occ->itemAtt->bmpList.EvalKeyValue(flds[i].second);
+            tmp = mt_occ->itemAtt->bmpList.EvalKeyValue(flds[i].second);
+            vals.reserve(tmp.size());
         }
-        valsList[i] = val;
+        
+        for (auto& t : tmp) {
+            Pivot::pivAtt_t att = {flds[i].first, t};
+            vals.push_back(att);
+        }
+        valsList.push_back(vals);
     }
 }
 
-void kgmod::exec::item2traBmp(string itemKey, string itemVal, Ewah& traBmp) {
-    traBmp.reset();
-    Ewah itemBmp = mt_occ->itemAtt->bmpList.GetVal(itemKey, itemVal);
-    for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
-        string tar = mt_occ->itemAtt->item[*i];
-        Ewah tmp = mt_occ->bmpList.GetVal(mt_occ->occKey, tar);
-        traBmp = traBmp | tmp;
+void kgmod::exec::combiAtt(vector<vector<Pivot::pivAtt_t>>& valsList, vector<vector<Pivot::pivAtt_t>>& hdr,
+                           vector<Pivot::pivAtt_t> tmp) {
+    size_t level = tmp.size();
+    if (level == 0) {
+        size_t hdrCnt = 1;
+        for (auto& vals : valsList) hdrCnt *= vals.size();
+        hdr.reserve(hdrCnt);
+        tmp.reserve(valsList.size());
+    } else if (level == valsList.size()) {
+        hdr.push_back(tmp);
+        return;
+    }
+    for (auto& val : valsList[level]) {
+        vector<Pivot::pivAtt_t> tmp2 = tmp;
+        tmp2.push_back(val);
+        combiAtt(valsList, hdr, tmp2);
     }
 }
 
 void kgmod::exec::pivot(Pivot& pivot, map<string, Result>& res) {
-    pair<map<pair<string, string>, Ewah>, map<pair<string, string>, Ewah>> bmp;
-    pair<vector<vector<string>>, vector<vector<string>>> valsList;
-    axisValsList(pivot.axes.first, valsList.first);
-    size_t i = 0;
-    for (auto& vals : valsList.first) {
-        Ewah itemBmp;
-        for (auto& val : vals) {
-            if (pivot.axes.first[i].first == 'I') {
-                if (pivot.axes.first[i].first == 'T') {
-                    bmp.first[{pivot.axes.first[i].second, val}] = mt_occ->bmpList.GetVal(pivot.axes.first[i].second, val);
-                } else if (pivot.axes.first[i].first == 'I') {
-                    item2traBmp(pivot.axes.first[i].second, val, bmp.first[{pivot.axes.first[i].second, val}]);
+    cerr << "start pivot" << endl;
+    vector<vector<vector<Pivot::pivAtt_t>>> valsList(2);    // [0] -> X axis, [1] -> Y axis
+    vector<vector<vector<Pivot::pivAtt_t>>> hdrs(2);        // [0] -> X axis, [1] -> Y axis
+    vector<map<vector<Pivot::pivAtt_t>, Ewah>> bmps(2);      // [0] -> X axis, [1] -> Y axis
+    
+    // xy: [0] -> X axis, [1] -> Y axis
+    for (size_t xy = 0; xy < 2; xy++) {
+        axisValsList(pivot.axes[xy], valsList[xy]);
+        vector<Pivot::pivAtt_t> tmp;
+        combiAtt(valsList[xy], hdrs[xy], tmp);
+        
+        for (auto vals = hdrs[xy].begin(), evals = hdrs[xy].end(); vals != evals; vals++) {
+            bmps[xy][*vals].padWithZeroes(mt_occ->traAtt->traMax + 1);
+            bmps[xy][*vals].inplace_logicalnot();
+            for (size_t i = 0, ei = vals->size(); i < ei; i++) {
+                if (isTimeOut) return;
+                Ewah bmp;
+                if ((*vals)[i].first == 'T') {
+                    mt_occ->bmpList.GetVal(pivot.axes[xy][i].second, (*vals)[i].second, bmp);
+                } else if ((*vals)[i].first == 'I') {
+                    mt_occ->item2traBmp(pivot.axes[xy][i].second, (*vals)[i].second, bmp);
                 }
+                bmps[xy][*vals] = bmps[xy][*vals] & bmp;
             }
-            i++;
         }
-    }
-    axisValsList(pivot.axes.second, valsList.second);
-    i = 0;
-    for (auto& vals : valsList.second) {
-        size_t v = 0;
-        Ewah itemBmp;
-        for (auto& val : vals) {
-            if (pivot.axes.second[i].first == 'T') {
-                bmp.first[{pivot.axes.second[i].second, val}] = mt_occ->bmpList.GetVal(pivot.axes.second[i].second, val);
-            } else if (pivot.axes.second[i].first == 'I') {
-                item2traBmp(pivot.axes.second[i].second, val, bmp.first[{pivot.axes.second[i].second, val}]);
-            }
-            v++;
-        }
-        i++;
     }
     
-    map<pair<vector<string>, vector<string>>, size_t> mat;
-    for (auto& x : bmp.first) {
-        for (auto& y : bmp.second) {
+    cerr << "calculating matrix" << endl;
+    map<pair<vector<Pivot::pivAtt_t>, vector<Pivot::pivAtt_t>>, float> mat;
+    vector<map<vector<Pivot::pivAtt_t>, bool>> axesHeader(2);
+    Ewah zero;
+    for (auto& x : bmps[0]) {
+        for (auto& y : bmps[1]) {
+            if (isTimeOut) return;
             Ewah cross = x.second & y.second;
+            cross = cross & pivot.traFilter;
             size_t num = cross.numberOfOnes();
-/////            if (num != 0) mat[{x.first, y.first}] = num;
+            if ((float)num > pivot.cutoff) {
+                mat[{x.first, y.first}] = (float)num;
+                axesHeader[0][x.first] = true;
+                axesHeader[1][y.first] = true;
+            }
         }
-    }
-
-    pair<map<vector<string>, bool>, map<vector<string>, bool>> axesHeader;  // first:x-axis, second:y-axies
-    for (auto i = mat.begin(), ei = mat.end(); i != ei; i++) {
-        axesHeader.first[i->first.first] = true;
-        axesHeader.second[i->first.second] = true;
     }
     
+    // enumerating header
     float lnum = 0;
-    for (auto& y_hdr : axesHeader.second) {
-        string line;
-        for (auto& y_hfld : y_hdr.first) {
-            line += y_hfld; line += ",";
+    string lineHead;
+    for (size_t i = 0; i < pivot.axes[1].size(); i++) lineHead += ",";
+    bool isFirstOne = true;
+    vector<string> lines(pivot.axes[0].size());
+    for (size_t i = 0; i < lines.size(); i++) lines[i] = lineHead;
+    for (auto x_hfld = axesHeader[0].begin(), ex_hfld = axesHeader[0].end(); x_hfld != ex_hfld; x_hfld++) {
+        size_t c = 0;
+        for (auto x_hdr = x_hfld->first.begin(), ex_hdr = x_hfld->first.end(); x_hdr != ex_hdr; x_hdr++) {
+            if (isTimeOut) return;
+            if (! isFirstOne) lines[c] += ",";
+            lines[c] += x_hdr->second;
+            c++;
         }
-        for (auto& x_hdr : axesHeader.first) {
+        isFirstOne = false;
+    }
+    
+    for (size_t i = 0; i < lines.size(); i++) {
+        res[""].insert(make_pair(lnum, lines[i]));
+        lnum++;
+    }
+    
+    // enumerating result
+    cerr << "formatting matrix" << endl;
+    for (auto y_hdr = axesHeader[1].begin(), ey_hdr = axesHeader[1].end(); y_hdr != ey_hdr; y_hdr++) {
+        string line;
+        for (auto y_hfld = y_hdr->first.begin(), ey_hfld = y_hdr->first.end(); y_hfld != ey_hfld; y_hfld++) {
+            line += y_hfld->second; line += ",";
+        }
+        bool isFirst = true;
+        for (auto x_hdr = axesHeader[0].begin(), ex_hdr = axesHeader[0].end(); x_hdr != ex_hdr; x_hdr++) {
+            if (isTimeOut) return;
+            if (isFirst) isFirst = false;
+            else line += ",";
             size_t cnt;
-            if (mat.find({x_hdr.first, y_hdr.first}) == mat.end()) {
+            if (mat.find({x_hdr->first, y_hdr->first}) == mat.end()) {
                 cnt = 0;
             } else {
-                cnt = mat[{x_hdr.first, y_hdr.first}];
+                cnt = mat[{x_hdr->first, y_hdr->first}];
             }
-            line += to_string(cnt);
+            if (cnt == 0) line += "";
+            else line += to_string(cnt);
         }
         res[""].insert(make_pair(lnum, line));
     }
-}
-
-void kgmod::exec::setQueryDefault(Query& query) {
-    query.traFilter.padWithZeroes(golap_->occ->traAtt->traMax + 1);
-    query.traFilter.inplace_logicalnot();
-    query.itemFilter.padWithZeroes(golap_->occ->itemAtt->itemMax + 1);
-    query.itemFilter.inplace_logicalnot();
-    query.selCond = {0, 0, 0, 0, -1};
-    query.debug_mode = 0;
-    query.granularity.first  = mt_config->traFile.traFld;
-    query.granularity.second = mt_config->traFile.itemFld;
-    query.dimension.key = "";
-    query.dimension.DimBmpList.clear();
-    query.sendMax = mt_config->sendMax;
-}
-
-bool kgmod::exec::evalRequestJson(Request& request) {
-    cerr << "request: " << req_body() << endl;
-    bool stat = true;
-    string res_body;
-    try {
-        stringstream json(req_body());
-        boost::property_tree::ptree pt;
-        boost::property_tree::read_json(json, pt);
-//        cerr << "request: " << endl;
-//        boost::property_tree::write_json(cerr, pt, true);
-        
-        if (boost::optional<unsigned int> val = pt.get_optional<unsigned int>("deadlineTimer")) {
-            request.deadlineTimer = *val;
-        } else {
-            request.deadlineTimer = mt_config->deadlineTimer;
-        }
-        
-        if (boost::optional<string> val = pt.get_optional<string>("control")) {
-            if (boost::iequals(*val, "bye")) {
-                cerr << "bye message recieved" << endl;
-                closing_ = true;
-                res_body = "terminated\n";
-            } else {
-                cerr << "unknown control request" << endl;
-                res_body = "unknown control request\n";
-            }
-            stat = false;
-        } else if (boost::optional<string> val = pt.get_optional<string>("retrieve")) {
-            vector<string> vec = Cmn::CsvStr::Parse(*val);
-            if (boost::iequals(vec[0], "ListTraAtt")) {
-                cerr << vec[0] << endl;
-                res_body ="TraAtt\n";
-                vector<string> traAtts = mt_occ->traAtt->listAtt();
-                for (auto att = traAtts.begin(); att != traAtts.end(); att++) {
-                    res_body += *att; res_body += "\n";
-                }
-    //        } else if (boost::iequals(vec[0], "ListItemAtt")) {
-            } else if (boost::iequals(vec[0], "GetTraAtt")) {
-                cerr << vec[0] << endl;
-                res_body = vec[1];  res_body += "\n";
-                vector<string> attVal = mt_occ->evalKeyValue(vec[1]);
-                for (auto att = attVal.begin(); att != attVal.end(); att++) {
-                    res_body += *att; res_body += "\n";
-                }
-    //        } else if (boost::iequals(vec[0], "GetItemAtt")) {
-            } else {
-                cerr << "unknown control request" << endl;
-                res_body = "unknown control request\n";
-            }
-            stat = false;
-        } else if (boost::optional<string> val = pt.get_optional<string>("query")) {
-            request.mode = "query";
-            setQueryDefault(request.query);
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.traFilter")) {
-                request.query.traFilter = golap_->fil->makeTraBitmap(*val2);
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.itemFilter")) {
-                request.query.itemFilter = golap_->fil->makeItemBitmap(*val2);
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.selCond")) {
-                if (boost::optional<double> val3 = pt.get_optional<double>("query.selCond.minSup")) {
-                    request.query.selCond.minSup = *val3;
-                }
-                if (boost::optional<double> val3 = pt.get_optional<double>("query.selCond.minConf")) {
-                    request.query.selCond.minConf = *val3;
-                }
-                if (boost::optional<double> val3 = pt.get_optional<double>("query.selCond.minLift")) {
-                    request.query.selCond.minLift = *val3;
-                }
-                if (boost::optional<double> val3 = pt.get_optional<double>("query.selCond.minJac")) {
-                    request.query.selCond.minJac = *val3;
-                }
-                if (boost::optional<double> val3 = pt.get_optional<double>("query.selCond.minPMI")) {
-                    request.query.selCond.minPMI = *val3;
-                }
-                request.query.selCond.dump();
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.sortKey")) {
-                if (boost::iequals(*val2, "SUP")) {
-                    request.query.sortKey = SORT_SUP;
-                } else if (boost::iequals(*val2, "CONF")) {
-                    request.query.sortKey = SORT_CONF;
-                } else if (boost::iequals(*val2, "LIFT")) {
-                    request.query.sortKey = SORT_LIFT;
-                } else if (boost::iequals(*val2, "JAC")) {
-                    request.query.sortKey = SORT_JAC;
-                } else if (boost::iequals(*val2, "PMI")) {
-                    request.query.sortKey = SORT_PMI;
-                } else {
-                    request.query.sortKey = SORT_NONE;
-                }
-//                cerr << "sortKey: " << *val2 << endl;
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.sendMax")) {
-                request.query.sendMax = stoi(*val2);
-//                cerr << "sendMax: " << request.query.sendMax << endl;
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.granularity")) {
-                if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.transaction")) {
-                    if (Cmn::posInVector(mt_config->traAttFile.granuFields, *val3)) {
-                        request.query.granularity.first = *val3;
-                    } else {
-                        res_body  = "#ERROR# query.granularity.transaction(";
-                        res_body += *val3;
-                        res_body += ") must be set in config file (traAttFile.granuFields)\n";
-                        stat = false;
-                    }
-                }
-                if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.node")) {
-                    request.query.granularity.second = *val3;
-                }
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.dimension")) {
-                request.query.dimension = golap_->makeDimBitmap(*val2);
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("query.debugMode")) {
-                // デバッグ用
-                if (boost::iequals(*val2, "notExec")) {
-                    request.query.debug_mode = 1;
-                    string body = *val2;
-                    stat = false;
-                } else if (boost::iequals(*val2, "checkData")) {
-                    request.query.debug_mode = 2;
-                }
-            }
-        } else if (boost::optional<string> val = pt.get_optional<string>("pivot")) {
-            request.mode = "pivot";
-            if (boost::optional<string> val2 = pt.get_optional<string>("pivot.traFilter")) {
-                request.pivot.traFilter = golap_->fil->makeTraBitmap(*val2);
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("pivot.itemFilter")) {
-                request.pivot.itemFilter = golap_->fil->makeItemBitmap(*val2);
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("pivot.x-axis")) {
-                vector<string>csv = Cmn::CsvStr::Parse(*val2);
-                request.pivot.axes.first.reserve(csv.size());
-                for (auto& i : csv) {
-                    vector<string>vec = Cmn::Split(i, ':');
-                    transform(vec[0].cbegin(), vec[0].cend(), vec[0].begin(), ::toupper);
-                    request.pivot.axes.first.push_back({vec[0][0], vec[1]});
-                }
-            }
-            if (boost::optional<string> val2 = pt.get_optional<string>("pivot.y-axis")) {
-                vector<string>csv = Cmn::CsvStr::Parse(*val2);
-                request.pivot.axes.second.reserve(csv.size());
-                for (auto& i : csv) {
-                    vector<string>vec = Cmn::Split(i, ':');
-                    transform(vec[0].cbegin(), vec[0].cend(), vec[0].begin(), ::toupper);
-                    request.pivot.axes.second.push_back({vec[0][0], vec[1]});
-                }
-            }
-        } else {
-            cerr << "unknown control request" << endl;
-            res_body = "unknown control request\n";
-            stat = false;
-        }
-    } catch (boost::property_tree::json_parser_error& e) {
-        res_body = "#ERROR# "; res_body += e.what();
-        cerr << res_body << endl;
-        stat = false;
-    }
-    
-    if (! stat) {
-        put_send_data(res_body);
-        Http::proc();
-    }
-    return stat;
-}
-
-bool kgmod::exec::evalRequestFlat(Request& request) {
-    setQueryDefault(request.query);
-    string line;
-    cerr << "request: \n\"" << req_body() << "\"" << endl;
-    stringstream ss(req_body());
-    int c = 0;
-    while (getline(ss, line)) {
-        Cmn::chomp(line);
-        vector<string> vec = Cmn::CsvStr::Parse(line);
-        if (boost::iequals(line, "bye")) {
-            cerr << "bye message recieved" << endl;
-            closing_ = true;
-            string res_body = "terminated\n";
-            put_send_data(res_body);
-            Http::proc();
-            return false;
-        } else if (boost::iequals(line, "ListTraAtt")) {
-            cerr << vec[0] << endl;
-            string res_body ="TraAtt\n";
-            vector<string> traAtts = mt_occ->traAtt->listAtt();
-            for (auto att = traAtts.begin(); att != traAtts.end(); att++) {
-                res_body += *att; res_body += "\n";
-            }
-            put_send_data(res_body);
-            Http::proc();
-            return false;
-        } else if (vec.size() != 0 && boost::iequals(vec[0], "GetTraAtt")) {
-            cerr << vec[0] << endl;
-            string res_body = vec[1];  res_body += "\n";
-            vector<string> attVal = mt_occ->evalKeyValue(vec[1]);
-            for (auto att = attVal.begin(); att != attVal.end(); att++) {
-                res_body += *att; res_body += "\n";
-            }
-            put_send_data(res_body);
-            Http::proc();
-            return false;
-        }
-        
-        try {
-            request.mode = "query";
-            if (c == 0) {
-                request.query.traFilter = golap_->fil->makeTraBitmap(line);
-            } else if (c == 1) {
-                request.query.itemFilter = golap_->fil->makeItemBitmap(line);
-            } else if (c == 2) {
-                for (size_t i = vec.size(); i < 5; i++) {
-                    vec.resize(i + 1);
-                    if (i == 4) vec[i] = "-1";
-                    else vec[i] = "0";
-                }
-                request.query.selCond = {stod(vec[0]), stod(vec[1]), stod(vec[2]), stod(vec[3]), stod(vec[4])};
-            } else if (c == 3) {
-                // sortKey
-                if (boost::iequals(vec[0], "SUP")) {
-                    request.query.sortKey = SORT_SUP;
-                } else if (boost::iequals(vec[0], "CONF")) {
-                    request.query.sortKey = SORT_CONF;
-                } else if (boost::iequals(vec[0], "LIFT")) {
-                    request.query.sortKey = SORT_LIFT;
-                } else if (boost::iequals(vec[0], "JAC")) {
-                    request.query.sortKey = SORT_JAC;
-                } else if (boost::iequals(vec[0], "PMI")) {
-                    request.query.sortKey = SORT_PMI;
-                } else {
-                    request.query.sortKey = SORT_NONE;
-                }
-                
-                // sendMax
-                if (vec.size() == 2) request.query.sendMax = stoi(vec[1]);
-            } else if (c == 4) {
-                if (vec.size() >= 1) {
-                    boost::trim(vec[0]);
-                    if (vec[0] != "") {
-                        if (! Cmn::posInVector(mt_config->traAttFile.granuFields, vec[0])) {
-                            string res_body = "#ERROR# query.granularity.transaction(";
-                            res_body += vec[0];
-                            res_body += ") must be set in config file (traAttFile.granuFields)\n";
-                            put_send_data(res_body);
-                            Http::proc();
-                            return false;
-                        }
-                        request.query.granularity.first = vec[0];
-                    }
-                }
-                if (vec.size() >= 2) {
-                    boost::trim(vec[1]);
-                    if (vec[1] != "") request.query.granularity.second = vec[1];
-                }
-            } else if (c == 5) {
-                request.query.dimension = golap_->makeDimBitmap(line);
-            } else if (c == 6) {
-                // デバッグ用
-                if (boost::iequals(line, "notExec")) {
-                    string body = line;
-                    put_send_data(body);
-                    Http::proc();
-                    return false;
-                }
-            } else {
-                break;
-            }
-            c++;
-        } catch(kgError& err){
-            auto msg = err.message();
-            for (auto i = msg.begin(); i != msg.end(); i++) {
-                string body = *i + "\n";
-                put_send_data(body);
-                Http::proc();
-            }
-            return false;
-        }
-    }
-    return true;
-}
-
-bool kgmod::exec::evalRequest(Request& request) {
-    bool stat;
-    string body = req_body();
-    request.deadlineTimer = mt_config->deadlineTimer;   // default
-    if (body[0] != '{') {
-        stat = evalRequestFlat(request);
-    } else {
-        stat = evalRequestJson(request);
-    }
-    if (stat) request.dump();
-    return stat;
 }
 
 void kgmod::exec::saveFilters(Query& query) {
@@ -805,8 +518,6 @@ void kgmod::exec::co_occrence_mcmd(Query& query) {
     stringstream cmd1;
     cmd1 << "/usr/local/bin/mcommon i=" << mt_config->outDir << "/xxbase0 m=";
     cmd1 << mt_config->outDir << "/itemFilter.csv k=" << mt_config->traFile.itemFld << " | ";
-//    cmd1 << "/usr/local/bin/mjoin m=" << mt_config->traAttFile.name;
-//    cmd1 << " k=" << mt_config->traFile.traFld << " | ";
     cmd1 << "/usr/local/bin/mjoin m=" << mt_config->itemAttFile.name;
     cmd1 << " k=" << mt_config->traFile.itemFld << " | ";
     cmd1 << "/usr/local/bin/mcut f='" << query.granularity.first << "," << query.granularity.second << "' | ";
@@ -824,8 +535,6 @@ void kgmod::exec::co_occrence_mcmd(Query& query) {
     stat = system(cmd2.str().c_str());
     if (stat != 0) {cerr << "#ERROR# failed in " << cmd2.str() << endl; return;}
 
-    // mcombi k=MemberID f=ProductNo a=node1,node2 n=2 i=xxbase |\
-    // mcount k=node1,node2 a=frequency o=xxcombi2
     stringstream cmd3;
     cmd3 << "/usr/local/bin/mcombi k=" << query.granularity.first << " f=" << query.granularity.second;
     cmd3 << " a=node1,node2 n=2 i=" << mt_config->outDir << "/xxbase | ";
@@ -879,9 +588,65 @@ void kgmod::exec::diff_res_vs_mcmd(void) {
     
 }
 
+void kgmod::exec::doControl(EtcReq& etcReq) {
+    string res_body;
+    if (boost::iequals(etcReq.func, "bye")) {
+        cerr << "bye message recieved" << endl;
+        closing_ = true;
+        res_body = "terminated\n";
+    } else {
+        cerr << "unknown control request" << endl;
+        res_body = "unknown control request\n";
+    }
+    put_send_data(res_body);
+    Http::proc();
+}
+
+void kgmod::exec::doRetrieve(EtcReq& etcReq) {
+    string res_body;
+    cerr << etcReq.func << endl;
+    if (boost::iequals(etcReq.func, "ListTraAtt")) {
+        res_body ="TraAtt\n";
+        vector<string> traAtts = mt_occ->traAtt->listAtt();
+        for (auto att = traAtts.begin(); att != traAtts.end(); att++) {
+            res_body += *att; res_body += "\n";
+        }
+//    } else if (boost::iequals(etcReq.func, "ListItemAtt")) {
+    } else if (boost::iequals(etcReq.func, "GetTraAtt")) {
+        res_body = etcReq.func;  res_body += "\n";
+        vector<string> attVal = mt_occ->evalKeyValue(etcReq.args[0]);
+        for (auto att = attVal.begin(); att != attVal.end(); att++) {
+            res_body += *att; res_body += "\n";
+        }
+//    } else if (boost::iequals(etcReq.func, "GetItemAtt")) {
+    } else {
+        cerr << "unknown control request" << endl;
+        res_body = "unknown control request\n";
+    }
+    put_send_data(res_body);
+    Http::proc();
+}
+
 void kgmod::exec::proc(void) {
-    Request request;
-    if (! evalRequest(request)) return;
+    Request request(mt_config, mt_occ, golap_->fil);
+    try {
+        request.evalRequest(req_body());
+    } catch(string& msg) {
+        cerr << msg << endl;
+        put_send_data(msg);
+        Http::proc();
+        return;
+    }
+    catch(kgError& err){
+        auto msg = err.message();
+        string body = "status:-1\n";
+        for (auto i = msg.begin(); i != msg.end(); i++) {
+            body += *i + "\n";
+        }
+        put_send_data(body);
+        Http::proc();
+        return;
+    }
     
     // Excecuting Enum on each dimention
     map<string, Result> res;
@@ -890,7 +655,11 @@ void kgmod::exec::proc(void) {
     // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
     // 各ファンクション内のループの先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
     setTimer(request.deadlineTimer);
-    if (request.mode == "query") {
+    if (request.mode == "control") {
+        doControl(request.etcRec);
+    } else if (request.mode == "retrieve") {
+        doRetrieve(request.etcRec);
+    } else if (request.mode == "query") {
         co_occurrence(request.query, res);
     } else if (request.mode == "pivot") {
         pivot(request.pivot, res);
@@ -954,6 +723,8 @@ int kgmod::kgGolap::run() {
             server.stop();
             io_service.stop();
         }
+        occ->exBmpList.save(true);
+        occ->ex_occ.save(true);
         cerr << "terminated" << endl;
         
     } catch(kgError& err){

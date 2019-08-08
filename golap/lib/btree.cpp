@@ -570,14 +570,15 @@ vector<string> kgmod::BTree::EvalKeyValue(const string& Key, const Ewah* filter)
 }
 
 size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
+    Ewah zero;
     size_t cnt = 0;
+    cerr << "count key value ... ";
     if (DataTypeMap[Key] == STR) {
         for (auto i = str_btree.lower_bound({Key,""}); i != str_btree.end(); i++) {
             if (i->first.first != Key) break;
             if (filter == NULL) {
                 cnt++;
             } else {
-                Ewah zero;
                 Ewah tmp = i->second & *filter;
                 if (tmp != zero) cnt++;
             }
@@ -588,11 +589,11 @@ size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
             if (filter == NULL) {
                 cnt++;
             } else {
-                Ewah zero;
                 Ewah tmp = i->second & *filter;
                 if (tmp != zero) cnt++;
             }
         }
     }
+    cerr << "end" << endl;
     return cnt;
 }

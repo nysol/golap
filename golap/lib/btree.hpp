@@ -70,6 +70,7 @@ namespace kgmod {
         void dump(bool debug);
         vector<string> EvalKeyValue(const string& Key, const Ewah* traFilter = NULL);
         size_t CountKeyValue(const string& Key, const Ewah* traFilter = NULL);
+        DataType getDataType(const string& Key) {return DataTypeMap[Key];}
     };
 }
 

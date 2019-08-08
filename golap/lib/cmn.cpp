@@ -265,7 +265,7 @@ void kgmod::Cmn::timeStamp(string& datetime) {
 
 //template <class T>
 //boost::optional<size_t> kgmod::Cmn::posInVector(vector<T> vec, T target) {
-boost::optional<size_t> kgmod::Cmn::posInVector(vector<string> vec, string target) {
+boost::optional<size_t> kgmod::Cmn::posInVector(const vector<string>& vec, const string& target) {
     boost::optional<size_t> ret;
     auto it = find(vec.begin(), vec.end(), target);
     if (it == vec.end()) {

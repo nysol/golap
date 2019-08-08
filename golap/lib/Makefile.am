@@ -30,6 +30,7 @@ itematt.cpp \
 occ.cpp \
 param.cpp \
 traatt.cpp \
+request.cpp \
 bidx-ewah.hpp \
 btree.hpp \
 cmdcache.hpp \
@@ -42,6 +43,7 @@ lrucache.hpp \
 occ.hpp \
 param.hpp \
 traatt.hpp \
+request.hpp \
 boolarray.h \
 btree_container.h \
 btree_map.h \

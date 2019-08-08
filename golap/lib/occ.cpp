@@ -41,6 +41,14 @@ kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
     string occDb = config->dbDir + "/occ.dat";
     bmpList.PutDbName(dtmDb, occDb);
     
+    string dtmDb2 = config->dbDir + "/occ2.dtm";
+    string occDb2 = config->dbDir + "/occ2.dat";
+    exBmpList.PutDbName(dtmDb2, occDb2);
+    
+    string ex_dtmDb = config->dbDir + "/exocc.dtm";
+    string ex_occDb = config->dbDir + "/exocc.dat";
+    ex_occ.PutDbName(ex_dtmDb, ex_occDb);
+    
     traAtt = new class TraAtt(config, env);
     itemAtt = new class ItemAtt(config, env);
     occKey = config->traFile.itemFld;
@@ -50,6 +58,33 @@ kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
 kgmod::Occ::~Occ(void) {
     delete traAtt;
     delete itemAtt;
+}
+
+void kgmod::Occ::buildExBmpList(void) {
+    cerr << "building extra transaction index" << endl;
+    vector<vector<string>*> AllItemAtt(2);
+    AllItemAtt[0] = &(_config->itemAttFile.strFields);
+    AllItemAtt[1] = &(_config->itemAttFile.catFields);
+    
+    for (size_t i = 0; i < 2; i++) {
+        for (auto& key : *AllItemAtt[i]) {
+            exBmpList.InitKey(key, STR);
+            vector<string> allVals = itemAtt->bmpList.EvalKeyValue(key);
+            for (auto& val : allVals) {
+                Ewah itemBmp;
+                itemAtt->bmpList.GetVal(key, val, itemBmp);
+                Ewah traBmp;
+                cerr << key << "," << val << ": ";
+                for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
+                    string tar = itemAtt->item[*i];
+                    Ewah tmp = bmpList.GetVal(occKey, tar);
+                    traBmp = traBmp | tmp;
+                }
+                exBmpList.SetVal(key, val, traBmp);
+//                Cmn::CheckEwah(exBmpList[{key, val}]);
+            }
+        }
+    }
 }
 
 void kgmod::Occ::build(void) {
@@ -139,6 +174,9 @@ void kgmod::Occ::build(void) {
     }
     
     if (isError) throw kgError("error occurred in building transaction index");
+    
+    //
+//    buildExBmpList();
 }
 
 void kgmod::Occ::saveLiveTra(void) {
@@ -205,6 +243,8 @@ void kgmod::Occ::save(const bool clean) {
     traAtt->save(clean);
     itemAtt->save(clean);
     bmpList.save(clean);
+    exBmpList.save(clean);
+    ex_occ.save(clean);
     saveCooccur(clean);
     saveLiveTra();
 }
@@ -282,26 +322,44 @@ void kgmod::Occ::load(void) {
     traAtt->load();
     itemAtt->load();
     bmpList.load();
+    exBmpList.load();
+    ex_occ.load();
     loadCooccur();
     itemAtt->buildKey2attMap();
     loadActTra();
 }
 
+void kgmod::Occ::item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp) {
+    if (exBmpList.GetVal(itemKey, itemVal, traBmp)) return;
+    
+    cerr << "calc item to transaction bitmap: " << itemKey << ":" << itemVal << endl;
+    exBmpList.InitKey(itemKey, STR);
+    traBmp.reset();
+    Ewah itemBmp;
+    itemAtt->bmpList.GetVal(itemKey, itemVal, itemBmp);
+    for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
+        string tar = itemAtt->item[*i];
+        Ewah tmp = bmpList.GetVal(occKey, tar);
+        traBmp = traBmp | tmp;
+    }
+    exBmpList.SetVal(itemKey, itemVal, traBmp);
+}
+
 void kgmod::Occ::expandItemByGranu(const size_t traNo, const string& traAttKey, Ewah& traFilter, Ewah& itemBmp) {
-    itemBmp.reset();
     string traAttVal;
     traAtt->traNo2traAtt(traNo, traAttKey, traAttVal);
-    if (ex_occ.find({traAttKey, traAttVal}) == ex_occ.end()) {
-        Ewah granuBmp;
-        bmpList.GetVal(traAttKey, traAttVal, granuBmp);
-        granuBmp = granuBmp & traFilter;
-        for (auto t = granuBmp.begin(), et = granuBmp.end(); t != et; t++) {
-            itemBmp = itemBmp | occ[*t];
-        }
-        ex_occ[{traAttKey, traAttVal}] = itemBmp;
-    } else {
-        itemBmp = ex_occ[{traAttKey, traAttVal}];
+    if (ex_occ.GetVal(traAttKey, traAttVal, itemBmp)) return;
+    
+    cerr << "calc traNo to transaction attribute bitmap: " << traAttKey << ":" << traAttVal << endl;
+    Ewah granuBmp;
+    bmpList.GetVal(traAttKey, traAttVal, granuBmp);
+    granuBmp = granuBmp & traFilter;
+    itemBmp.reset();
+    for (auto t = granuBmp.begin(), et = granuBmp.end(); t != et; t++) {
+        itemBmp = itemBmp | occ[*t];
     }
+    ex_occ.InitKey(traAttKey, bmpList.getDataType(traAttKey));
+    ex_occ.SetVal(traAttKey, traAttVal, itemBmp);
 }
 
 size_t kgmod::Occ::itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key) {
@@ -331,11 +389,8 @@ size_t kgmod::Occ::attFreq(string& attKey, string& attVal, const Ewah& traFilter
     Ewah traBmp;
     Ewah itemVals = itemAtt->bmpList.GetVal(attKey, attVal);
     for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
-        //                Ewah tmp = bmpList[{_config->traFile.itemFld, itemAtt->item[*i]}];
         Ewah tmp;
         if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*i], tmp)) continue;
-        //                cerr << "tmp"; Cmn::CheckEwah(tmp);
-        //                cerr << "tra"; Cmn::CheckEwah(traBmp);
         traBmp = traBmp | tmp;
     }
     traBmp = traBmp & traFilter;

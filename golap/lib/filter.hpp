@@ -75,6 +75,7 @@ namespace kgmod {
         Ewah makeItemBitmap(string& cmdline);
         
     private:
+        bool existsFldName(const string& fldName, const tra_item traitem);
         Ewah& logicalnot(Ewah& bmp, const tra_item traitem);
         Ewah allone(const tra_item traitem);
 

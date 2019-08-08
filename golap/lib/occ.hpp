@@ -41,22 +41,24 @@ namespace kgmod {
         kgEnv* _env;
         string _dbName;
         string _liveTraFile;
-        unordered_map<pair<string, string>, Ewah, boost::hash<pair<string, string>>> ex_occ;
         
     public:
         TraAtt* traAtt;
         ItemAtt* itemAtt;
         string occKey;              // OCCで使用するBmpListのKey名
-        BTree bmpList;
+        BTree bmpList;              //
+        BTree exBmpList;            //
         Ewah liveTra;
         
         typedef vector<Ewah> occ_t; // traNo -> item bitmap
         occ_t occ;
+        BTree ex_occ;
         
     public:
         Occ(Config* config, kgEnv* env);
         ~Occ(void);
         
+        void buildExBmpList(void);
         void build(void);
         void saveLiveTra(void);
         void saveCooccur(const bool clean);
@@ -66,12 +68,13 @@ namespace kgmod {
         void load(void);
         size_t LiveTraCnt(void) {return liveTra.numberOfOnes();}
         
+        void item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp);
         void expandItemByGranu(const size_t traNo, const string& key, Ewah& traFilter, Ewah& itemBmp);
         size_t itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key = NULL);
         size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL);
         size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter, const vector<string>* tra2key = NULL);
         size_t attFreq(string attKey, string attVal, const vector<string>* tra2key = NULL);
-        
+
         void occ_dump(const bool debug);
         void dump(const bool debug);
         vector<string> evalKeyValue(string& key, Ewah* TraFilter = NULL) {
