@@ -78,6 +78,7 @@ vector<string> kgmod::Cmn::CsvStr::Parse(const string Record) {
     free(field);
     return Fields;
 }
+
 string kgmod::Cmn::EnvFile(const char* PrefEnv, const string Filename, const char* ext) {
     string Pref(getenv(PrefEnv));
     if (ext == NULL) {
@@ -226,11 +227,14 @@ double kgmod::Cmn::DiffTime(const timespec& Start, const timespec End) {
 }
 
 bool kgmod::Cmn::isDigit(char* str) {
-    bool res = true;
+    bool res = false;
+    int dotCnt = 0;
     for (size_t c = 0; c < strlen(str); c++) {
         res = (bool)isdigit(str[c]);
         if (! res) break;
+        if (str[c] == '.') dotCnt++;
     }
+    if (dotCnt >= 2) res = false;
     return res;
 }
 

@@ -136,7 +136,7 @@ bool kgmod::BTree::GetVal(const string& Key, const string& KeyValue, Ewah*& Bitm
 bool kgmod::BTree::GetVal(const string& Key, const string& KeyValue, Ewah& Bitmap) {
     Ewah* tmp = NULL;
     bool ret = GetVal(Key, KeyValue, tmp);
-    Bitmap = *tmp;
+    if (ret) Bitmap = *tmp;
     return ret;
 }
 

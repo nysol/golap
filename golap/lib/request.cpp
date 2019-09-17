@@ -20,6 +20,8 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/optional.hpp>
+#include <boost/exception/all.hpp>
+#include <kgError.h>
 #include "filter.hpp"
 #include "request.hpp"
 
@@ -59,9 +61,16 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
     cerr << "request: " << req_msg << endl;
     stringstream json(req_msg);
     boost::property_tree::ptree pt;
-    boost::property_tree::read_json(json, pt);
-    //    cerr << "request: " << endl;
-    //    boost::property_tree::write_json(cerr, pt, true);
+    try {
+        boost::property_tree::read_json(json, pt);
+        //    cerr << "request: " << endl;
+        //    boost::property_tree::write_json(cerr, pt, true);
+    }
+    catch(const boost::exception& e) {
+        string diag = diagnostic_information(e);
+        cerr << diag << endl;
+        throw kgError("json parse error");
+    }
     
     if (boost::optional<unsigned int> val = pt.get_optional<unsigned int>("deadlineTimer")) {
         deadlineTimer = *val;
@@ -136,7 +145,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     msg += "query.granularity.transaction(";
                     msg += *val3;
                     msg += ") must be set in config file (traAttFile.granuFields)\n";
-                    throw msg;
+                    throw kgError(msg);
                 }
             }
             if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.node")) {
@@ -151,9 +160,97 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             if (boost::iequals(*val2, "notExec")) {
                 query.debug_mode = 1;
                 string msg = "status:-1\n" + *val2 + "\n";
-                throw msg;
+                throw kgError(msg);
             } else if (boost::iequals(*val2, "checkData")) {
                 query.debug_mode = 2;
+            }
+        }
+    } else if (boost::optional<string> val = pt.get_optional<string>("nodestat")) {
+        mode = "nodestat";
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.traFilter")) {
+            nodestat.traFilter = _filter->makeTraBitmap(*val2);
+        } else {
+            nodestat.traFilter.padWithZeroes(_occ->traAtt->traMax + 1);
+            nodestat.traFilter.inplace_logicalnot();
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.granuItem")) {
+            nodestat.itemFld = *val2;
+        } else {
+            nodestat.itemFld = _occ->occKey;
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.itemVals")) {
+            vector<string> vec = Cmn::CsvStr::Parse(*val2);
+            nodestat.itemVals.resize(vec.size());
+            for (size_t i = 0; i < vec.size(); i++) {
+                nodestat.itemVals[i] = vec[i];
+            }
+        } else {
+            throw kgError("nodestat.itemVals must be set");
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.values")) {
+            vector<string> vec = Cmn::CsvStr::Parse(*val2);
+            nodestat.vals.resize(vec.size());
+            for (size_t i = 0; i < vec.size(); i++) {
+                nodestat.vals[i].first.setValPosMap(_factTable->valPosMap());
+                vector<string>v = Cmn::Split(vec[i], ':');
+                nodestat.vals[i].first.parse(v[0]);
+                if (v.size() == 1) {
+                    nodestat.vals[i].second = v[0];
+                } else if (v.size() == 2) {
+                    nodestat.vals[i].second = v[1];
+                } else {
+                    throw kgError("error in nodestat.values");
+                }
+            }
+        }
+    } else if (boost::optional<string> val = pt.get_optional<string>("worksheet")) {
+        mode = "worksheet";
+        if (boost::optional<string> val2 = pt.get_optional<string>("worksheet.traFilter")) {
+            worksheet.traFilter = _filter->makeTraBitmap(*val2);
+        } else {
+            worksheet.traFilter.padWithZeroes(_occ->traAtt->traMax + 1);
+            worksheet.traFilter.inplace_logicalnot();
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("worksheet.itemFilter")) {
+            worksheet.itemFilter = _filter->makeItemBitmap(*val2);
+        } else {
+            worksheet.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
+            worksheet.itemFilter.inplace_logicalnot();
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("worksheet.traAtt")) {
+            vector<string> vec = Cmn::CsvStr::Parse(*val2);
+            worksheet.traAtt.resize(vec.size());
+            for (size_t i = 0; i < vec.size(); i++) {
+                worksheet.traAtt[i].first = 'T';
+                worksheet.traAtt[i].second = vec[i];
+            }
+        } else {
+            throw kgError("worksheet.traAtt must be set");
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("worksheet.itemAtt")) {
+            vector<string> vec = Cmn::CsvStr::Parse(*val2);
+            worksheet.itemAtt.resize(vec.size());
+            for (size_t i = 0; i < vec.size(); i++) {
+                worksheet.itemAtt[i].first = 'I';
+                worksheet.itemAtt[i].second = vec[i];
+            }
+        } else {
+            throw kgError("worksheet.itemAtt must be set");
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("worksheet.values")) {
+            vector<string> vec = Cmn::CsvStr::Parse(*val2);
+            worksheet.vals.resize(vec.size());
+            for (size_t i = 0; i < vec.size(); i++) {
+                worksheet.vals[i].first.setValPosMap(_factTable->valPosMap());
+                vector<string>v = Cmn::Split(vec[i], ':');
+                worksheet.vals[i].first.parse(v[0]);
+                if (v.size() == 1) {
+                    worksheet.vals[i].second = v[0];
+                } else if (v.size() == 2) {
+                    worksheet.vals[i].second = v[1];
+                } else {
+                    throw kgError("error in worksheet.values");
+                }
             }
         }
     } else if (boost::optional<string> val = pt.get_optional<string>("pivot")) {
@@ -165,9 +262,10 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             pivot.traFilter.inplace_logicalnot();
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("pivot.itemFilter")) {
-            string tmp = "sel_item(" + *val2 + ")";
-            Ewah bmp = _filter->makeTraBitmap(tmp);
-            pivot.traFilter = pivot.traFilter & bmp;
+            pivot.itemFilter = _filter->makeTraBitmap(*val2);
+        } else {
+            pivot.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
+            pivot.itemFilter.inplace_logicalnot();
         }
         pivot.axes.resize(2);
         if (boost::optional<string> val2 = pt.get_optional<string>("pivot.colAtt")) {
@@ -179,7 +277,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) &&
                         (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
                         string msg = "status:-1\n" + vec[0] + " is not transaction attribute\n";
-                        throw msg;
+                        throw kgError(msg);
                     }
                     pivot.axes[0].push_back({'T', vec[0]});
                 } else if (vec.size() >= 2) {
@@ -189,16 +287,16 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                         if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) &&
                             (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
                             msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
-                            throw msg;
+                            throw kgError(msg);
                         }
                     } else if (vec[0][0] == 'I') {
                         if (! Cmn::posInVector(_config->itemAttFile.strFields, vec[1])) {
                             msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
-                            throw msg;
+                            throw kgError(msg);
                         }
                     } else {
                         msg = "status:-1\nillegular format: " + i + "\n";
-                        throw msg;
+                        throw kgError(msg);
                     }
                     pivot.axes[0].push_back({vec[0][0], vec[1]});
                 }
@@ -213,7 +311,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) &&
                         (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
                         string msg = "status:-1\n" + vec[0] + " is not transaction attribute\n";
-                        throw msg;
+                        throw kgError(msg);
                     }
                     pivot.axes[1].push_back({'T', vec[0]});
                 } else if (vec.size() >= 2) {
@@ -223,16 +321,16 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                         if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) &&
                             (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
                             msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
-                            throw msg;
+                            throw kgError(msg);
                         }
                     } else if (vec[0][0] == 'I') {
                         if (! Cmn::posInVector(_config->itemAttFile.strFields, vec[1])) {
                             msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
-                            throw msg;
+                            throw kgError(msg);
                         }
                     } else {
                         msg = "status:-1\nillegular format: " + i + "\n";
-                        throw msg;
+                        throw kgError(msg);
                     }
                     pivot.axes[1].push_back({vec[0][0], vec[1]});
                 }
@@ -246,7 +344,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
     } else {
         cerr << "unknown control request" << endl;
         string msg = "status:-1\nunknown control request\n";
-        throw msg;
+        throw kgError(msg);
     }
 }
 
@@ -316,7 +414,7 @@ void kgmod::Request::evalRequestFlat(string& req_msg) {
                             string msg = "status:-1\nquery.granularity.transaction(";
                             msg += vec[0];
                             msg += ") must be set in config file (traAttFile.granuFields)\n";
-                            throw msg;
+                            throw kgError(msg);
                         }
                         query.granularity.first = vec[0];
                     }
@@ -342,7 +440,7 @@ void kgmod::Request::evalRequestFlat(string& req_msg) {
             for (auto i = msg.begin(); i != msg.end(); i++) {
                 body += *i + "\n";
             }
-            throw body;
+            throw kgError(body);
         }
     }
 }

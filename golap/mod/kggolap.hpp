@@ -36,6 +36,7 @@
 #include "http.hpp"
 #include "request.hpp"
 #include "thread.hpp"
+#include "facttable.hpp"
 
 using namespace std;
 using namespace kglib;
@@ -77,6 +78,7 @@ namespace kgmod {
     
     static Config* mt_config;
     static Occ* mt_occ;
+    static FactTable* mt_factTable;
     Result Enum(Query& query, Ewah& dimBmp);
     typedef MtQueue<pair<string, Ewah*>> mq_t;
     void MT_Enum(mq_t* mq, Query* query, map<string, Result>* res);
@@ -91,6 +93,7 @@ namespace kgmod {
         bool opt_debug = false;
         Config* config = NULL;
         Occ* occ = NULL;
+        FactTable* factTable = NULL;
         Filter* fil = NULL;
         cmdCache* cmdcache;
         
@@ -132,8 +135,10 @@ namespace kgmod {
         void doRetrieve(EtcReq& etcReq);
         void setQueryDefault(Query& query);
         void co_occurrence(Query& query, map<string, Result>& res);
-        void axisValsList(Pivot::axis_t& flds, vector<vector<Pivot::pivAtt_t>>& valsList);
-        void combiAtt(vector<vector<Pivot::pivAtt_t>>& valsList, vector<vector<Pivot::pivAtt_t>>& hdr, vector<Pivot::pivAtt_t> tmp);
+        void nodestat(NodeStat& nodestat, map<string, Result>& res);
+        void axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList);
+        void combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp);
+        void worksheet(WorkSheet& worksheet, map<string, Result>& res);
         void pivot(Pivot& pivot, map<string, Result>& res);
         void saveFilters(Query& query);
         void co_occrence_mcmd(Query& query);

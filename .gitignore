@@ -44,6 +44,8 @@ golap/lib/traatt.lo
 golap/lib/traatt.o
 golap/lib/request.lo
 golap/lib/request.o
+golap/lib/facttable.lo
+golap/lib/facttable.o
 golap/mod/.deps/
 golap/mod/.libs/
 golap/mod/Makefile

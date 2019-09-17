@@ -21,12 +21,11 @@
 #define cmn_hpp
 
 #include <sstream>
+#include <numeric>
+#include <float.h>
 #include <time.h>
 #include <boost/optional.hpp>
 #include "bidx-ewah.hpp"
-//#include "csvfile.hpp"
-//#include "storage.hpp"
-//#include "param.hpp"
 
 using namespace std;
 
@@ -60,18 +59,41 @@ namespace kgmod {
         bool MatchWild(const char* pat, const char* str);
         bool StartWith(const string& str, const string& pref);
         vector<string> Split(const string &s, char delim);
+        inline void ToUpper(string& s) {transform(s.cbegin(), s.cend(), s.begin(), ::toupper);}
         double DiffTime(const timespec& Start, const timespec End);
         static inline void chomp(string &str) { // 後ろの余白（スペースや改行）を削除する
             str.erase(find_if(str.rbegin(), str.rend(), not1(ptr_fun<int, int>(isspace))).base(), str.end());
         }
         bool isDigit(char* str);
         bool ReplaceString(string& str, string fm, string to);
+        static inline void EraseLastChar(string& str) {if (str.length() != 0) str.erase(--str.end());}
         void readJson(string file);
         
         float calcPmi(size_t freq, size_t freq1, size_t freq2, size_t total);
         void timeStamp(string& datetime);
 //        template <class T> boost::optional<size_t> posInVector(vector<T> vec, T target);
         boost::optional<size_t> posInVector(const vector<string>& vec, const string& target);
+        
+        template <typename U, template<class T, class Allocator = allocator<T>> class Container>
+        U min(Container<U>& x) {return *min_element(x.begin(), x.end());}
+        template <typename U, template<class T, class Allocator = allocator<T>> class Container>
+        U max(Container<U>& x) {return *max_element(x.begin(), x.end());}
+        template <typename U, template<class T, class Allocator = allocator<T>> class Container>
+        U sum(Container<U>& x) {return accumulate(x.begin(), x.end(), 0.0);}
+        template <typename U, template<class T, class Allocator = allocator<T>> class Container>
+        U mean(Container<U>& x) {return accumulate(x.begin(), x.end(), 0.0) / x.size();}
+        template <typename U, template<class T, class Allocator = allocator<T>> class Container>
+        U var(Container<U>& x) {
+            size_t size = x.size();
+            if (size < 2) return -DBL_MAX;
+            U x_mean = mean(x);
+            return (inner_product(x.begin(), x.end(), x.begin(), 0.0) - (pow(x_mean, 2) * size)) / (size - 1.0);
+        }
+        template <typename U, template<class T, class Allocator = allocator<T>> class Container>
+        U sd(Container<U>& x) {
+            if (x.size() < 2) return -DBL_MAX;
+            return sqrt(var(x));
+        }
     }
 }
 #endif /* cmn_hpp */

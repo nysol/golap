@@ -24,6 +24,7 @@
 #include "cmn.hpp"
 #include "config.hpp"
 #include "occ.hpp"
+#include "facttable.hpp"
 
 namespace kgmod {
     typedef struct {
@@ -38,6 +39,8 @@ namespace kgmod {
     
     typedef enum {SORT_NONE, SORT_SUP, SORT_CONF, SORT_LIFT, SORT_JAC, SORT_PMI} sort_key;
     typedef struct {string key; map<string, Ewah> DimBmpList;} Dimension;
+    typedef pair<char, string> pivAtt_t;
+    typedef vector<pivAtt_t> axis_t;        // first:[I|T] second:attName
     
     /////////////////////
     struct Query {
@@ -49,6 +52,7 @@ namespace kgmod {
         pair<string, string> granularity;   // first:transaction granurality, second:node granurality
         Dimension dimension;
         size_t debug_mode;
+        
         void dump(void) {
             cerr << "traFilter; ";  Cmn::CheckEwah(traFilter);
             cerr << "itemFilter; "; Cmn::CheckEwah(itemFilter);
@@ -72,13 +76,45 @@ namespace kgmod {
     };
     
     /////////////////////
+    struct NodeStat {
+        Ewah traFilter;
+        string itemFld;
+        vector<string> itemVals;
+        vector<pair<AggrFunc, string>> vals;
+        
+        void dump(void) {
+            cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
+            cerr << "\nitemFld: " << itemFld << " ";
+            cerr << endl;
+        }
+    };
+    
+    /////////////////////
+    struct WorkSheet {
+        Ewah traFilter;
+        Ewah itemFilter;
+        axis_t traAtt;              // first:'T'固定
+        axis_t itemAtt;             // first:'I'固定
+        vector<pair<AggrFunc, string>> vals;
+        
+        void dump(void) {
+            cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
+            cerr << "itemFilter: "; Cmn::CheckEwah(itemFilter);
+            cerr << "itemAtt: ";
+            for (auto& t : traAtt) cerr << t.second << " ";
+            cerr << "\ntraAtt: ";
+            for (auto& t : traAtt) cerr << t.second << " ";
+            cerr << endl;
+        }
+    };
+    
+    /////////////////////
     struct Pivot {
         Ewah traFilter;
-//        Ewah itemFilter;
-        typedef pair<char, string> pivAtt_t;
-        typedef vector<pivAtt_t> axis_t;        // first:[I|T] second:attName
+        Ewah itemFilter;
         vector<axis_t> axes;                    // first:x-axis second:y-axis
         float cutoff;
+        
         void dump (void) {
             cerr << "x-axis: ";
             for (auto i : axes[0]) {
@@ -102,18 +138,22 @@ namespace kgmod {
     /////////////////////
     class Request {
         Occ* _occ;
+        FactTable* _factTable;
         Config* _config;
         Filter* _filter;
         
     public:
-        string mode;    // ”control” | "retrieve" | "query" | "pivot"
+        string mode;    // "query" | "nodestat" | "worksheet" | "pivot" | ”control” | "retrieve"
         Query query;
+        NodeStat nodestat;
+        WorkSheet worksheet;
         Pivot pivot;
         EtcReq etcRec;  // for control or retrieve
         unsigned int deadlineTimer;
         
     public:
-        Request(Config* config, Occ* occ, Filter* filter) : _config(config), _occ(occ), _filter(filter) {}
+        Request(Config* config, Occ* occ, FactTable* factTable, Filter* filter)
+        : _config(config), _occ(occ), _factTable(factTable), _filter(filter) {}
         
     private:
         Dimension makeDimBitmap(string& cmdline);

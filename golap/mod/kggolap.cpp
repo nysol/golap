@@ -348,10 +348,10 @@ void kgmod::exec::co_occurrence(Query& query, map<string, Result>& res) {
     }
 }
 
-void kgmod::exec::axisValsList(Pivot::axis_t& flds, vector<vector<Pivot::pivAtt_t>>& valsList) {
+void kgmod::exec::axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList) {
     valsList.reserve(flds.size());
     for (size_t i = 0; i < flds.size(); i++) {
-        vector<Pivot::pivAtt_t> vals;
+        vector<pivAtt_t> vals;
         vector<string> tmp;
         if (flds[i].first == 'T') {
             tmp = mt_occ->bmpList.EvalKeyValue(flds[i].second);
@@ -362,15 +362,14 @@ void kgmod::exec::axisValsList(Pivot::axis_t& flds, vector<vector<Pivot::pivAtt_
         }
         
         for (auto& t : tmp) {
-            Pivot::pivAtt_t att = {flds[i].first, t};
+            pivAtt_t att = {flds[i].first, t};
             vals.push_back(att);
         }
         valsList.push_back(vals);
     }
 }
 
-void kgmod::exec::combiAtt(vector<vector<Pivot::pivAtt_t>>& valsList, vector<vector<Pivot::pivAtt_t>>& hdr,
-                           vector<Pivot::pivAtt_t> tmp) {
+void kgmod::exec::combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp) {
     size_t level = tmp.size();
     if (level == 0) {
         size_t hdrCnt = 1;
@@ -382,23 +381,148 @@ void kgmod::exec::combiAtt(vector<vector<Pivot::pivAtt_t>>& valsList, vector<vec
         return;
     }
     for (auto& val : valsList[level]) {
-        vector<Pivot::pivAtt_t> tmp2 = tmp;
+        vector<pivAtt_t> tmp2 = tmp;
         tmp2.push_back(val);
         combiAtt(valsList, hdr, tmp2);
     }
 }
 
+void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
+    cerr << "start nodestat" << endl;
+    
+    signed int stat = 0;
+    string header = nodestat.itemFld;
+    for (auto& v : nodestat.vals) {
+        header += ",";
+        header += v.second;
+    }
+    
+    string line;
+    string traHeader = "";
+    size_t cnt = 0;
+    size_t lineCnt = 0;
+    res[""].insert(make_pair(lineCnt++, header));
+    for (auto& v : nodestat.itemVals) {
+        Ewah* itemBmp;
+        mt_occ->itemAtt->bmpList.GetVal(nodestat.itemFld, v, itemBmp);
+        size_t c = mt_factTable->aggregate({traHeader, nodestat.traFilter}, {v, *itemBmp},
+                                           nodestat.vals, line);
+        cnt += c;
+        res[""].insert(make_pair(lineCnt++, line));
+    }
+    
+    string buf = "status:" + to_string(stat);
+    buf += ",sent:" + to_string(cnt);
+    //    buf += ",hit:" + to_string(hit);
+    cerr << buf << endl;
+    res[""].insert(make_pair(-FLT_MAX, buf));
+}
+
+void kgmod::exec::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
+    cerr << "start worksheet" << endl;
+    
+    signed int stat = 0;
+    vector<vector<pivAtt_t>> traValsList;
+    axisValsList(worksheet.traAtt, traValsList);
+    vector<pivAtt_t> work0;
+    vector<vector<pivAtt_t>> traHdrs;
+    combiAtt(traValsList, traHdrs, work0);
+    vector<Ewah> traBmp(traHdrs.size());
+    for (size_t i = 0; i < traHdrs.size(); i++) {
+        if (isTimeOut) {stat = 2; break;}
+        traBmp[i].padWithZeroes(mt_occ->traAtt->traMax + 1);
+        traBmp[i].inplace_logicalnot();
+        for (size_t j = 0; j < traHdrs[i].size(); j++) {
+            if (isTimeOut) {stat = 2; break;}
+            Ewah* tmp;
+            mt_occ->bmpList.GetVal(worksheet.traAtt[j].second, traHdrs[i][j].second, tmp);
+            traBmp[i] = traBmp[i] & *tmp;
+        }
+    }
+    
+    vector<vector<pivAtt_t>> itemValsList;
+    axisValsList(worksheet.itemAtt, itemValsList);
+    vector<pivAtt_t> work1;
+    vector<vector<pivAtt_t>> itemHdrs;
+    combiAtt(itemValsList, itemHdrs, work1);
+    vector<Ewah> itemBmp(itemHdrs.size());
+    for (size_t i = 0; i < itemHdrs.size(); i++) {
+        if (isTimeOut) {stat = 2; break;}
+        itemBmp[i].padWithZeroes(mt_occ->itemAtt->itemMax + 1);
+        itemBmp[i].inplace_logicalnot();
+        for (size_t j = 0; j < itemHdrs[i].size(); j++) {
+            if (isTimeOut) {stat = 2; break;}
+            Ewah* tmp;
+            mt_occ->itemAtt->bmpList.GetVal(worksheet.itemAtt[j].second, itemHdrs[i][j].second, tmp);
+            itemBmp[i] = itemBmp[i] & *tmp;
+        }
+    }
+    
+    string line1;
+    size_t lnum = 0;
+    for (auto& fld : worksheet.traAtt) {
+        line1 += fld.second + ",";
+    }
+    for (auto& fld : worksheet.itemAtt) {
+        line1 += fld.second + ",";
+    }
+    if (worksheet.vals.size() == 0) {
+        line1 += mt_factTable->valNames();
+    } else {
+        for (auto& f : worksheet.vals) {
+            line1 += f.second + ",";
+        }
+        Cmn::EraseLastChar(line1);
+    }
+    res[""].insert(make_pair(lnum++, line1));
+    
+    cerr << "extracting" << endl;
+    size_t cnt = 0;
+    for (size_t t = 0; t < traBmp.size(); t++) {
+        if (isTimeOut) {stat = 2; break;}
+        string traHeader;
+        for (auto& h : traHdrs[t]) {
+            traHeader += h.second + ",";
+        }
+        Cmn::EraseLastChar(traHeader);
+        cerr << traHeader << ":";
+        for (size_t i = 0; i < itemBmp.size(); i++) {
+            if (isTimeOut) {stat = 2; break;}
+            string line;
+            string itemHeader;
+            for (auto& h : itemHdrs[i]) {
+                itemHeader += h.second + ",";
+            }
+            Cmn::EraseLastChar(itemHeader);
+            
+            size_t c = mt_factTable->aggregate({traHeader, traBmp[t]}, {itemHeader, itemBmp[i]}, worksheet.vals, line);
+            if (c != 0) {
+                cnt += c;
+//                cerr << itemHeader << " ";
+                res[""].insert(make_pair(lnum++, line));
+            }
+        }
+        cerr << endl;
+    }
+    
+    string buf = "status:" + to_string(stat);
+    buf += ",sent:" + to_string(cnt);
+//    buf += ",hit:" + to_string(hit);
+    cerr << buf << endl;
+    res[""].insert(make_pair(-FLT_MAX, buf));
+}
+
 void kgmod::exec::pivot(Pivot& pivot, map<string, Result>& res) {
     cerr << "start pivot" << endl;
-    vector<vector<vector<Pivot::pivAtt_t>>> valsList(2);    // [0] -> X axis, [1] -> Y axis
-    vector<vector<vector<Pivot::pivAtt_t>>> hdrs(2);        // [0] -> X axis, [1] -> Y axis
-    vector<map<vector<Pivot::pivAtt_t>, Ewah>> bmps(2);      // [0] -> X axis, [1] -> Y axis
+    vector<vector<vector<pivAtt_t>>> valsList(2);    // [0] -> X axis, [1] -> Y axis
+    vector<vector<vector<pivAtt_t>>> hdrs(2);        // [0] -> X axis, [1] -> Y axis
+    vector<map<vector<pivAtt_t>, Ewah>> bmps(2);      // [0] -> X axis, [1] -> Y axis
     
     // xy: [0] -> X axis, [1] -> Y axis
     for (size_t xy = 0; xy < 2; xy++) {
         axisValsList(pivot.axes[xy], valsList[xy]);
-        vector<Pivot::pivAtt_t> tmp;
-        combiAtt(valsList[xy], hdrs[xy], tmp);
+        vector<pivAtt_t> work;
+        combiAtt(valsList[xy], hdrs[xy], work);
         
         for (auto vals = hdrs[xy].begin(), evals = hdrs[xy].end(); vals != evals; vals++) {
             bmps[xy][*vals].padWithZeroes(mt_occ->traAtt->traMax + 1);
@@ -417,9 +541,8 @@ void kgmod::exec::pivot(Pivot& pivot, map<string, Result>& res) {
     }
     
     cerr << "calculating matrix" << endl;
-    map<pair<vector<Pivot::pivAtt_t>, vector<Pivot::pivAtt_t>>, float> mat;
-    vector<map<vector<Pivot::pivAtt_t>, bool>> axesHeader(2);
-    Ewah zero;
+    map<pair<vector<pivAtt_t>, vector<pivAtt_t>>, float> mat;
+    vector<map<vector<pivAtt_t>, bool>> axesHeader(2);
     for (auto& x : bmps[0]) {
         for (auto& y : bmps[1]) {
             if (isTimeOut) return;
@@ -628,10 +751,60 @@ void kgmod::exec::doRetrieve(EtcReq& etcReq) {
 }
 
 void kgmod::exec::proc(void) {
-    Request request(mt_config, mt_occ, golap_->fil);
     try {
+        Request request(mt_config, mt_occ, mt_factTable, golap_->fil);
         request.evalRequest(req_body());
-    } catch(string& msg) {
+        
+        // Excecuting Enum on each dimention
+        map<string, Result> res;
+        chrono::system_clock::time_point Start = chrono::system_clock::now();
+        
+        // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
+        // 各ファンクション内のループの先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
+        setTimer(request.deadlineTimer);
+        if (request.mode == "control") {
+            doControl(request.etcRec);
+        } else if (request.mode == "retrieve") {
+            doRetrieve(request.etcRec);
+        } else if (request.mode == "query") {
+            co_occurrence(request.query, res);
+        } else if (request.mode == "nodestat") {
+            nodestat(request.nodestat, res);
+        } else if (request.mode == "worksheet") {
+            worksheet(request.worksheet, res);
+        } else if (request.mode == "pivot") {
+            pivot(request.pivot, res);
+        }
+        cancelTimer();
+        
+        chrono::system_clock::time_point End = chrono::system_clock::now();
+        double elapsed = chrono::duration_cast<chrono::milliseconds>(End - Start).count();
+        cerr << "process time: " << elapsed / 1000 << " sec" <<endl;
+        
+        if (request.query.debug_mode == 2) {
+            if (request.query.dimension.key != "") {
+                cerr << "#WARNING# dataCheck mode is not executed, if 'dimension' element is set in query" << endl;
+            } else {
+                saveFilters(request.query);
+                co_occrence_mcmd(request.query);
+            }
+        }
+        
+        cerr << "sending" << endl;
+        string body;
+        for (auto i = res.begin(); i != res.end(); i++) {
+            if (i->first != "") {
+                body += request.query.dimension.key; body += ":"; body += i->first; body += "\n";
+            }
+            for (auto j = i->second.begin(); j != i->second.end(); j++) {
+                body += j->second; body += "\n";
+            }
+            body += "\n";
+        }
+        put_send_data(body);
+        Http::proc();
+    }
+    catch(string& msg) {
         cerr << msg << endl;
         put_send_data(msg);
         Http::proc();
@@ -647,51 +820,6 @@ void kgmod::exec::proc(void) {
         Http::proc();
         return;
     }
-    
-    // Excecuting Enum on each dimention
-    map<string, Result> res;
-    chrono::system_clock::time_point Start = chrono::system_clock::now();
-    
-    // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
-    // 各ファンクション内のループの先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
-    setTimer(request.deadlineTimer);
-    if (request.mode == "control") {
-        doControl(request.etcRec);
-    } else if (request.mode == "retrieve") {
-        doRetrieve(request.etcRec);
-    } else if (request.mode == "query") {
-        co_occurrence(request.query, res);
-    } else if (request.mode == "pivot") {
-        pivot(request.pivot, res);
-    }
-    cancelTimer();
-    
-    chrono::system_clock::time_point End = chrono::system_clock::now();
-    double elapsed = chrono::duration_cast<chrono::milliseconds>(End-Start).count();
-    cerr << "process time: " << elapsed / 1000 << " sec" <<endl;
-    
-    if (request.query.debug_mode == 2) {
-        if (request.query.dimension.key != "") {
-            cerr << "#WARNING# dataCheck mode is not executed, if 'dimension' element is set in query" << endl;
-        } else {
-            saveFilters(request.query);
-            co_occrence_mcmd(request.query);
-        }
-    }
-    
-    cerr << "sending" << endl;
-    string body;
-    for (auto i = res.begin(); i != res.end(); i++) {
-        if (i->first != "") {
-            body += request.query.dimension.key; body += ":"; body += i->first; body += "\n";
-        }
-        for (auto j = i->second.begin(); j != i->second.end(); j++) {
-            body += j->second; body += "\n";
-        }
-        body += "\n";
-    }
-    put_send_data(body);
-    Http::proc();
 }
 
 //
@@ -706,6 +834,10 @@ int kgmod::kgGolap::run() {
         occ->load();
         occ->dump(opt_debug);
         mt_occ = occ;               // マルチスレッド用反則技
+        
+        factTable = new FactTable(config, _env, occ);
+        factTable->load();
+        mt_factTable = factTable;   // マルチスレッド用反則技
         
         cmdcache = new cmdCache(config, _env, false);
         cmdcache->dump(opt_debug);
