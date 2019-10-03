@@ -23,6 +23,7 @@
 #include <sstream>
 #include <numeric>
 #include <float.h>
+#include <functional>
 #include <time.h>
 #include <boost/optional.hpp>
 #include "bidx-ewah.hpp"
@@ -41,6 +42,7 @@ namespace kgmod {
         namespace CsvStr {
             char* SplitValues(char *p, char *field, int size);
             vector<string> Parse(const string Record);
+            string Make(const vector<string> Items, const string delim = ",");
         }
         string EnvFile(const char* PrefEnv, const string Filename, const char* ext);
         string FullPath(const string Path);
@@ -62,11 +64,13 @@ namespace kgmod {
         inline void ToUpper(string& s) {transform(s.cbegin(), s.cend(), s.begin(), ::toupper);}
         double DiffTime(const timespec& Start, const timespec End);
         static inline void chomp(string &str) { // 後ろの余白（スペースや改行）を削除する
-            str.erase(find_if(str.rbegin(), str.rend(), not1(ptr_fun<int, int>(isspace))).base(), str.end());
+            str.erase(find_if(str.rbegin(), str.rend(), [](int ch) {
+                return (! isspace(ch));
+            }).base(), str.end());
         }
         bool isDigit(char* str);
         bool ReplaceString(string& str, string fm, string to);
-        static inline void EraseLastChar(string& str) {if (str.length() != 0) str.erase(--str.end());}
+        static inline void EraseLastChar(string& str) {if (! str.empty()) str.erase(--str.end());}
         void readJson(string file);
         
         float calcPmi(size_t freq, size_t freq1, size_t freq2, size_t total);

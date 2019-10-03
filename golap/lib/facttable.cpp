@@ -215,7 +215,7 @@ void kgmod::AggrFunc::dump(void) {
         if (_stack[i].ope == '9') {
             cerr << _stack[i].val << endl;
         } else if (_stack[i].ope == 'V') {
-            cerr << _stack[i].fldPos << endl;
+            cerr << "{" << _stack[i].fldPos << "}" << endl;
         } else if (_stack[i].ope == 'F') {
             cerr << _stack[i].func << endl;
         } else {
@@ -396,6 +396,6 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
         line = string(buf);
         lineCount++;
     }
-    cerr << "(" << skipCount0 << "," << skipCount << "," << hitCount << ":" << lineCount << ") ";
+    cerr << "(" << skipCount0 << "," << skipCount << "," << hitCount << ":" << lineCount << ") " << endl;
     return lineCount;
 }

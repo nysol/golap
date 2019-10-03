@@ -79,6 +79,20 @@ vector<string> kgmod::Cmn::CsvStr::Parse(const string Record) {
     return Fields;
 }
 
+string kgmod::Cmn::CsvStr::Make(const vector<string> Items, const string delim) {
+    string out;
+    for (auto& itm : Items) {
+        if (itm.find(delim) == string::npos) {
+            out += itm;
+        } else {
+            out += "\"" + itm + "\"";
+        }
+        out += delim;
+    }
+    Cmn::EraseLastChar(out);
+    return out;
+}
+
 string kgmod::Cmn::EnvFile(const char* PrefEnv, const string Filename, const char* ext) {
     string Pref(getenv(PrefEnv));
     if (ext == NULL) {

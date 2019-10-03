@@ -70,10 +70,17 @@ namespace kgmod {
         
         void item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp);
         void expandItemByGranu(const size_t traNo, const string& key, Ewah& traFilter, Ewah& itemBmp);
-        size_t itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key = NULL);
+        void expandItemByGranu(const size_t traNo, const vector<string>& key,
+                               Ewah& traFilter, Ewah& itemBmp);
+        size_t itemFreq(const size_t itemNo, const Ewah& traFilter,
+                        const vector<string>* tra2key = NULL);
         size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL);
-        size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter, const vector<string>* tra2key = NULL);
-        size_t attFreq(string attKey, string attVal, const vector<string>* tra2key = NULL);
+        size_t attFreq(const vector<string>& attKeys, const vector<string> attVal, const Ewah& traFilter,
+                       const Ewah& itemFilter, const vector<string>* tra2key = NULL);
+        size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter,
+                       const Ewah& itemFilter, const vector<string>* tra2key = NULL);
+        size_t attFreq(string attKey, string attVal, const Ewah& itemFilter,
+                       const vector<string>* tra2key = NULL);
 
         void occ_dump(const bool debug);
         void dump(const bool debug);
@@ -83,7 +90,15 @@ namespace kgmod {
         size_t countKeyValue(string& key, Ewah* TraFilter = NULL) {
             return bmpList.CountKeyValue(key, TraFilter);
         }
-        void getTra2KeyValue(string& key, vector<string>* tra2key);
+        size_t countKeyValue(vector<string>& keys, Ewah* TraFilter = NULL) {
+            return bmpList.CountKeyValue(keys, TraFilter);
+        }
+        void combiValues(const vector<string> flds, vector<string>& csvVals, vector<Ewah>& bmps,
+                         const Ewah* traFilter = NULL) {
+            return bmpList.combiValues(flds, csvVals, bmps, traFilter);
+        }
+        void getTra2KeyValue(vector<string>& key, vector<string>& tra2key);
+        void getTra2KeyValue(string& key, vector<string>& tra2key);
         
         size_t sendMax(void) {return _config->sendMax;}
     };

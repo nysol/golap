@@ -53,7 +53,8 @@ namespace kgmod {
         void load(void);
         void dump(bool debug);
         vector<string> listAtt(void);
-        void traNo2traAtt(const size_t traNo, const string& traAttKey, string& traAttVal);
+        void traNo2traAtt(const size_t traNo_, const string& traAttKey, string& traAttVal);
+        void traNo2traAtt(const size_t traNo_, const vector<string>& traAttKey, vector<string>& traAttVal);
         // traattのevalKeyValueはoccのものを用いる
     };
 }

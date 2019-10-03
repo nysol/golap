@@ -55,6 +55,8 @@ namespace kgmod {
         bool GetVal(const string& Key, const string& KeyValue, Ewah*& Bitmap);
         bool GetVal(const string& Key, const string& KeyValue, Ewah& Bitmap);
         Ewah& GetVal(const string& Key, const string& KeyValue);
+        Ewah GetVal(const vector<string> Keys, const vector<string> KeyValues);
+        void GetVal(const vector<string> Keys, const vector<string> KeyValues, Ewah& Bitmap);
         Ewah& operator[](const pair<string, string>& Key) {return GetVal(Key.first, Key.second);}
         bool GetValMulti(const string& Key, const string& LikeKey, Ewah& Bitmap);
         bool GetValMulti(const string& Key, const string& Kakko, const string& FromKey,
@@ -69,6 +71,9 @@ namespace kgmod {
         void load(void);
         void dump(bool debug);
         vector<string> EvalKeyValue(const string& Key, const Ewah* traFilter = NULL);
+        void combiValues(const vector<string> flds, vector<string>& csvVals, vector<Ewah>& bmps,
+                         const Ewah* traFilter, size_t pos = 0);
+        size_t CountKeyValue(const vector<string>& Keys, const Ewah* traFilter = NULL);
         size_t CountKeyValue(const string& Key, const Ewah* traFilter = NULL);
         DataType getDataType(const string& Key) {return DataTypeMap[Key];}
     };

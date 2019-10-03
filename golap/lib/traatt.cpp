@@ -209,13 +209,23 @@ vector<string> kgmod::TraAtt::listAtt(void) {
     return out;
 }
 
-void kgmod::TraAtt::traNo2traAtt(const size_t traNo, const string& traAttKey, string& traAttVal) {
+void kgmod::TraAtt::traNo2traAtt(const size_t traNo_, const string& traAttKey, string& traAttVal) {
     boost::optional<size_t> traAttKeyPos = Cmn::posInVector(_config->traAttFile.granuFields, traAttKey);
     if (traAttKeyPos) {
-        traAttVal = traAttMap[traNo][*traAttKeyPos];
+        traAttVal = traAttMap[traNo_][*traAttKeyPos];
+    } else if (traAttKey == _config->traFile.traFld) {
+        traAttVal = tra[traNo_];
     } else {
         stringstream ss;
         ss << traAttKey << " is not in granuFields";
         throw kgError(ss.str());
+    }
+}
+
+void kgmod::TraAtt::traNo2traAtt(const size_t traNo_, const vector<string>& traAttKey,
+                                 vector<string>& traAttVal) {
+    traAttVal.resize(traAttKey.size());
+    for (size_t i = 0; i < traAttKey.size(); i++) {
+        traNo2traAtt(traNo_, traAttKey[i], traAttVal[i]);
     }
 }

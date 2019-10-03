@@ -50,11 +50,24 @@ void kgmod::Request::setQueryDefault(void) {
     query.itemFilter.inplace_logicalnot();
     query.selCond = {0, 0, 0, 0, -1};
     query.debug_mode = 0;
-    query.granularity.first  = _config->traFile.traFld;
-    query.granularity.second = _config->traFile.itemFld;
+    query.granularity.first.resize(1);
+    query.granularity.first[0] = _config->traFile.traFld;
+    query.granularity.second.resize(1);
+    query.granularity.second[0] = _config->traFile.itemFld;
     query.dimension.key = "";
     query.dimension.DimBmpList.clear();
     query.sendMax = _config->sendMax;
+}
+
+void kgmod::Request::setNodestatDefault(void) {
+    nodestat.traFilter.padWithZeroes(_occ->traAtt->traMax + 1);
+    nodestat.traFilter.inplace_logicalnot();
+    nodestat.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
+    nodestat.itemFilter.inplace_logicalnot();
+    nodestat.granularity.first.resize(1);
+    nodestat.granularity.first[0] = _config->traFile.traFld;
+    nodestat.granularity.second.resize(1);
+    nodestat.granularity.second[0]= _config->traFile.itemFld;
 }
 
 void kgmod::Request::evalRequestJson(string& req_msg) {
@@ -130,26 +143,37 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             } else {
                 query.sortKey = SORT_NONE;
             }
-            //            cerr << "sortKey: " << *val2 << endl;
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("query.sendMax")) {
             query.sendMax = stoi(*val2);
-            //            cerr << "sendMax: " << request.query.sendMax << endl;
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("query.granularity")) {
             if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.transaction")) {
-                if (Cmn::posInVector(_config->traAttFile.granuFields, *val3)) {
-                    query.granularity.first = *val3;
-                } else {
-                    string msg = "status:-1\n";
-                    msg += "query.granularity.transaction(";
-                    msg += *val3;
-                    msg += ") must be set in config file (traAttFile.granuFields)\n";
-                    throw kgError(msg);
+                vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
+                if (! buf.empty()) {
+                    query.granularity.first.clear();
+                    query.granularity.first.reserve(buf.size());
+                    for (auto& f : buf) {
+                        if (Cmn::posInVector(_config->traAttFile.granuFields, f)) {
+                            query.granularity.first.push_back(f);
+                        } else {
+                            string msg = "query.granularity.transaction(";
+                            msg += *val3;
+                            msg += ") must be set in config file (traAttFile.granuFields)\n";
+                            throw kgError(msg);
+                        }
+                    }
                 }
             }
             if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.node")) {
-                query.granularity.second = *val3;
+                vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
+                if (! buf.empty()) {
+                    query.granularity.second.clear();
+                    query.granularity.second.reserve(buf.size());
+                    for (auto& f : buf) {
+                        query.granularity.second.push_back(f);
+                    }
+                }
             }
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("query.dimension")) {
@@ -159,7 +183,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             // デバッグ用
             if (boost::iequals(*val2, "notExec")) {
                 query.debug_mode = 1;
-                string msg = "status:-1\n" + *val2 + "\n";
+                string msg = *val2 + "\n";
                 throw kgError(msg);
             } else if (boost::iequals(*val2, "checkData")) {
                 query.debug_mode = 2;
@@ -167,25 +191,51 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         }
     } else if (boost::optional<string> val = pt.get_optional<string>("nodestat")) {
         mode = "nodestat";
+        setNodestatDefault();
         if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.traFilter")) {
             nodestat.traFilter = _filter->makeTraBitmap(*val2);
-        } else {
-            nodestat.traFilter.padWithZeroes(_occ->traAtt->traMax + 1);
-            nodestat.traFilter.inplace_logicalnot();
         }
-        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.granuItem")) {
-            nodestat.itemFld = *val2;
-        } else {
-            nodestat.itemFld = _occ->occKey;
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.itemFilter")) {
+            nodestat.itemFilter = _filter->makeItemBitmap(*val2);
         }
-        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.itemVals")) {
-            vector<string> vec = Cmn::CsvStr::Parse(*val2);
-            nodestat.itemVals.resize(vec.size());
-            for (size_t i = 0; i < vec.size(); i++) {
-                nodestat.itemVals[i] = vec[i];
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.granularity")) {
+            if (boost::optional<string> val3 = pt.get_optional<string>("nodestat.granularity.transaction")) {
+                vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
+                if (! buf.empty()) {
+                    nodestat.granularity.first.clear();
+                    nodestat.granularity.first.reserve(buf.size());
+                    for (auto& f : buf) {
+                        if (Cmn::posInVector(_config->traAttFile.granuFields, f)) {
+                            nodestat.granularity.first.push_back(f);
+                        } else {
+                            string msg = "nodestat.granularity.transaction(";
+                            msg += *val3;
+                            msg += ") must be set in config file (traAttFile.granuFields)\n";
+                            throw kgError(msg);
+                        }
+                    }
+                }
+            }
+            if (boost::optional<string> val3 = pt.get_optional<string>("nodestat.granularity.node")) {
+                vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
+                if (! buf.empty()) {
+                    nodestat.granularity.second.clear();
+                    nodestat.granularity.second.reserve(buf.size());
+                    for (auto& f : buf) {
+                        nodestat.granularity.second.push_back(f);
+                    }
+                }
+            }
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.itemVal")) {
+            vector<string> buf = Cmn::CsvStr::Parse((*val2).c_str());
+            nodestat.itemVal.reserve(buf.size());
+            for (auto& f : buf) {
+                nodestat.itemVal.push_back(f);
             }
         } else {
-            throw kgError("nodestat.itemVals must be set");
+            string msg = "nodestat.itemVal must be set in request\n";
+            throw kgError(msg);
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.values")) {
             vector<string> vec = Cmn::CsvStr::Parse(*val2);
@@ -276,7 +326,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                 if (vec.size() == 1) {
                     if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) &&
                         (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
-                        string msg = "status:-1\n" + vec[0] + " is not transaction attribute\n";
+                        string msg = vec[0] + " is not transaction attribute\n";
                         throw kgError(msg);
                     }
                     pivot.axes[0].push_back({'T', vec[0]});
@@ -286,16 +336,16 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     if (vec[0][0] == 'T') {
                         if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) &&
                             (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
-                            msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
+                            msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }
                     } else if (vec[0][0] == 'I') {
                         if (! Cmn::posInVector(_config->itemAttFile.strFields, vec[1])) {
-                            msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
+                            msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }
                     } else {
-                        msg = "status:-1\nillegular format: " + i + "\n";
+                        msg = "illegular format: " + i + "\n";
                         throw kgError(msg);
                     }
                     pivot.axes[0].push_back({vec[0][0], vec[1]});
@@ -310,7 +360,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                 if (vec.size() == 1) {
                     if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) &&
                         (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
-                        string msg = "status:-1\n" + vec[0] + " is not transaction attribute\n";
+                        string msg = vec[0] + " is not transaction attribute\n";
                         throw kgError(msg);
                     }
                     pivot.axes[1].push_back({'T', vec[0]});
@@ -320,16 +370,16 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     if (vec[0][0] == 'T') {
                         if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) &&
                             (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
-                            msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
+                            msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }
                     } else if (vec[0][0] == 'I') {
                         if (! Cmn::posInVector(_config->itemAttFile.strFields, vec[1])) {
-                            msg = "status:-1\n" + vec[1] + " is not transaction attribute\n";
+                            msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }
                     } else {
-                        msg = "status:-1\nillegular format: " + i + "\n";
+                        msg = "illegular format: " + i + "\n";
                         throw kgError(msg);
                     }
                     pivot.axes[1].push_back({vec[0][0], vec[1]});
@@ -343,7 +393,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         }
     } else {
         cerr << "unknown control request" << endl;
-        string msg = "status:-1\nunknown control request\n";
+        string msg = "unknown control request\n";
         throw kgError(msg);
     }
 }
@@ -411,17 +461,17 @@ void kgmod::Request::evalRequestFlat(string& req_msg) {
                     boost::trim(vec[0]);
                     if (vec[0] != "") {
                         if (! Cmn::posInVector(_config->traAttFile.granuFields, vec[0])) {
-                            string msg = "status:-1\nquery.granularity.transaction(";
+                            string msg = "query.granularity.transaction(";
                             msg += vec[0];
                             msg += ") must be set in config file (traAttFile.granuFields)\n";
                             throw kgError(msg);
                         }
-                        query.granularity.first = vec[0];
+                        query.granularity.first[0] = vec[0];
                     }
                 }
                 if (vec.size() >= 2) {
                     boost::trim(vec[1]);
-                    if (vec[1] != "") query.granularity.second = vec[1];
+                    if (vec[1] != "") query.granularity.second[0] = vec[1];
                 }
             } else if (c == 5) {
                 query.dimension = makeDimBitmap(line);

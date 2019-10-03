@@ -199,6 +199,19 @@ string kgmod::ItemAtt::key2att(const size_t _itemNo, const string& attKey) {
     return key2att_map[{_itemNo, attKey}];
 }
 
+vector<string> kgmod::ItemAtt::key2att(const size_t _itemNo, const vector<string>& attKeys) {
+    vector<string> out;
+    out.reserve(attKeys.size());
+    for (auto& at : attKeys) {
+        if (at == _config->traFile.itemFld) {
+            out.push_back(item[_itemNo]);
+        } else {
+            out.push_back(key2att_map[{_itemNo, at}]);
+        }
+    }
+    return out;
+}
+
 void kgmod::ItemAtt::buildKey2attMap(void) {
     cerr << "making key2att map" << endl;
     vector<string> attName = listAtt();
@@ -224,8 +237,7 @@ void kgmod::ItemAtt::dumpKey2attMap(bool debug) {
     }
 }
 
-string kgmod::ItemAtt::code2name(const string& codeFld, const string& code) {
-    string out;
+void kgmod::ItemAtt::code2name(const string& codeFld, const string& code, string& out) {
     if (_config->itemAttFile.code2name_map.find(codeFld) == _config->itemAttFile.code2name_map.end()) {
         out = code;
     } else {
@@ -234,11 +246,17 @@ string kgmod::ItemAtt::code2name(const string& codeFld, const string& code) {
         string nameFld = _config->itemAttFile.code2name_map[codeFld];
         out = key2att(i.answer, nameFld);
     }
-    return out;
 }
 
-string kgmod::ItemAtt::name2code(const string& nameFld, const string& name) {
-    string out;
+void kgmod::ItemAtt::code2name(const vector<string>& codeFld, const vector<string>& code,
+                               vector<string>& out) {
+    out.resize(codeFld.size());
+    for (size_t i = 0; i < codeFld.size(); i++) {
+        code2name(codeFld[i], code[i], out[i]);
+    }
+}
+
+void kgmod::ItemAtt::name2code(const string& nameFld, const string& name, string& out) {
     if (_config->itemAttFile.name2code_map.find(nameFld) == _config->itemAttFile.name2code_map.end()) {
         out = name;
     } else {
@@ -247,5 +265,12 @@ string kgmod::ItemAtt::name2code(const string& nameFld, const string& name) {
         string codeFld = _config->itemAttFile.name2code_map[nameFld];
         out = key2att(i.answer, codeFld);
     }
-    return out;
+}
+
+void kgmod::ItemAtt::name2code(const vector<string>& nameFld, const vector<string>& name,
+                               vector<string>& out) {
+    out.resize(nameFld.size());
+    for (size_t i = 0; i < nameFld.size(); i++) {
+        name2code(nameFld[i], name[i], out[i]);
+    }
 }

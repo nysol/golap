@@ -49,7 +49,7 @@ namespace kgmod {
         sel_cond selCond;
         sort_key sortKey;
         size_t sendMax;
-        pair<string, string> granularity;   // first:transaction granurality, second:node granurality
+        pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
         Dimension dimension;
         size_t debug_mode;
         
@@ -63,8 +63,12 @@ namespace kgmod {
             else if (sortKey == SORT_JAC)  cerr << "sortKey: JAC"  << endl;
             else if (sortKey == SORT_PMI)  cerr << "sortKey: PMI"  << endl;
             cerr << "sendMax: " << sendMax << endl;
-            cerr << "granularity(transaction): " << granularity.first << endl;
-            cerr << "granularity(node): "        << granularity.second << endl;
+            cerr << "granularity(transaction): ";
+            for (auto& f : granularity.first) cerr << f << " ";
+            cerr << endl;
+            cerr << "granularity(node): ";
+            for (auto& f : granularity.second) cerr << f << " ";
+            cerr << endl;
             if (dimension.key.length() != 0) {
                 cerr << "dimension: " << dimension.key << "=";
                 for (auto i = dimension.DimBmpList.begin(); i != dimension.DimBmpList.end(); i++) {
@@ -78,13 +82,19 @@ namespace kgmod {
     /////////////////////
     struct NodeStat {
         Ewah traFilter;
-        string itemFld;
-        vector<string> itemVals;
+        Ewah itemFilter;
+        pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
+        vector<string> itemVal;
         vector<pair<AggrFunc, string>> vals;
         
         void dump(void) {
             cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
-            cerr << "\nitemFld: " << itemFld << " ";
+            cerr << "itemFilter: "; Cmn::CheckEwah(itemFilter);
+            cerr << "granularity(transaction): ";
+            for (auto& f : granularity.first) cerr << f << " ";
+            cerr << endl;
+            cerr << "granularity(node): ";
+            for (auto& f : granularity.second) cerr << f << " ";
             cerr << endl;
         }
     };
@@ -158,6 +168,7 @@ namespace kgmod {
     private:
         Dimension makeDimBitmap(string& cmdline);
         void setQueryDefault(void);
+        void setNodestatDefault(void);
         void evalRequestJson(string& req_msg);
         void evalRequestFlat(string& req_msg);
         

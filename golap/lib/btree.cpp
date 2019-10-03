@@ -172,6 +172,32 @@ Ewah& kgmod::BTree::GetVal(const string& Key, const string& KeyValue) {
     }
 }
 
+Ewah kgmod::BTree::GetVal(const vector<string> Keys, const vector<string> KeyValues) {
+    Ewah out;
+    for (size_t i = 0; i < Keys.size(); i++) {
+        Ewah* tmp;
+        GetVal(Keys[i], KeyValues[i], tmp);
+        if (i == 0) {
+            out = *tmp;
+        } else {
+            out = out & *tmp;
+        }
+    }
+    return out;
+}
+
+void kgmod::BTree::GetVal(const vector<string> Keys, const vector<string> KeyValues, Ewah& Bitmap) {
+    for (size_t i = 0; i < Keys.size(); i++) {
+        Ewah* tmp;
+        GetVal(Keys[i], KeyValues[i], tmp);
+        if (i == 0) {
+            Bitmap = *tmp;
+        } else {
+            Bitmap = Bitmap & *tmp;
+        }
+    }
+}
+
 bool kgmod::BTree::GetValMulti(const string& Key, const string& LikeKey, Ewah& Bitmap) {
     if (DataTypeMap[Key] != STR) return false;
     size_t FirstWild = min(LikeKey.find("*"), LikeKey.find("?"));
@@ -567,6 +593,47 @@ vector<string> kgmod::BTree::EvalKeyValue(const string& Key, const Ewah* filter)
         }
     }
     return out;
+}
+
+void kgmod::BTree::combiValues(const vector<string> flds, vector<string>& csvVals,
+                               vector<Ewah>& bmps, const Ewah* traFilter, size_t pos) {
+    // 当初、値リストをカンマ区切りにしていたがコロン区切りに変更した。その影響でソーズ上csvの表現が残っている
+    if (flds.size() == pos) return;
+    vector<string> vals = EvalKeyValue(flds[pos], traFilter);
+    vector<string> tmpVals;
+    vector<Ewah> tmpBmps;
+    if (pos == 0) csvVals.push_back("");
+    tmpVals.reserve(csvVals.size() * vals.size());
+    tmpBmps.reserve(csvVals.size() * vals.size());
+    for (auto& v : vals) {
+        Ewah* bmp;
+        if (! GetVal(flds[pos], v, bmp)) continue;
+        for (size_t i = 0; i < csvVals.size(); i++) {
+            if (bmps.size() == 0) {
+                tmpBmps.push_back(*bmp);
+            } else {
+                Ewah tmp = bmps[pos] & *bmp;
+                if (tmp.numberOfOnes() == 0) continue;
+                tmpBmps.push_back(tmp);
+            }
+            string vals = csvVals[i] + (pos == 0 ? "" : ":") + v;
+            tmpVals.push_back(vals);
+        }
+    }
+    combiValues(flds, tmpVals, tmpBmps, traFilter, ++pos);
+    csvVals = tmpVals;
+    bmps = tmpBmps;
+}
+
+size_t kgmod::BTree::CountKeyValue(const vector<string>& Keys, const Ewah* traFilter) {
+    vector<string> csvVals;
+    vector<Ewah> bmps;
+    combiValues(Keys, csvVals, bmps, traFilter);
+    size_t cnt = 0;
+    for (auto& b : bmps) {
+        if (b.numberOfOnes() != 0) cnt++;
+    }
+    return cnt;
 }
 
 size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
