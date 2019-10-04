@@ -99,6 +99,7 @@ namespace kgmod {
         }
         void getTra2KeyValue(vector<string>& key, vector<string>& tra2key);
         void getTra2KeyValue(string& key, vector<string>& tra2key);
+        void filterItemBmpByTraBmp(const Ewah& itemBmp, const Ewah& traBmp, Ewah& filteredItemBmp);
         
         size_t sendMax(void) {return _config->sendMax;}
     };

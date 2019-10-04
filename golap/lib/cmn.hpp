@@ -78,21 +78,38 @@ namespace kgmod {
 //        template <class T> boost::optional<size_t> posInVector(vector<T> vec, T target);
         boost::optional<size_t> posInVector(const vector<string>& vec, const string& target);
         
+        // Min
         template <typename U, template<class T, class Allocator = allocator<T>> class Container>
         U min(Container<U>& x) {return *min_element(x.begin(), x.end());}
+        // Max
         template <typename U, template<class T, class Allocator = allocator<T>> class Container>
         U max(Container<U>& x) {return *max_element(x.begin(), x.end());}
+        // Sum
         template <typename U, template<class T, class Allocator = allocator<T>> class Container>
         U sum(Container<U>& x) {return accumulate(x.begin(), x.end(), 0.0);}
+        // Mean
         template <typename U, template<class T, class Allocator = allocator<T>> class Container>
         U mean(Container<U>& x) {return accumulate(x.begin(), x.end(), 0.0) / x.size();}
+        // Median
+        template <typename U, template<class T, class Allocator = allocator<T>> class Container>
+        U median(Container<U> x) {
+            size_t n = x.size() / 2;
+            nth_element(x.begin(), x.begin() + n, x.end());
+            if (x.size() % 2 == 1) {
+                return x[n];
+            } else {
+                return (x[n - 1] + x[n]) / 2;
+            }
+        }
+        // Var
         template <typename U, template<class T, class Allocator = allocator<T>> class Container>
         U var(Container<U>& x) {
-            size_t size = x.size();
-            if (size < 2) return -DBL_MAX;
+            size_t n = x.size();
+            if (n < 2) return -DBL_MAX;
             U x_mean = mean(x);
-            return (inner_product(x.begin(), x.end(), x.begin(), 0.0) - (pow(x_mean, 2) * size)) / (size - 1.0);
+            return (inner_product(x.begin(), x.end(), x.begin(), 0.0) - (pow(x_mean, 2) * n)) / (n - 1.0);
         }
+        // SD
         template <typename U, template<class T, class Allocator = allocator<T>> class Container>
         U sd(Container<U>& x) {
             if (x.size() < 2) return -DBL_MAX;

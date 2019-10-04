@@ -52,6 +52,7 @@ namespace kgmod {
         void save(bool clean = true);
         void load(void);
         void dump(bool debug);
+        bool isTraAtt(const string& fldName) {return (FldPos.find(fldName) != FldPos.end());}
         vector<string> listAtt(void);
         void traNo2traAtt(const size_t traNo_, const string& traAttKey, string& traAttVal);
         void traNo2traAtt(const size_t traNo_, const vector<string>& traAttKey, vector<string>& traAttVal);

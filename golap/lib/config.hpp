@@ -56,6 +56,7 @@ namespace kgmod {
             vector<string> strFields;
             vector<string> numFields;
             vector<string> catFields;
+            string imageField;
             unordered_map<string, string> code2name_map;
             unordered_map<string, string> name2code_map;
         } itemAttFile;

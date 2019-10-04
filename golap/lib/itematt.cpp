@@ -125,7 +125,13 @@ void kgmod::ItemAtt::save(bool clean) {
 void kgmod::ItemAtt::load(void) {
     cerr << "loading item attributes" << endl;
     bmpList.load();
+    loadAtt();
     
+    cerr << "loading image list" << endl;
+    loadImage();
+}
+
+void kgmod::ItemAtt::loadAtt(void) {
     item.clear();
     itemNo.clear();
     
@@ -154,6 +160,25 @@ void kgmod::ItemAtt::load(void) {
         throw kgError(msg.str());
     }
     ifs.close();
+    
+}
+
+void kgmod::ItemAtt::loadImage(void) {
+    image.clear();
+    image.resize(itemMax + 1);
+    
+    kgCSVfld itemAttF;
+    itemAttF.open(_config->itemAttFile.name, _env, false);
+    itemAttF.read_header();
+    vector<string> fldName = itemAttF.fldName();
+    auto itemFld = find(fldName.begin(), fldName.end(), _config->itemAttFile.imageField);
+    if (itemFld == fldName.end()) return;
+    int imageFldPos = (int)(itemFld - fldName.begin());
+    size_t cnt = 0;
+    while (itemAttF.read() != EOF) {
+        image[cnt++] = itemAttF.getVal(imageFldPos);
+    }
+    itemAttF.close();
 }
 
 void kgmod::ItemAtt::dump(bool debug) {
@@ -272,5 +297,17 @@ void kgmod::ItemAtt::name2code(const vector<string>& nameFld, const vector<strin
     out.resize(nameFld.size());
     for (size_t i = 0; i < nameFld.size(); i++) {
         name2code(nameFld[i], name[i], out[i]);
+    }
+}
+
+void kgmod::ItemAtt::getImageList(const Ewah& itemBmp, vector<string>& imageList) {
+    imageList.clear();
+    unordered_map<string, bool> checked_images;
+    for (auto i = itemBmp.begin(), ei = itemBmp.end(); i != ei; i++) {
+        if (image[*i].empty()) continue;
+        auto itr = checked_images.find(image[*i]);
+        if (itr != checked_images.end()) continue;
+        checked_images[image[*i]] = true;
+        imageList.push_back(image[*i]);
     }
 }

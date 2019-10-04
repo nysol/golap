@@ -41,6 +41,7 @@ namespace kgmod {
         btree::btree_map<string, size_t> itemNo;    // マスターに示されたアイテムコード -> bitmapにおけるbit no.
         btree::btree_map<size_t, string> item;      // bitmapにおけるbit no. -> マスターに示されたアイテムコード
         btree::btree_map<size_t, string> itemName;  // bitmapにおけるbit no. -> マスターに示されたアイテム名
+        vector<string> image;                       // [bitmapにおけるbit no.] -> image
         size_t itemMax;
         BTree bmpList;
         
@@ -50,10 +51,10 @@ namespace kgmod {
         void build(void);
         void save(bool clean = true);
         void load(void);
-        void loadItemTra(void);
         void dump(bool debug);
         void buildKey2attMap(void);
         void dumpKey2attMap(bool debug);
+        bool isItemAtt(const string& fldName) {return (bmpList.getDataType(fldName) != NONE);};
         vector<string> listAtt(void);
         vector<string> evalKeyValue(const string& key) {return bmpList.EvalKeyValue(key);}
         string key2att(const size_t _itemNo, const string& attKey);
@@ -62,6 +63,11 @@ namespace kgmod {
         void code2name(const vector<string>& nameFld, const vector<string>& code, vector<string>& out);
         void name2code(const string& nameFld, const string& name, string& out);
         void name2code(const vector<string>& nameFld, const vector<string>& name, vector<string>& out);
+        void getImageList(const Ewah& itemBmp, vector<string>& imageList);
+        
+    private:
+        void loadAtt(void);
+        void loadImage(void);
     };
 }
 

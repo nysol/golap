@@ -664,3 +664,11 @@ size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
     cerr << "end" << endl;
     return cnt;
 }
+
+DataType kgmod::BTree::getDataType(const string& Key) {
+    if (DataTypeMap.find(Key) == DataTypeMap.end()) {
+        return NONE;
+    } else {
+        return DataTypeMap[Key];
+    }
+}

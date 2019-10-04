@@ -136,6 +136,7 @@ namespace kgmod {
         void setQueryDefault(Query& query);
         void co_occurrence(Query& query, map<string, Result>& res);
         void nodestat(NodeStat& nodestat, map<string, Result>& res);
+        void nodeimage(NodeImage& nodeimage, map<string, Result>& res);
         void axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList);
         void combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp);
         void worksheet(WorkSheet& worksheet, map<string, Result>& res);

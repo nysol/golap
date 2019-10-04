@@ -168,7 +168,6 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
             mt_occ->bmpList.GetVal(mt_occ->occKey, mt_occ->itemAtt->item[*at2], tra_i2_tmp);
             Ewah tra_i2 = *tra_i2_tmp & tarTraBmp;
             
-//            unordered_map<pair<string, size_t>, bool, boost::hash<pair<string, size_t>>> checked_traAttVal;
             for (auto t2 = tra_i2.begin(), et2 = tra_i2.end(); t2 != et2; t2++) {
                 if (isTimeOut) {stat = 2; break;}
                 vector<string> vTraAtt;
@@ -219,18 +218,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                             itemNo4node = *i1;
                         }
                         
-//                        if (isTraGranu) {
-//                            if (checked_traAttVal.find({traAtt, *i1}) == checked_traAttVal.end()) {
                         coitems[itemNo4node]++;
-//                                checked_traAttVal[{traAtt, *i1}] = true;
-                                
-//                                if (test) {
-//                                    cerr << mt_occ->itemAtt->item[itemNo4node] << ":" << coitems[itemNo4node] << endl;
-//                                }
-//                            }
-//                        } else {
-//                            coitems[itemNo4node]++;
-//                        }
                     }
                 }
             }
@@ -489,6 +477,28 @@ void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
     cerr << buf << endl;
     res[""].insert(make_pair(-FLT_MAX, buf));
 }
+
+void kgmod::exec::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
+    cerr << "start nodeimage" << endl;
+    
+    vector<string> imageList;
+    Ewah tmpItemBmp;
+    Ewah itemBmp;
+    mt_occ->itemAtt->bmpList.GetVal(nodeimage.granularity.second, nodeimage.itemVal, tmpItemBmp);
+    tmpItemBmp = tmpItemBmp & nodeimage.itemFilter;
+    mt_occ->filterItemBmpByTraBmp(tmpItemBmp, nodeimage.traFilter, itemBmp);
+    mt_occ->itemAtt->getImageList(itemBmp, imageList);
+    for (size_t i = 0; i < imageList.size(); i++) {
+        res[""].insert(make_pair(i + 1, imageList[i]));
+    }
+    
+    string buf = "status:0,sent:" + to_string(imageList.size());
+    buf += ",hit:" + to_string(imageList.size());
+    cerr << buf << endl;
+    res[""].insert(make_pair(-FLT_MAX, buf));
+    res[""].insert(make_pair(0, mt_config->itemAttFile.imageField));
+}
+
 
 void kgmod::exec::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
     cerr << "start worksheet" << endl;
@@ -847,6 +857,8 @@ void kgmod::exec::proc(void) {
             co_occurrence(request.query, res);
         } else if (request.mode == "nodestat") {
             nodestat(request.nodestat, res);
+        } else if (request.mode == "nodeimage") {
+            nodeimage(request.nodeimage, res);
         } else if (request.mode == "worksheet") {
             worksheet(request.worksheet, res);
         } else if (request.mode == "pivot") {

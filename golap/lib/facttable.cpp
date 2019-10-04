@@ -163,6 +163,8 @@ double kgmod::AggrFunc::calc(vector<vector<factVal_t>>& dat) {
                 rslt.back()[0] = Cmn::sum(buf);
             } else if (boost::iequals(st.func, "AVE")) {
                 rslt.back()[0] = Cmn::mean(buf);
+            } else if (boost::iequals(st.func, "MED")) {
+                rslt.back()[0] = Cmn::median(buf);
             } else if (boost::iequals(st.func, "MIN")) {
                 rslt.back()[0] = Cmn::min(buf);
             } else if (boost::iequals(st.func, "MAX")) {

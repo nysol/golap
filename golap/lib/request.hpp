@@ -100,6 +100,25 @@ namespace kgmod {
     };
     
     /////////////////////
+    struct NodeImage {
+        Ewah traFilter;
+        Ewah itemFilter;
+        pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
+        vector<string> itemVal;
+        
+        void dump(void) {
+            cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
+            cerr << "itemFilter: "; Cmn::CheckEwah(itemFilter);
+            cerr << "granularity(transaction): ";
+            for (auto& f : granularity.first) cerr << f << " ";
+            cerr << endl;
+            cerr << "granularity(node): ";
+            for (auto& f : granularity.second) cerr << f << " ";
+            cerr << endl;
+        }
+    };
+    
+    /////////////////////
     struct WorkSheet {
         Ewah traFilter;
         Ewah itemFilter;
@@ -156,6 +175,7 @@ namespace kgmod {
         string mode;    // "query" | "nodestat" | "worksheet" | "pivot" | ”control” | "retrieve"
         Query query;
         NodeStat nodestat;
+        NodeImage nodeimage;
         WorkSheet worksheet;
         Pivot pivot;
         EtcReq etcRec;  // for control or retrieve
@@ -169,6 +189,7 @@ namespace kgmod {
         Dimension makeDimBitmap(string& cmdline);
         void setQueryDefault(void);
         void setNodestatDefault(void);
+        void setNodeimageDefault(void);
         void evalRequestJson(string& req_msg);
         void evalRequestFlat(string& req_msg);
         

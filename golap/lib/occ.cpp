@@ -541,3 +541,15 @@ void kgmod::Occ::getTra2KeyValue(vector<string>& keys, vector<string>& tra2key) 
         }
     }
 }
+
+void kgmod::Occ::filterItemBmpByTraBmp(const Ewah& itemBmp, const Ewah& traBmp, Ewah& filteredItemBmp) {
+    filteredItemBmp.reset();
+    for (auto i = itemBmp.begin(), ei = itemBmp.end(); i != ei; i++) {
+        Ewah* tmpTraBmp;
+        if (! bmpList.GetVal(occKey, itemAtt->item[*i], tmpTraBmp)) continue;
+        Ewah tmp = *tmpTraBmp & traBmp;
+        if (tmp.numberOfOnes() != 0) {
+            filteredItemBmp.set(*i);
+        }
+    }
+}

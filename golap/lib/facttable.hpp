@@ -48,7 +48,7 @@ namespace kgmod {
         vector<elem> _stack;
         string _func;
         unordered_map<string, int>* _valPosMap;
-        const map<string, int> _funcs = {{"COUNT",0}, {"SUM",1}, {"AVE",1}, {"MIN",1},
+        const map<string, int> _funcs = {{"COUNT",0}, {"SUM",1}, {"AVE",1}, {"MED",1}, {"MIN",1},
                                          {"MAX",1}, {"VAR",1}, {"SD",1}, {"QTILE",1}};
             // ["function name"] -> argument count
         

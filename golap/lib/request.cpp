@@ -67,7 +67,18 @@ void kgmod::Request::setNodestatDefault(void) {
     nodestat.granularity.first.resize(1);
     nodestat.granularity.first[0] = _config->traFile.traFld;
     nodestat.granularity.second.resize(1);
-    nodestat.granularity.second[0]= _config->traFile.itemFld;
+    nodestat.granularity.second[0] = _config->traFile.itemFld;
+}
+
+void kgmod::Request::setNodeimageDefault(void) {
+    nodeimage.traFilter.padWithZeroes(_occ->traAtt->traMax + 1);
+    nodeimage.traFilter.inplace_logicalnot();
+    nodeimage.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
+    nodeimage.itemFilter.inplace_logicalnot();
+    nodeimage.granularity.first.resize(1);
+    nodeimage.granularity.first[0] = _config->traFile.traFld;
+    nodeimage.granularity.second.resize(1);
+    nodeimage.granularity.second[0] = _config->traFile.itemFld;
 }
 
 void kgmod::Request::evalRequestJson(string& req_msg) {
@@ -171,6 +182,11 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     query.granularity.second.clear();
                     query.granularity.second.reserve(buf.size());
                     for (auto& f : buf) {
+                        if (! _occ->itemAtt->isItemAtt(f)) {
+                            string msg = f;
+                            msg += " is not item attribute\n";
+                            throw kgError(msg);
+                        }
                         query.granularity.second.push_back(f);
                     }
                 }
@@ -222,6 +238,11 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     nodestat.granularity.second.clear();
                     nodestat.granularity.second.reserve(buf.size());
                     for (auto& f : buf) {
+                        if (! _occ->itemAtt->isItemAtt(f)) {
+                            string msg = f;
+                            msg += " is not item attribute\n";
+                            throw kgError(msg);
+                        }
                         nodestat.granularity.second.push_back(f);
                     }
                 }
@@ -252,6 +273,59 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     throw kgError("error in nodestat.values");
                 }
             }
+        }
+    } else if (boost::optional<string> val = pt.get_optional<string>("nodeimage")) {
+        mode = "nodeimage";
+        setNodeimageDefault();
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.traFilter")) {
+            nodeimage.traFilter = _filter->makeTraBitmap(*val2);
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.itemFilter")) {
+            nodeimage.itemFilter = _filter->makeItemBitmap(*val2);
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.granularity")) {
+            if (boost::optional<string> val3 = pt.get_optional<string>("nodeimage.granularity.transaction")) {
+                vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
+                if (! buf.empty()) {
+                    nodeimage.granularity.first.clear();
+                    nodeimage.granularity.first.reserve(buf.size());
+                    for (auto& f : buf) {
+                        if (Cmn::posInVector(_config->traAttFile.granuFields, f)) {
+                            nodeimage.granularity.first.push_back(f);
+                        } else {
+                            string msg = "nodeimage.granularity.transaction(";
+                            msg += *val3;
+                            msg += ") must be set in config file (traAttFile.granuFields)\n";
+                            throw kgError(msg);
+                        }
+                    }
+                }
+            }
+            if (boost::optional<string> val3 = pt.get_optional<string>("nodeimage.granularity.node")) {
+                vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
+                if (! buf.empty()) {
+                    nodeimage.granularity.second.clear();
+                    nodeimage.granularity.second.reserve(buf.size());
+                    for (auto& f : buf) {
+                        if (! _occ->itemAtt->isItemAtt(f)) {
+                            string msg = f;
+                            msg += " is not item attribute\n";
+                            throw kgError(msg);
+                        }
+                        nodeimage.granularity.second.push_back(f);
+                    }
+                }
+            }
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.itemVal")) {
+            vector<string> buf = Cmn::CsvStr::Parse((*val2).c_str());
+            nodeimage.itemVal.reserve(buf.size());
+            for (auto& f : buf) {
+                nodeimage.itemVal.push_back(f);
+            }
+        } else {
+            string msg = "nodeimage.itemVal must be set in request\n";
+            throw kgError(msg);
         }
     } else if (boost::optional<string> val = pt.get_optional<string>("worksheet")) {
         mode = "worksheet";

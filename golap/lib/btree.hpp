@@ -75,7 +75,7 @@ namespace kgmod {
                          const Ewah* traFilter, size_t pos = 0);
         size_t CountKeyValue(const vector<string>& Keys, const Ewah* traFilter = NULL);
         size_t CountKeyValue(const string& Key, const Ewah* traFilter = NULL);
-        DataType getDataType(const string& Key) {return DataTypeMap[Key];}
+        DataType getDataType(const string& Key);
     };
 }
 

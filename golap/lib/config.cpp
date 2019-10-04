@@ -131,6 +131,12 @@ kgmod::Config::Config(string& infile) {
             itemDataType[*i] = STR;
         }
         
+        if (boost::optional<string> val = Prm.get<string>("itemAttFile.imageFidld")) {
+            itemAttFile.imageField = *val;
+        } else {
+            itemAttFile.imageField = "image";
+        }
+        
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.Code-Name")) {
             vector<string> code_name_list = Cmn::CsvStr::Parse(*val);
             for (auto& code_name : code_name_list) {
