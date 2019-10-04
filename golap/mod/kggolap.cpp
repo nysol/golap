@@ -100,27 +100,20 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                         (query.granularity.first[0] != mt_config->traFile.traFld);
     bool isNodeGranu = (query.granularity.second.size() != 1) ||
                         (query.granularity.second[0] != mt_config->traFile.itemFld);
-    // transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書き
+    vector<string> tra2key;     // [traNo] -> 当該トランザクションが有するTraAttの値リスト(csv)
+    // transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書きして、
     if (isTraGranu) {
         // vector版countKeyValueは処理が重いので、マルチバリューかどうかで処理を分ける
         if (query.granularity.first.size() == 1) {
             traNum = mt_occ->countKeyValue(query.granularity.first[0], &tarTraBmp);
-        } else {
-            traNum = mt_occ->countKeyValue(query.granularity.first, tarTraBmp);
-        }
-    }
-    
-    unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
-    vector<string> tra2key;     // [traNo] -> 当該トランザクションが有するTraAttの値リスト(csv)
-    if (isTraGranu) {
-        // vector版getTra2KeyValueは処理が重いので、マルチバリューかどうかで処理を分ける
-        if (query.granularity.first.size() == 1) {
             mt_occ->getTra2KeyValue(query.granularity.first[0], tra2key);
         } else {
+            traNum = mt_occ->countKeyValue(query.granularity.first, tarTraBmp);
             mt_occ->getTra2KeyValue(query.granularity.first, tra2key);
         }
     }
     
+    unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
     for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
         if (isTimeOut) {stat = 2; break;}
         vector<string> vnode2;
