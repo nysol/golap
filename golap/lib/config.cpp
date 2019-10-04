@@ -131,10 +131,8 @@ kgmod::Config::Config(string& infile) {
             itemDataType[*i] = STR;
         }
         
-        if (boost::optional<string> val = Prm.get<string>("itemAttFile.imageFidld")) {
+        if (boost::optional<string> val = Prm.get<string>("itemAttFile.imageField")) {
             itemAttFile.imageField = *val;
-        } else {
-            itemAttFile.imageField = "image";
         }
         
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.Code-Name")) {

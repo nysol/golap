@@ -93,12 +93,13 @@ namespace kgmod {
         size_t countKeyValue(vector<string>& keys, Ewah* TraFilter = NULL) {
             return bmpList.CountKeyValue(keys, TraFilter);
         }
+        size_t countKeyValue(const vector<string>& keys, Ewah& traFilter);
         void combiValues(const vector<string> flds, vector<string>& csvVals, vector<Ewah>& bmps,
                          const Ewah* traFilter = NULL) {
             return bmpList.combiValues(flds, csvVals, bmps, traFilter);
         }
-        void getTra2KeyValue(vector<string>& key, vector<string>& tra2key);
         void getTra2KeyValue(string& key, vector<string>& tra2key);
+        void getTra2KeyValue(const vector<string>& key, vector<string>& tra2key);
         void filterItemBmpByTraBmp(const Ewah& itemBmp, const Ewah& traBmp, Ewah& filteredItemBmp);
         
         size_t sendMax(void) {return _config->sendMax;}

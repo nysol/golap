@@ -36,10 +36,10 @@ namespace kgmod {
         string _dbName;
         
     public:
-        btree::btree_map<string, size_t> traNo;
-        btree::btree_map<size_t, string> tra;
-        unordered_map<string, size_t> FldPos;
-        vector<vector<char*>> traAttMap;
+        btree::btree_map<string, size_t> traNo;     // traID -> bitmap no.
+        btree::btree_map<size_t, string> tra;       // bitmap no. -> traID
+        unordered_map<string, size_t> FldPos;       // traAtt name -> field pos
+        vector<vector<char*>> traAttMap;            // [traNo][granuFieldsのposition] -> value
         size_t traMax;
         
     private:

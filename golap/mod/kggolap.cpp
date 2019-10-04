@@ -106,7 +106,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
         if (query.granularity.first.size() == 1) {
             traNum = mt_occ->countKeyValue(query.granularity.first[0], &tarTraBmp);
         } else {
-            traNum = mt_occ->countKeyValue(query.granularity.first, &tarTraBmp);
+            traNum = mt_occ->countKeyValue(query.granularity.first, tarTraBmp);
         }
     }
     

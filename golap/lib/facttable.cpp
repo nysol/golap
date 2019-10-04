@@ -256,7 +256,7 @@ bool kgmod::FactTable::getItems(const size_t traNo, Ewah& itemBmp) {
 }
 
 void kgmod::FactTable::load(void) {
-    cerr << "loadding fact table" << endl;
+    cerr << "loading fact table" << endl;
     kgCSVfld ft;
     ft.open(_config->traFile.name, _env, false);
     ft.read_header();

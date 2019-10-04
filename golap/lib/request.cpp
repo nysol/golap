@@ -276,6 +276,9 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         }
     } else if (boost::optional<string> val = pt.get_optional<string>("nodeimage")) {
         mode = "nodeimage";
+        if (_config->itemAttFile.imageField.empty()) {
+            throw kgError("imageField is not set in config file");
+        }
         setNodeimageDefault();
         if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.traFilter")) {
             nodeimage.traFilter = _filter->makeTraBitmap(*val2);

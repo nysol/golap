@@ -518,6 +518,33 @@ void kgmod::Occ::dump(const bool debug) {
 ===================== */
 }
 
+size_t kgmod::Occ::countKeyValue(const vector<string>& keys, Ewah& traFilter) {
+    vector<size_t> traAttKeyPos(keys.size());
+    for (size_t i = 0; i < keys.size(); i++) {
+        boost::optional<size_t> pos = Cmn::posInVector(_config->traAttFile.granuFields, keys[i]);
+        if (! pos) {
+            string msg = keys[i] + " is not set in config file (traAttFile.granuFields)\n";
+            throw kgError(msg);
+        }
+        traAttKeyPos[i] = *pos;
+    }
+    
+    size_t cnt = 0;
+    unordered_map<string, bool> checked_vals;
+    for (auto tra = traFilter.begin(), etra = traFilter.end(); tra != etra; tra++) {
+        string valList;
+        for (const auto pos : traAttKeyPos) {
+            string val(traAtt->traAttMap[*tra][pos]);
+            valList += val;
+        }
+        if (checked_vals.find(valList) == checked_vals.end()) {
+            checked_vals[valList] = true;
+            cnt++;
+        }
+    }
+    return cnt;
+}
+
 void kgmod::Occ::getTra2KeyValue(string& key, vector<string>& tra2key) {
     tra2key.resize(traAtt->traMax + 1);
     vector<string> vals = evalKeyValue(key);
@@ -530,15 +557,24 @@ void kgmod::Occ::getTra2KeyValue(string& key, vector<string>& tra2key) {
     }
 }
 
-void kgmod::Occ::getTra2KeyValue(vector<string>& keys, vector<string>& tra2key) {
-    tra2key.resize(traAtt->traMax + 1);
-    vector<string> vals;
-    vector<Ewah> bmps;
-    combiValues(keys, vals, bmps);
-    for (size_t i = 0; i < vals.size(); i++) {
-        for (auto t = bmps[i].begin(), et = bmps[i].end(); t != et; t++) {
-            tra2key[*t] = vals[i];
+void kgmod::Occ::getTra2KeyValue(const vector<string>& keys, vector<string>& tra2key) {
+    vector<size_t> traAttKeyPos(keys.size());
+    for (size_t i = 0; i < keys.size(); i++) {
+        boost::optional<size_t> pos = Cmn::posInVector(_config->traAttFile.granuFields, keys[i]);
+        if (! pos) {
+            string msg = keys[i] + " is not set in config file (traAttFile.granuFields)\n";
+            throw kgError(msg);
         }
+        traAttKeyPos[i] = *pos;
+    }
+
+    tra2key.resize(traAtt->traMax + 1);
+    for (size_t tra = 0; tra < tra2key.size(); tra++) {
+        for (const auto pos : traAttKeyPos) {
+            string val(traAtt->traAttMap[tra][pos]);
+            tra2key[tra] += val + ":";
+        }
+        Cmn::EraseLastChar(tra2key[tra]);
     }
 }
 
