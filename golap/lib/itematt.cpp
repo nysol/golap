@@ -211,7 +211,7 @@ void kgmod::ItemAtt::dump(bool debug) {
 vector<string> kgmod::ItemAtt::listAtt(void) {
     vector<string> out = _config->itemAttFile.numFields;
     out.insert(out.end(), _config->itemAttFile.strFields.begin(), _config->itemAttFile.strFields.end());
-    out.insert(out.end(), _config->itemAttFile.catFields.begin(), _config->itemAttFile.catFields.end());
+//    out.insert(out.end(), _config->itemAttFile.catFields.begin(), _config->itemAttFile.catFields.end());
     sort(out.begin(), out.end());
     return out;
 }

@@ -401,8 +401,8 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             for (auto& i : csv) {
                 vector<string>vec = Cmn::Split(i, ':');
                 if (vec.size() == 1) {
-                    if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) &&
-                        (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
+                    if (! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) {
+//                        (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
                         string msg = vec[0] + " is not transaction attribute\n";
                         throw kgError(msg);
                     }
@@ -411,8 +411,8 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     transform(vec[0].cbegin(), vec[0].cend(), vec[0].begin(), ::toupper);
                     string msg;
                     if (vec[0][0] == 'T') {
-                        if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) &&
-                            (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
+                        if (! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) {
+//                            (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
                             msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }
@@ -435,8 +435,8 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             for (auto& i : csv) {
                 vector<string>vec = Cmn::Split(i, ':');
                 if (vec.size() == 1) {
-                    if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) &&
-                        (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
+                    if (! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) {
+//                        (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
                         string msg = vec[0] + " is not transaction attribute\n";
                         throw kgError(msg);
                     }
@@ -445,8 +445,8 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     transform(vec[0].cbegin(), vec[0].cend(), vec[0].begin(), ::toupper);
                     string msg;
                     if (vec[0][0] == 'T') {
-                        if ((! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) &&
-                            (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
+                        if (! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) {
+//                            (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
                             msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }

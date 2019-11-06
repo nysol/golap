@@ -204,7 +204,7 @@ void kgmod::TraAtt::dump(bool debug) {
 vector<string> kgmod::TraAtt::listAtt(void) {
     vector<string> out = _config->traAttFile.numFields;
     out.insert(out.end(), _config->traAttFile.strFields.begin(), _config->traAttFile.strFields.end());
-    out.insert(out.end(), _config->traAttFile.catFields.begin(), _config->traAttFile.catFields.end());
+//    out.insert(out.end(), _config->traAttFile.catFields.begin(), _config->traAttFile.catFields.end());
     sort(out.begin(), out.end());
     return out;
 }

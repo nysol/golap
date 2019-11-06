@@ -28,8 +28,9 @@
 using namespace std;
 
 namespace kgmod {
-    enum DataType {NONE=0,STR=1,NUM=2,CAT=3};
-    const vector<string> DataTypeStr = {"NONE","STR","NUM","CAT"};
+    // STR_HC,NUM_HCではhigh cardinality用のbitmapを使わないインデックスを使用する
+    enum DataType {NONE=0,STR=1,NUM=2,STR_HC=3,NUM_HC=4};
+    const vector<string> DataTypeStr = {"NONE","STR","NUM","STR_HC","NUM_HC"};
     
     struct Config {
         string dbDir;
@@ -45,22 +46,22 @@ namespace kgmod {
             string name;
             vector<string> strFields;
             vector<string> numFields;
-            vector<string> catFields;
+            vector<string> highCardinality;
             vector<string> granuFields;
         } traAttFile;
-        btree::btree_map<string, DataType> traDataType;
+        btree::btree_map<string, DataType> traDataType; // ["field name"] -> data type
         
         struct itemAttFile {
             string name;
             string itemName;
             vector<string> strFields;
             vector<string> numFields;
-            vector<string> catFields;
+            vector<string> highCardinality;
             string imageField;
             unordered_map<string, string> code2name_map;
             unordered_map<string, string> name2code_map;
         } itemAttFile;
-        btree::btree_map<string, DataType> itemDataType;
+        btree::btree_map<string, DataType> itemDataType; // ["field name"] -> data type
         
         bool cmdCache_enable;
         size_t cmdCache_size;

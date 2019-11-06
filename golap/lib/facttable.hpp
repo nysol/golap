@@ -47,10 +47,10 @@ namespace kgmod {
         };
         vector<elem> _stack;
         string _func;
-        unordered_map<string, int>* _valPosMap;
+        unordered_map<string, int>* _valPosMap;     // ["value name"] -> position in csv columns
         const map<string, int> _funcs = {{"COUNT",0}, {"SUM",1}, {"AVE",1}, {"MED",1}, {"MIN",1},
                                          {"MAX",1}, {"VAR",1}, {"SD",1}, {"QTILE",1}};
-            // ["function name"] -> argument count
+                                                    // ["function name"] -> argument count
         
     private:
         string getOneElem(char** ptr);
@@ -76,6 +76,9 @@ namespace kgmod {
         vector<itemMap_t> _factTable;       // [traNo][itemNo]
         vector<string> _flds;
         unordered_map<string, int> _fldPos;
+        // どこで実装すべきか？？？
+        typedef btree::btree_multimap<string, size_t> valsIndex_t;
+        vector<valsIndex_t> _valsIndex;     // [_fldPos][value] -> index in _factTable
         
     public:
         FactTable(Config* config, kgEnv* env, Occ* occ)

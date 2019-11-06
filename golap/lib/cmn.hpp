@@ -42,7 +42,7 @@ namespace kgmod {
         namespace CsvStr {
             char* SplitValues(char *p, char *field, int size);
             vector<string> Parse(const string Record);
-            string Make(const vector<string> Items, const string delim = ",");
+            string Join(const vector<string> Items, const string delim = ",");
         }
         string EnvFile(const char* PrefEnv, const string Filename, const char* ext);
         string FullPath(const string Path);

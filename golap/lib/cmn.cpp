@@ -89,7 +89,7 @@ vector<string> kgmod::Cmn::CsvStr::Parse(const string Record) {
     return Fields;
 }
 
-string kgmod::Cmn::CsvStr::Make(const vector<string> Items, const string delim) {
+string kgmod::Cmn::CsvStr::Join(const vector<string> Items, const string delim) {
     string out;
     for (auto& itm : Items) {
         if (itm.find(delim) == string::npos) {

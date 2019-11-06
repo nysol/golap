@@ -82,21 +82,26 @@ kgmod::Config::Config(string& infile) {
         if (boost::optional<string> val = Prm.get<string>("traAttFile.numFields")) {
             traAttFile.numFields = Cmn::CsvStr::Parse(*val);
         }
-        if (boost::optional<string> val = Prm.get<string>("traAttFile.catFields")) {
-            traAttFile.catFields = Cmn::CsvStr::Parse(*val);
+        if (boost::optional<string> val = Prm.get<string>("traAttFile.highCardinality")) {
+            traAttFile.highCardinality = Cmn::CsvStr::Parse(*val);
         }
         if (boost::optional<string> val = Prm.get<string>("traAttFile.granuFields")) {
             traAttFile.granuFields = Cmn::CsvStr::Parse(*val);
         }
         
         for (auto i = traAttFile.strFields.begin(); i != traAttFile.strFields.end(); i++) {
-            traDataType[*i] = STR;
+            if (Cmn::posInVector(traAttFile.highCardinality, *i)) {
+                traDataType[*i] = STR_HC;
+            } else {
+                traDataType[*i] = STR;
+            }
         }
         for (auto i = traAttFile.numFields.begin(); i != traAttFile.numFields.end(); i++) {
-            traDataType[*i] = NUM;
-        }
-        for (auto i = traAttFile.catFields.begin(); i != traAttFile.catFields.end(); i++) {
-            traDataType[*i] = STR;
+            if (Cmn::posInVector(traAttFile.highCardinality, *i)) {
+                traDataType[*i] = NUM_HC;
+            } else {
+                traDataType[*i] = NUM;
+            }
         }
         
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.name")) {
@@ -118,17 +123,22 @@ kgmod::Config::Config(string& infile) {
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.numFields")) {
             itemAttFile.numFields = Cmn::CsvStr::Parse(*val);
         }
-        if (boost::optional<string> val = Prm.get<string>("itemAttFile.catFields")) {
-            itemAttFile.catFields = Cmn::CsvStr::Parse(*val);
+        if (boost::optional<string> val = Prm.get<string>("traAttFile.highCardinality")) {
+            itemAttFile.highCardinality = Cmn::CsvStr::Parse(*val);
         }
         for (auto i = itemAttFile.strFields.begin(); i != itemAttFile.strFields.end(); i++) {
-            itemDataType[*i] = STR;
+            if (Cmn::posInVector(itemAttFile.highCardinality, *i)) {
+                itemDataType[*i] = STR_HC;
+            } else {
+                itemDataType[*i] = STR;
+            }
         }
         for (auto i = itemAttFile.numFields.begin(); i != itemAttFile.numFields.end(); i++) {
-            itemDataType[*i] = NUM;
-        }
-        for (auto i = itemAttFile.catFields.begin(); i != itemAttFile.catFields.end(); i++) {
-            itemDataType[*i] = STR;
+            if (Cmn::posInVector(itemAttFile.highCardinality, *i)) {
+                itemDataType[*i] = NUM_HC;
+            } else {
+                itemDataType[*i] = NUM;
+            }
         }
         
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.imageField")) {
@@ -146,7 +156,7 @@ kgmod::Config::Config(string& infile) {
                 }
             }
         }
-
+        
         if (boost::optional<string> val = Prm.get<string>("cmdCache.enable")) {
             string tmp = *val;
             transform(tmp.cbegin(), tmp.cend(), tmp.begin(), ::toupper);
@@ -235,11 +245,6 @@ void kgmod::Config::dump(bool debug) {
         cerr << *i << " ";
     }
     cerr << endl;
-    cerr << "catFields: ";
-    for (auto i = traAttFile.catFields.begin(); i != traAttFile.catFields.end(); i++) {
-        cerr << *i << " ";
-    }
-    cerr << endl;
     cerr << "itemAttFile: " << itemAttFile.name << endl;
     cerr << "itemName: " << itemAttFile.itemName << endl;
     cerr << "strFidls: ";
@@ -249,11 +254,6 @@ void kgmod::Config::dump(bool debug) {
     cerr << endl;
     cerr << "numFilds: ";
     for (auto i = itemAttFile.numFields.begin(); i != itemAttFile.numFields.end(); i++) {
-        cerr << *i << " ";
-    }
-    cerr << endl;
-    cerr << "catFields: ";
-    for (auto i = itemAttFile.catFields.begin(); i != itemAttFile.catFields.end(); i++) {
         cerr << *i << " ";
     }
     cerr << endl;

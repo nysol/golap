@@ -64,9 +64,9 @@ void kgmod::Occ::buildExBmpList(void) {
     cerr << "building extra transaction index" << endl;
     vector<vector<string>*> AllItemAtt(2);
     AllItemAtt[0] = &(_config->itemAttFile.strFields);
-    AllItemAtt[1] = &(_config->itemAttFile.catFields);
+//    AllItemAtt[1] = &(_config->itemAttFile.catFields);
     
-    for (size_t i = 0; i < 2; i++) {
+    for (size_t i = 0; i < 1; i++) {
         for (auto& key : *AllItemAtt[i]) {
             exBmpList.InitKey(key, STR);
             vector<string> allVals = itemAtt->bmpList.EvalKeyValue(key);
@@ -345,39 +345,63 @@ void kgmod::Occ::item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp) {
     exBmpList.SetVal(itemKey, itemVal, traBmp);
 }
 
-void kgmod::Occ::expandItemByGranu(const size_t traNo, const string& traAttKey,
-                                   Ewah& traFilter, Ewah& itemBmp) {
-    string traAttVal;
-    traAtt->traNo2traAtt(traNo, traAttKey, traAttVal);
-    if (ex_occ.GetVal(traAttKey, traAttVal, itemBmp)) return;
-    
-    cerr << "calc traNo to transaction attribute bitmap: " << traAttKey << ":" << traAttVal << endl;
-    Ewah granuBmp;
-    bmpList.GetVal(traAttKey, traAttVal, granuBmp);
-    granuBmp = granuBmp & traFilter;
-    itemBmp.reset();
-    for (auto t = granuBmp.begin(), et = granuBmp.end(); t != et; t++) {
-        itemBmp = itemBmp | occ[*t];
-    }
-    ex_occ.InitKey(traAttKey, bmpList.getDataType(traAttKey));
-    ex_occ.SetVal(traAttKey, traAttVal, itemBmp);
-}
-
+// 指定したトランザクション(traNo)から指定したトランザクション属性(traAttKey)と同じ値を持つ
+// トランザクションを抽出し、それらのトランザクションに含まれるitemNoのビットマップを生成して。
+// ex_occにキャッシュさせる。
+//　更に、traFilterに含まれるitemだけを抽出して返す。（ex_occ_CacheOnceQueryにキャッシュ）
 void kgmod::Occ::expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
-                                   Ewah& traFilter, Ewah& itemBmp) {
-    itemBmp.padWithZeroes(itemAtt->itemMax + 1);
-    itemBmp.inplace_logicalnot();
-    for (auto& k : traAttKey) {
-        Ewah tmpBmp;
-        expandItemByGranu(traNo, k, traFilter, tmpBmp);
-        itemBmp = itemBmp & tmpBmp;
+                                   const Ewah& traFilter, const Ewah& itemFilter, Ewah& itemBmp,
+                                   unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery) {
+    string joinedTraAttKey = Cmn::CsvStr::Join(traAttKey, ":");
+    vector<string> traAttVal;
+    traAtt->traNo2traAtt(traNo, traAttKey, traAttVal);
+    string joinedTraAttVal = Cmn::CsvStr::Join(traAttVal, ":");
+    
+    // キャッシュにあれば、それを返す
+    auto it = ex_occ_CacheOnceQeuery.find(joinedTraAttVal);
+    if (it != ex_occ_CacheOnceQeuery.end()) {
+        itemBmp = it->second;
+        return;
     }
+    
+    Ewah granuBmp;      // これはtransaction bitmap
+    granuBmp.padWithZeroes(itemAtt->itemMax + 1);
+    granuBmp.inplace_logicalnot();
+    bmpList.GetVal(traAttKey, traAttVal, granuBmp);
+    
+    Ewah cachedItemBmp;
+    bool cached = ex_occ.GetVal(joinedTraAttKey, joinedTraAttVal, cachedItemBmp);
+    if (!cached) {
+        // ex_occになければ、当該item bitmapを生成する
+        cerr << "make transaction attribute bitmap (exocc) derived from traNo=";
+        cerr << traNo << " ";
+        cerr << joinedTraAttKey << "=" << joinedTraAttVal << endl;
+        cachedItemBmp.reset();
+        for (auto t = granuBmp.begin(), et = granuBmp.end(); t != et; t++) {
+            cachedItemBmp = cachedItemBmp | occ[*t];
+        }
+        // ex_occにキャッシュ
+        ex_occ.InitKey(joinedTraAttKey, STR);
+        ex_occ.SetVal(joinedTraAttKey, joinedTraAttVal, cachedItemBmp);
+    }
+    
+    // キャッシュされたitem bmp(cachedItemBmp)よりtraFilterのトランザクションに含まれない
+    // itemをommitしながらitem bmpを作成する（結果をキャッシュする）
+    Ewah zeroBmp;
+    itemBmp.reset();
+    Ewah tmpBmp = cachedItemBmp & itemFilter;
+    for (auto i = tmpBmp.begin(), ei = tmpBmp.end(); i != ei; i++) {
+        string tarItem = itemAtt->item[*i];
+        Ewah tmpTraBmp = bmpList.GetVal(occKey, tarItem);
+        Ewah tmpTraBmp2 = tmpTraBmp & traFilter & granuBmp;
+        if (tmpTraBmp2 != zeroBmp) {
+            itemBmp.set(*i);
+        }
+    }
+    ex_occ_CacheOnceQeuery[joinedTraAttVal] = itemBmp;
 }
 
 size_t kgmod::Occ::itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key) {
-    if (itemNo == 16438) {
-        cerr << endl;
-    }
     size_t cnt = 0;
     unordered_map<string, int> checkedAttVal;
     Ewah traBmp = bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}];
@@ -398,17 +422,11 @@ size_t kgmod::Occ::itemFreq(const size_t itemNo, const Ewah& traFilter, const ve
 }
 
 size_t kgmod::Occ::itemFreq(size_t itemNo, vector<string>* tra2key) {
-    if (itemNo == 16438) {
-        cerr << endl;
-    }
     return bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
 }
 
 size_t kgmod::Occ::attFreq(const vector<string>& attKeys, const vector<string>attVals,
                            const Ewah& traFilter, const Ewah& itemFilter, const vector<string>* tra2key) {
-    if (attKeys[0] == "0011023580813") {
-        cerr << endl;
-    }
     size_t cnt = 0;
     Ewah itemBmp;
     itemBmp.padWithZeroes(itemAtt->itemMax + 1); itemBmp.inplace_logicalnot();
@@ -448,7 +466,7 @@ size_t kgmod::Occ::attFreq(string& attKey, string& attVal, const Ewah& traFilter
         cerr << endl;
     }
     Ewah *itemBmp;
-    if (! itemAtt->bmpList.GetVal(attKey, attVal, itemBmp)) return 0;
+    if (!itemAtt->bmpList.GetVal(attKey, attVal, itemBmp)) return 0;
     Ewah itemVals = *itemBmp & itemFilter;
 //    Cmn::CheckEwah(itemVals);
     

@@ -38,12 +38,12 @@ bool kgmod::Filter::existsFldName(const string& fldName, const tra_item traitem)
     bool stat;
     if (traitem == TRA) {
         stat =  Cmn::posInVector(config->traAttFile.numFields, fldName) ||
-                Cmn::posInVector(config->traAttFile.strFields, fldName) ||
-                Cmn::posInVector(config->traAttFile.catFields, fldName);
+                Cmn::posInVector(config->traAttFile.strFields, fldName);
+//                Cmn::posInVector(config->traAttFile.catFields, fldName);
     } else if (traitem == ITEM) {
         stat =  Cmn::posInVector(config->itemAttFile.numFields, fldName) ||
-                Cmn::posInVector(config->itemAttFile.strFields, fldName) ||
-                Cmn::posInVector(config->itemAttFile.catFields, fldName);
+                Cmn::posInVector(config->itemAttFile.strFields, fldName);
+//                Cmn::posInVector(config->itemAttFile.catFields, fldName);
     } else {
         stringstream msg;
         msg << "invalid tra_item: " << traitem;

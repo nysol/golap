@@ -101,9 +101,9 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
     bool isNodeGranu = (query.granularity.second.size() != 1) ||
                         (query.granularity.second[0] != mt_config->traFile.itemFld);
     vector<string> tra2key;     // [traNo] -> 当該トランザクションが有するTraAttの値リスト(csv)
-    // transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書きして、
+    // transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書きする
     if (isTraGranu) {
-        // vector版countKeyValueは処理が重いので、マルチバリューかどうかで処理を分ける
+        // vector版countKeyValueは処理が比較的重いので、マルチバリューかどうかで処理を分ける
         if (query.granularity.first.size() == 1) {
             traNum = mt_occ->countKeyValue(query.granularity.first[0], &tarTraBmp);
             mt_occ->getTra2KeyValue(query.granularity.first[0], tra2key);
@@ -113,6 +113,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
         }
     }
     
+    unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
     unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
     for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
         if (isTimeOut) {stat = 2; break;}
@@ -121,7 +122,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
         if (isNodeGranu) {
             // itemNo(2)から指定した粒度のキー(node2)を作成する。
             vnode2 = mt_occ->itemAtt->key2att(*i2, query.granularity.second);
-            node2 = Cmn::CsvStr::Make(vnode2, ":");
+            node2 = Cmn::CsvStr::Join(vnode2, ":");
         } else {
             node2 = mt_occ->itemAtt->item[(*i2)];
             vnode2.resize(1);
@@ -138,6 +139,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
             }
         }
         if (itemFreq[*i2] == 0) continue;
+        
         // すでに処理済みのキーの場合はcontinueする。
         if (checked_node2.find(vnode2) == checked_node2.end()) {
             checked_node2[vnode2] = true;
@@ -152,7 +154,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                                                             // [itemNo, traAtt(:区切り)] -> exists
         unordered_map<vector<string>, size_t, boost::hash<vector<string>>> itemNo4node_map;
                                                             // [node] -> coitemsをカウントする代表itemNo
-        // itemNo(2)が持つ属性(vnode2)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt2)
+        // itemNo(2)の属性(vnode2)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt2)
         Ewah itemInTheAtt2 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
         itemInTheAtt2 = itemInTheAtt2 & query.itemFilter;
         for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
@@ -165,13 +167,15 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                 if (isTimeOut) {stat = 2; break;}
                 vector<string> vTraAtt;
                 mt_occ->traAtt->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
-                string traAtt = Cmn::CsvStr::Make(vTraAtt, ":");
+                string traAtt = Cmn::CsvStr::Join(vTraAtt, ":");
                 
                 Ewah item_i1;
                 if (isTraGranu) {
-                    // t2が持つ属性から、requestで指定された粒度で対象トランザクションを拡張した上で、対象itemNo(1)を拡張する
-                    mt_occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp, item_i1);
-                    item_i1 = item_i1 & query.itemFilter;
+                    // t2の属性から、requestで指定された粒度で対象トランザクションを拡張した上で、対象itemNo(1)を拡張する
+                    mt_occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp,
+                                              query.itemFilter, item_i1, ex_occ_cacheOnceQuery);
+//                    item_i1 = item_i1 & query.itemFilter;
+//                    cerr << "!!!"; Cmn::CheckEwah(item_i1);
                 } else {
                     item_i1 = mt_occ->occ[*t2] & query.itemFilter;
                 }
@@ -180,7 +184,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                     if (*i1 >= *i2) break;
                     
                     vector<string> vnode1 = mt_occ->itemAtt->key2att(*i1, query.granularity.second);
-                    string node1 = Cmn::CsvStr::Make(vnode1, ":");
+                    string node1 = Cmn::CsvStr::Join(vnode1, ":");
                     if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
                         checked_node1[{node1, traAtt}] = true;
                     } else {
@@ -447,7 +451,7 @@ void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
     cerr << "start nodestat" << endl;
     
     signed int stat = 0;
-    string header = Cmn::CsvStr::Make(nodestat.granularity.second, ":");
+    string header = Cmn::CsvStr::Join(nodestat.granularity.second, ":");
     for (auto& v : nodestat.vals) {
         header += ",";
         header += v.second;
@@ -460,7 +464,7 @@ void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
     Ewah itemBmp;
     mt_occ->itemAtt->bmpList.GetVal(nodestat.granularity.second, nodestat.itemVal, itemBmp);
     itemBmp = itemBmp & nodestat.itemFilter;
-    string itemVal = Cmn::CsvStr::Make(nodestat.itemVal, ":");
+    string itemVal = Cmn::CsvStr::Join(nodestat.itemVal, ":");
     size_t cnt = mt_factTable->aggregate({traHeader, nodestat.traFilter}, {itemVal, itemBmp},
                                          nodestat.vals, line);
     res[""].insert(make_pair(1, line));
@@ -718,10 +722,10 @@ void kgmod::exec::co_occrence_mcmd(Query& query) {
     cmd1 << mt_config->outDir << "/itemFilter.csv k=" << mt_config->traFile.itemFld << " | ";
     cmd1 << "/usr/local/bin/mjoin m=" << mt_config->itemAttFile.name;
     cmd1 << " k=" << mt_config->traFile.itemFld << " | ";
-    cmd1 << "/usr/local/bin/mcut f='" << Cmn::CsvStr::Make(query.granularity.first) << ",";
-    cmd1 << Cmn::CsvStr::Make(query.granularity.second) << "' | ";
-    cmd1 << "/usr/local/bin/muniq k='" << Cmn::CsvStr::Make(query.granularity.first) << ",";
-    cmd1 << Cmn::CsvStr::Make(query.granularity.second);
+    cmd1 << "/usr/local/bin/mcut f='" << Cmn::CsvStr::Join(query.granularity.first) << ",";
+    cmd1 << Cmn::CsvStr::Join(query.granularity.second) << "' | ";
+    cmd1 << "/usr/local/bin/muniq k='" << Cmn::CsvStr::Join(query.granularity.first) << ",";
+    cmd1 << Cmn::CsvStr::Join(query.granularity.second);
     cmd1 << "' o=" << mt_config->outDir << "/xxbase";
     cerr << "exec: " << cmd1.str() << endl;
     stat = system(cmd1.str().c_str());
@@ -729,7 +733,7 @@ void kgmod::exec::co_occrence_mcmd(Query& query) {
     
     // muniq f=MemberID i=xxbase0 | mcount a=total o=xxtotal
     stringstream cmd2;
-    cmd2 << "/usr/local/bin/muniq k=" << Cmn::CsvStr::Make(query.granularity.first);
+    cmd2 << "/usr/local/bin/muniq k=" << Cmn::CsvStr::Join(query.granularity.first);
     cmd2 << " i=" << mt_config->outDir << "/xxbase0 | ";
     cmd2 << "/usr/local/bin/mcount a=total o=" << mt_config->outDir << "/xxtotal";
     cerr << "exec: " << cmd2.str() << endl;
@@ -737,8 +741,8 @@ void kgmod::exec::co_occrence_mcmd(Query& query) {
     if (stat != 0) {cerr << "#ERROR# failed in " << cmd2.str() << endl; return;}
 
     stringstream cmd3;
-    cmd3 << "/usr/local/bin/mcombi k=" << Cmn::CsvStr::Make(query.granularity.first);
-    cmd3 << " f=" << Cmn::CsvStr::Make(query.granularity.second);
+    cmd3 << "/usr/local/bin/mcombi k=" << Cmn::CsvStr::Join(query.granularity.first);
+    cmd3 << " f=" << Cmn::CsvStr::Join(query.granularity.second);
     cmd3 << " a=node1,node2 n=2 i=" << mt_config->outDir << "/xxbase | ";
     cmd3 << "/usr/local/bin/mcount k=node1,node2 a=frequency o=" << mt_config->outDir << "/xxcombi2";
     cerr << "exec: " << cmd3.str() << endl;
@@ -747,7 +751,7 @@ void kgmod::exec::co_occrence_mcmd(Query& query) {
     
     // mcount k=MemberID a=nfreq i=xxbase o=xxcnt
     stringstream cmd4;
-    cmd4 << "/usr/local/bin/mcount k=" << Cmn::CsvStr::Make(query.granularity.second);
+    cmd4 << "/usr/local/bin/mcount k=" << Cmn::CsvStr::Join(query.granularity.second);
     cmd4 << " a=nfreq i=";
     cmd4 << mt_config->outDir <<"/xxbase o=" << mt_config->outDir << "/xxcnt";
     cerr << "exec: " << cmd4.str() << endl;
@@ -765,10 +769,10 @@ void kgmod::exec::co_occrence_mcmd(Query& query) {
     // msortf f=frequency |\
     // mfldname -q o=test.csv
     stringstream cmd5;
-    cmd5 << "/usr/local/bin/mjoin k=node1 K=" << Cmn::CsvStr::Make(query.granularity.second);
+    cmd5 << "/usr/local/bin/mjoin k=node1 K=" << Cmn::CsvStr::Join(query.granularity.second);
     cmd5 << " f=nfreq:frequency1 m=" << mt_config->outDir << "/xxcnt i=";
     cmd5 << mt_config->outDir << "/xxcombi2 | ";
-    cmd5 << "/usr/local/bin/mjoin k=node2 K=" << Cmn::CsvStr::Make(query.granularity.second);
+    cmd5 << "/usr/local/bin/mjoin k=node2 K=" << Cmn::CsvStr::Join(query.granularity.second);
     cmd5 << " f=nfreq:frequency2 m=" << mt_config->outDir << "/xxcnt | ";
     cmd5 << "/usr/local/bin/mproduct f=total m=";
     cmd5 << mt_config->outDir << "/xxtotal | ";
@@ -832,12 +836,19 @@ void kgmod::exec::doRetrieve(EtcReq& etcReq) {
 
 void kgmod::exec::proc(void) {
     try {
+        chrono::system_clock::time_point timeStart;
+        chrono::system_clock::time_point timeEnd;
+        double elapsedTime;
+        timeStart = chrono::system_clock::now();
         Request request(mt_config, mt_occ, mt_factTable, golap_->fil);
         request.evalRequest(req_body());
+        timeEnd = chrono::system_clock::now();
+        elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
+        cerr << "filter eval time: " << elapsedTime / 1000 << " sec" << endl;
         
         // Excecuting Enum on each dimention
         map<string, Result> res;
-        chrono::system_clock::time_point Start = chrono::system_clock::now();
+        timeStart = chrono::system_clock::now();
         
         // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
         // 各ファンクション内のループの先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
@@ -859,9 +870,9 @@ void kgmod::exec::proc(void) {
         }
         cancelTimer();
         
-        chrono::system_clock::time_point End = chrono::system_clock::now();
-        double elapsed = chrono::duration_cast<chrono::milliseconds>(End - Start).count();
-        cerr << "process time: " << elapsed / 1000 << " sec" <<endl;
+        timeEnd = chrono::system_clock::now();
+        elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
+        cerr << "process time: " << elapsedTime / 1000 << " sec" << endl;
         
         if (request.query.debug_mode == 2) {
             if (request.query.dimension.key != "") {

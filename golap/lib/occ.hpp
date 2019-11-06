@@ -69,9 +69,9 @@ namespace kgmod {
         size_t LiveTraCnt(void) {return liveTra.numberOfOnes();}
         
         void item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp);
-        void expandItemByGranu(const size_t traNo, const string& key, Ewah& traFilter, Ewah& itemBmp);
-        void expandItemByGranu(const size_t traNo, const vector<string>& key,
-                               Ewah& traFilter, Ewah& itemBmp);
+        void expandItemByGranu(const size_t traNo, const vector<string>& key, const Ewah& traFilter,
+                               const Ewah& itemFilter, Ewah& itemBmp,
+                               unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery);
         size_t itemFreq(const size_t itemNo, const Ewah& traFilter,
                         const vector<string>* tra2key = NULL);
         size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL);

@@ -40,11 +40,19 @@ namespace kgmod {
         string dataTypeMapDb;
         map<string, DataType> DataTypeMap;
         
-        // xxx_btree[{変数, 値}] = ビットマップ; xx: str num
+        // xxx_btree[{変数, 値}] = ビットマップ; xxx: str/num
         typedef btree::btree_map<pair<string, string>, Ewah> str_btree_t;
         typedef btree::btree_map<pair<string, double>, Ewah> num_btree_t;
         str_btree_t str_btree;
         num_btree_t num_btree;
+        
+        // xxx_btree_2[{変数, 値}] = レコードNo; xxx: str/num
+        // High Cardinality用のbitmapを使わないインデックス
+        typedef btree::btree_multimap<pair<string, string>, Ewah> str_btree_hc_t;
+        typedef btree::btree_multimap<pair<string, double>, Ewah> num_btree_hc_t;
+        str_btree_hc_t str_btree_hc;
+        num_btree_hc_t num_btree_hc;
+        
         unordered_map<double, string> num_str;
         
     public:
