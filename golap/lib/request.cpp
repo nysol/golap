@@ -155,8 +155,8 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                 query.sortKey = SORT_NONE;
             }
         }
-        if (boost::optional<string> val2 = pt.get_optional<string>("query.sendMax")) {
-            query.sendMax = stoi(*val2);
+        if (boost::optional<size_t> val2 = pt.get_optional<size_t>("query.sendMax")) {
+            query.sendMax = *val2;
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("query.granularity")) {
             if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.transaction")) {

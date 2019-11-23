@@ -23,7 +23,11 @@
 #include <iostream>
 #include <unordered_map>
 #include <vector>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/optional.hpp>
 #include "btree_map.h"
+#include "param.hpp"
 
 using namespace std;
 
@@ -33,6 +37,8 @@ namespace kgmod {
     const vector<string> DataTypeStr = {"NONE","STR","NUM","STR_HC","NUM_HC"};
     
     struct Config {
+        Param Prm;
+        
         string dbDir;
         string outDir;
         
@@ -79,6 +85,7 @@ namespace kgmod {
         
     public:
         Config(string& infile);
+        bool getJson(string& json) {return Prm.convJson(json);}
         void dump(bool debug);
     };
 }

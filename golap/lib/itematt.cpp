@@ -190,7 +190,7 @@ void kgmod::ItemAtt::dump(bool debug) {
         cerr << "{" << i->first << "," << i->second << "} ";
     }
     cerr << endl;
-
+    
     cerr << "item: ";
     for (auto i = item.begin(); i != item.end(); i++) {
         cerr << "{" << i->first << "," << i->second << "} ";

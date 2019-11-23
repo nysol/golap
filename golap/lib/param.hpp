@@ -40,6 +40,7 @@ namespace kgmod {
         
         bool WriteParam(void);
         bool ReadParam(void);
+        bool convJson(string& json);
         bool SetFilePath(const string File, const string& FilePath);
         bool GetFilePath(const string File, string& FilePath);
         template<typename T> boost::optional<T> get(const string& path) {

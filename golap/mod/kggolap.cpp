@@ -129,6 +129,11 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
             vnode2[0] = node2;
         }
         
+        bool br = false;
+        if (node2 == "30/-天竺 半袖Tシャツ_キッズ女児") {
+            br = true;
+        }
+        
         if (itemFreq.find(*i2) == itemFreq.end()) {
             if (isTraGranu) {
                 itemFreq[*i2] = mt_occ->attFreq(query.granularity.second, vnode2,
@@ -496,7 +501,6 @@ void kgmod::exec::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
     res[""].insert(make_pair(0, mt_config->itemAttFile.imageField));
 }
 
-
 void kgmod::exec::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
     cerr << "start worksheet" << endl;
     
@@ -801,6 +805,15 @@ void kgmod::exec::doControl(EtcReq& etcReq) {
         cerr << "bye message recieved" << endl;
         closing_ = true;
         res_body = "terminated\n";
+    } else if (boost::iequals(etcReq.func, "config")) {
+        cerr << "bye message recieved" << endl;
+        string configJson;
+        if (mt_config->getJson(configJson)) {
+            res_body = "status:0\n";
+            res_body += configJson;
+        } else {
+            res_body = "status:-1\nFailed to convert json";
+        }
     } else {
         cerr << "unknown control request" << endl;
         res_body = "unknown control request\n";

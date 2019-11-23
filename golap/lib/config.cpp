@@ -19,23 +19,18 @@
 
 #include <iostream>
 #include <thread>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/optional.hpp>
 #include <kgError.h>
 #include <kgMethod.h>
 #include <kgConfig.h>
 #include <kgMessage.h>
 #include "cmn.hpp"
-#include "param.hpp"
 #include "config.hpp"
 
 using namespace kgmod;
 using namespace kglib;
 
-kgmod::Config::Config(string& infile) {
+kgmod::Config::Config(string& infile) : Prm(infile) {
     if (infile.size() != 0) {
-        Param Prm(infile);
         Prm.ReadParam();
         
         if (boost::optional<string> val = Prm.get<string>("dbDir")) {
@@ -205,7 +200,7 @@ kgmod::Config::Config(string& infile) {
             mt_degree = thread::hardware_concurrency();
         }
         
-        if (boost::optional<int> val = Prm.get<int>("etc.sendMax")) {
+        if (boost::optional<size_t> val = Prm.get<size_t>("etc.sendMax")) {
             sendMax = *val;
         } else {
             sendMax = 1000;

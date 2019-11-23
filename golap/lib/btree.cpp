@@ -91,6 +91,16 @@ void kgmod::BTree::SetBit(const string& Key, const string& KeyValue, size_t bit)
             tmp.set(bit);
             num_btree[{Key, dbl}] = tmp;
         }
+    } else if (DataTypeMap[Key] == STR_HC) {
+        str_hc_btree.insert({{Key, KeyValue}, bit});
+    } else if (DataTypeMap[Key] == NUM_HC) {
+        double dbl;
+        if (KeyValue.length() == 0) {
+            dbl = -DBL_MAX;
+        } else {
+            dbl = stod(KeyValue);
+        }
+        num_hc_btree.insert({{Key, dbl}, bit});
     }
 }
 
@@ -106,13 +116,30 @@ void kgmod::BTree::SetVal(const string& Key, const string& KeyValue, Ewah& Bitma
         }
         num_btree[{Key,dbl}] = Bitmap;
         num_str[dbl] = KeyValue;
+    } else if (DataTypeMap[Key] == STR_HC) {
+        for (auto i = Bitmap.begin(), ei = Bitmap.end(); i != ei; i++) {
+            str_hc_btree.insert({{Key, KeyValue}, *i});
+        }
+    } else if (DataTypeMap[Key] == NUM_HC) {
+        double dbl;
+        if (KeyValue.length() == 0) {
+            dbl = -DBL_MAX;
+        } else {
+            dbl = stod(KeyValue);
+        }
+        for (auto i = Bitmap.begin(), ei = Bitmap.end(); i != ei; i++) {
+            num_hc_btree.insert({{Key, dbl}, *i});
+        }
+        num_str[dbl] = KeyValue;
     }
 }
 
 bool kgmod::BTree::GetVal(const string& Key, const string& KeyValue, Ewah*& Bitmap) {
     bool found = false;
-    static Ewah nullBmp;
-    Bitmap = &nullBmp;
+//    static Ewah nullBmp;
+//    Bitmap = &nullBmp;
+    resBmp.reset();
+    Bitmap = &resBmp;
     if (DataTypeMap[Key] == STR) {
         if (str_btree.find({Key,KeyValue}) != str_btree.end()) {
             Bitmap = &str_btree[{Key,KeyValue}];
@@ -129,6 +156,30 @@ bool kgmod::BTree::GetVal(const string& Key, const string& KeyValue, Ewah*& Bitm
             Bitmap = &num_btree[{Key, dbl}];
             found = true;
         }
+    } else if (DataTypeMap[Key] == STR_HC) {
+        set<size_t> work;
+        for (auto i = str_hc_btree.lower_bound({Key, KeyValue}),
+             ei = str_hc_btree.upper_bound({Key, KeyValue}); i != ei; i++) {
+            work.insert(i->second);
+        }
+        for (auto wk : work) {
+            Bitmap->set(wk);
+        }
+    } else if (DataTypeMap[Key] == NUM_HC) {
+        double dbl;
+        if (KeyValue.length() == 0) {
+            dbl = -DBL_MAX;
+        } else {
+            dbl = stod(KeyValue);
+        }
+        set<size_t> work;
+        for (auto i = num_hc_btree.lower_bound({Key, dbl}),
+             ei = num_hc_btree.upper_bound({Key, dbl}); i != ei; i++) {
+            work.insert(i->second);
+        }
+        for (auto wk : work) {
+            Bitmap->set(wk);
+        }
     }
     return found;
 }
@@ -141,11 +192,10 @@ bool kgmod::BTree::GetVal(const string& Key, const string& KeyValue, Ewah& Bitma
 }
 
 Ewah& kgmod::BTree::GetVal(const string& Key, const string& KeyValue) {
-    static Ewah Zero; Zero.reset();
+    resBmp.reset();
     if (DataTypeMap[Key] == STR) {
-//        if (str_btree.find({Key, KeyValue}) == str_btree.end()) str_btree[{Key, KeyValue}] = Zero;
         if (str_btree.find({Key, KeyValue}) == str_btree.end()) {
-            return Zero;
+            return resBmp;  // null bitmap
         } else {
             return str_btree[{Key, KeyValue}];
         }
@@ -156,12 +206,37 @@ Ewah& kgmod::BTree::GetVal(const string& Key, const string& KeyValue) {
         } else {
             dbl = stod(KeyValue);
         }
-//        if (num_btree.find({Key, dbl}) == num_btree.end()) num_btree[{Key, dbl}] = Zero;
         if (num_btree.find({Key, dbl}) == num_btree.end()) {
-            return Zero;
+            return resBmp;  // null bitmap
         } else {
             return num_btree[{Key, dbl}];
         }
+    } else if (DataTypeMap[Key] == STR_HC) {
+        set<size_t> work;
+        for (auto i = str_hc_btree.lower_bound({Key, KeyValue}),
+             ei = str_hc_btree.upper_bound({Key, KeyValue}); i != ei; i++) {
+            work.insert(i->second);
+        }
+        for (auto wk : work) {
+            resBmp.set(wk);
+        }
+        return resBmp;
+    } else if (DataTypeMap[Key] == NUM_HC) {
+        double dbl;
+        if (KeyValue.length() == 0) {
+            dbl = -DBL_MAX;
+        } else {
+            dbl = stod(KeyValue);
+        }
+        set<size_t> work;
+        for (auto i = num_hc_btree.lower_bound({Key, dbl}),
+             ei = num_hc_btree.upper_bound({Key, dbl}); i != ei; i++) {
+            work.insert(i->second);
+        }
+        for (auto wk : work) {
+            resBmp.set(wk);
+        }
+        return resBmp;
     } else {
         stringstream msg;
 //        msg << "invalid DataTypeMap: " << DataTypeMap[Key];
@@ -206,12 +281,27 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& LikeKey, Ewah& B
     if (FirstWild != 0) EndOfSearch[FirstWild - 1]++;
     
     Bitmap.reset();
-    auto s = (FirstWild == 0) ? str_btree.begin() : str_btree.lower_bound({Key,StartWith});
-    auto e = (FirstWild == 0) ? str_btree.end() : str_btree.upper_bound({Key,EndOfSearch});
-    for (auto i = s; i != e; i++) {
-        if (i->first.first != Key) continue;
-        if (Cmn::MatchWild(LikeKey.c_str(), i->first.second.c_str())) {
-            Bitmap = Bitmap | i->second;
+    if (DataTypeMap[Key] == STR) {
+        auto s = (FirstWild == 0) ? str_btree.begin() : str_btree.lower_bound({Key,StartWith});
+        auto e = (FirstWild == 0) ? str_btree.end() : str_btree.upper_bound({Key,EndOfSearch});
+        for (auto i = s; i != e; i++) {
+            if (i->first.first != Key) continue;
+            if (Cmn::MatchWild(LikeKey.c_str(), i->first.second.c_str())) {
+                Bitmap = Bitmap | i->second;
+            }
+        }
+    } else if (DataTypeMap[Key] == STR_HC) {
+        set<size_t> work;
+        auto s = (FirstWild == 0) ? str_hc_btree.begin() : str_hc_btree.lower_bound({Key,StartWith});
+        auto e = (FirstWild == 0) ? str_hc_btree.end() : str_hc_btree.upper_bound({Key,EndOfSearch});
+        for (auto i = s; i != e; i++) {
+            if (i->first.first != Key) continue;
+            if (Cmn::MatchWild(LikeKey.c_str(), i->first.second.c_str())) {
+                work.insert(i->second);
+            }
+        }
+        for (auto wk : work) {
+            Bitmap.set(wk);
         }
     }
     return true;
@@ -246,6 +336,39 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& Kakko, const str
                 if (i->first.second == -DBL_MAX) continue;
                 Bitmap = Bitmap | i->second;
             }
+        } else if (DataTypeMap[Key] == STR_HC) {
+            set<size_t> work;
+            for (auto i = str_hc_btree.lower_bound({Key,FromKey}); i != str_hc_btree.upper_bound({Key,ToKey}); i++) {
+                if ((Kakko == "(") && (i->first.second == FromKey)) continue;
+                if ((Kokka == ")") && (i->first.second == ToKey)) continue;
+                work.insert(i->second);
+            }
+            for (auto wk : work) {
+                Bitmap.set(wk);
+            }
+        } else if (DataTypeMap[Key] == NUM_HC) {
+            double DblFromKey;
+            if (FromKey.length() == 0) {
+                DblFromKey = -DBL_MAX;
+            } else {
+                DblFromKey = stod(FromKey);
+            }
+            double DblToKey;
+            if (ToKey.length() == 0) {
+                DblToKey   = DBL_MAX;
+            } else {
+                DblToKey   = stod(ToKey);
+            }
+            set<size_t> work;
+            for (auto i = num_hc_btree.lower_bound({Key,DblFromKey}); i != num_hc_btree.upper_bound({Key,DblToKey}); i++) {
+                if ((Kakko == "(") && (i->first.second == DblFromKey)) continue;
+                if ((Kokka == ")") && (i->first.second == DblToKey)) continue;
+                if (i->first.second == -DBL_MAX) continue;
+                work.insert(i->second);
+            }
+            for (auto wk : work) {
+                Bitmap.set(wk);
+            }
         } else {
             return false;
         }
@@ -277,6 +400,31 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& Operator, const 
                     if (i->first.second == -DBL_MAX) continue;
                     Bitmap = Bitmap | i->second;
                 }
+            } else if (DataTypeMap[Key] == STR_HC) {
+                set<size_t> work;
+                for (auto i = str_hc_btree.lower_bound({Key,KeyValue}); i != str_hc_btree.end(); i++) {
+                    if ((Operator == "(") && (i->first.second == KeyValue)) continue;
+                    work.insert(i->second);
+                }
+                for (auto wk : work) {
+                    Bitmap.set(wk);
+                }
+            } else if (DataTypeMap[Key] == NUM_HC) {
+                double DblKeyValue;
+                if (KeyValue.length() == 0) {
+                    DblKeyValue = -DBL_MAX;
+                } else {
+                    DblKeyValue = stod(KeyValue);
+                }
+                set<size_t> work;
+                for (auto i = num_hc_btree.lower_bound({Key,DblKeyValue}); i != num_hc_btree.end(); i++) {
+                    if ((Operator == "(") && (i->first.second == DblKeyValue)) continue;
+                    if (i->first.second == -DBL_MAX) continue;
+                    work.insert(i->second);
+                }
+                for (auto wk : work) {
+                    Bitmap.set(wk);
+                }
             }
         } catch (exception& e) {
             cerr << "#ERROR# ; Data conversion error" << endl;
@@ -301,6 +449,31 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& Operator, const 
                     if (i->first.second == -DBL_MAX) continue;
                     Bitmap = Bitmap | i->second;
                 }
+            } else if (DataTypeMap[Key] == STR_HC) {
+                set<size_t> work;
+                for (auto i = str_hc_btree.begin(); i != str_hc_btree.upper_bound({Key,KeyValue}); i++) {
+                    if ((Operator == ")") && (i->first.second == KeyValue)) continue;
+                    work.insert(i->second);
+                }
+                for (auto wk : work) {
+                    Bitmap.set(wk);
+                }
+            } else if (DataTypeMap[Key] == NUM_HC) {
+                double DblKeyValue;
+                if (KeyValue.length() == 0) {
+                    DblKeyValue = DBL_MAX;
+                } else {
+                    DblKeyValue = stod(KeyValue);
+                }
+                set<size_t> work;
+                for (auto i = num_hc_btree.begin() ; i != num_hc_btree.upper_bound({Key,DblKeyValue}); i++) {
+                    if ((Operator == ")") && (i->first.second == DblKeyValue)) continue;
+                    if (i->first.second == -DBL_MAX) continue;
+                    work.insert(i->second);
+                }
+                for (auto wk : work) {
+                    Bitmap.set(wk);
+                }
             }
         } catch (exception& e) {
             cerr << "#ERROR# ; Data conversion error" << endl;
@@ -313,6 +486,7 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& Operator, const 
 }
 
 void kgmod::BTree::GetAllKeyValue(const string& Key, pair<string, Ewah>& out, kvHandle*& kvh) {
+    // out.first -> field name, out.second -> bitmap
     out.first = "";
     out.second.reset();
     
@@ -338,6 +512,46 @@ void kgmod::BTree::GetAllKeyValue(const string& Key, pair<string, Ewah>& out, kv
             } else if (kvh->num_iter->first.first == Key) {
                 out.first  = num_str[kvh->num_iter->first.second];
                 out.second = kvh->num_iter->second;
+            } else {
+                delete kvh;
+                kvh = NULL;
+            }
+        } else if (DataTypeMap[Key] == STR_HC) {
+            kvh->str_hc_iter = str_hc_btree.lower_bound({Key, ""});
+            if (kvh->str_hc_iter == str_hc_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->str_hc_iter->first.first == Key) {
+                set<size_t> work;
+                out.first  = kvh->str_hc_iter->first.second;
+                for (; kvh->str_hc_iter != str_hc_btree.end(); kvh->str_hc_iter++) {
+                    if (out.first != kvh->str_hc_iter->first.second) break;
+                    work.insert(kvh->str_hc_iter->second);
+                }
+                for (auto wk : work) {
+                    out.second.set(wk);
+                }
+                kvh->str_hc_iter--;
+            } else {
+                delete kvh;
+                kvh = NULL;
+            }
+        } else if (DataTypeMap[Key] == NUM_HC) {
+            kvh->num_hc_iter = num_hc_btree.lower_bound({Key, -DBL_MAX});
+            if (kvh->num_hc_iter == num_hc_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->num_hc_iter->first.first == Key) {
+                set<size_t> work;
+                out.first  = num_str[kvh->num_hc_iter->first.second];
+                for (; kvh->num_hc_iter != num_hc_btree.end(); kvh->num_hc_iter++) {
+                    if (out.first != num_str[kvh->num_hc_iter->first.second]) break;
+                    work.insert(kvh->num_hc_iter->second);
+                }
+                for (auto wk : work) {
+                    out.second.set(wk);
+                }
+                kvh->num_hc_iter--;
             } else {
                 delete kvh;
                 kvh = NULL;
@@ -371,6 +585,47 @@ void kgmod::BTree::GetAllKeyValue(const string& Key, pair<string, Ewah>& out, kv
                 delete kvh;
                 kvh = NULL;
             }
+        } else if (DataTypeMap[Key] == STR_HC) {
+            set<size_t> work;
+            kvh->str_hc_iter++;
+            if (kvh->str_hc_iter == str_hc_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->str_hc_iter->first.first == Key) {
+                out.first  = kvh->str_hc_iter->first.second;
+                for (; kvh->str_hc_iter != str_hc_btree.end(); kvh->str_hc_iter++) {
+                    if (out.first != kvh->str_hc_iter->first.second) break;
+                    work.insert(kvh->str_hc_iter->second);
+                }
+                for (auto wk : work) {
+                    out.second.set(wk);
+                }
+                kvh->str_hc_iter--;
+            } else {
+                delete kvh;
+                kvh = NULL;
+            }
+        } else if (DataTypeMap[Key] == NUM_HC) {
+            set<size_t> work;
+            kvh->num_hc_iter++;
+            if (kvh->num_hc_iter == num_hc_btree.end()) {
+                delete kvh;
+                kvh = NULL;
+            } else if (kvh->num_hc_iter->first.first == Key) {
+                out.first = num_str[kvh->num_hc_iter->first.second];
+                for (; kvh->num_hc_iter != num_hc_btree.end(); kvh->num_hc_iter++) {
+                    if (out.first != num_str[kvh->num_hc_iter->first.second]) break;
+                    work.insert(kvh->num_hc_iter->second);
+                }
+                for (auto wk : work) {
+                    out.second.set(wk);
+                }
+                kvh->num_hc_iter--;
+            } else {
+                delete kvh;
+                kvh = NULL;
+            }
+
         } else {
             delete kvh;
             kvh = NULL;
@@ -419,7 +674,7 @@ void kgmod::BTree::save(bool clean) {
     try {
         for (auto i = DataTypeMap.begin(); i != DataTypeMap.end(); i++) {
             kvHandle* kvh = NULL;
-            pair<string, Ewah> ret;
+            pair<string, Ewah> ret;     // first -> field name, second -> bitmap
             GetAllKeyValue(i->first, ret, kvh);
             while (kvh != NULL) {
 //                cerr << "{" << i->first << "," << ret.first << "} ";
@@ -464,8 +719,7 @@ void kgmod::BTree::load(void) {
     ifstream ifs(dataTypeMapDb);
     try {
         while (getline(ifs, dt)) {
-            vector<string> var;
-            var = Cmn::CsvStr::Parse(dt);
+            vector<string> var = Cmn::CsvStr::Parse(dt);
             if (var.size() != 2) throw 0;
             DataType tmp = (DataType)stoi(var[1]);
             InitKey(var[0], tmp);
@@ -514,7 +768,10 @@ void kgmod::BTree::load(void) {
             size_t size;
             size_t rc = fread(&size, sizeof(size), 1, fp);
             if (rc == 0) throw 0;
-            if (malloc_size < size) {malloc_size = size; buf = (char*)realloc(buf, malloc_size);};
+            if (malloc_size < size) {
+                malloc_size = size;
+                buf = (char*)realloc(buf, malloc_size);
+            }
             rc = fread(buf, size, 1, fp);
             if (rc == 0) {free(buf); throw 1;}
             

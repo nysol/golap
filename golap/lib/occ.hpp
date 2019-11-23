@@ -54,6 +54,9 @@ namespace kgmod {
         occ_t occ;
         BTree ex_occ;
         
+    private:
+        mutex ex_occ_mtx;
+        
     public:
         Occ(Config* config, kgEnv* env);
         ~Occ(void);

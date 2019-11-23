@@ -94,7 +94,7 @@ void kgmod::TraAtt::build(BTree& bmpList) {
 void kgmod::TraAtt::save(bool clean) {
     cerr << "writing " << _dbName << " ..." << endl;
     if (clean) {
-        ofstream osf(_dbName,ios::out);
+        ofstream osf(_dbName, ios::out);
         osf.close();
     }
     

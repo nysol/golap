@@ -50,8 +50,8 @@ bool kgmod::Param::ReadParam(void) {
     if (! Cmn::FileExists(ParamFile)) return true;
     try {
         boost::property_tree::read_json(ParamFile, pt);
-        
-    } catch (boost::property_tree::json_parser_error& e) {
+    }
+    catch (boost::property_tree::json_parser_error& e) {
         cerr << "#ERROR# ; " << e.what() << endl;
         cerr << "#ERROR# ; " << "Failed to read file: " << ParamFile << endl;
         return false;
@@ -62,10 +62,24 @@ bool kgmod::Param::ReadParam(void) {
 bool kgmod::Param::WriteParam(void) {
     try {
         boost::property_tree::write_json(ParamFile, pt);
-        
-    } catch (boost::property_tree::json_parser_error& e) {
+    }
+    catch (boost::property_tree::json_parser_error& e) {
         cerr << "#ERROR# ; " << e.what() << endl;
         cerr << "#ERROR# ; " << "Failed to write file:" << ParamFile << endl;
+        return false;
+    }
+    return true;
+}
+
+bool kgmod::Param::convJson(string& json) {
+    try {
+        stringstream ss;
+        boost::property_tree::write_json(ss, pt, true);
+        json = ss.str();
+    }
+    catch (boost::property_tree::json_parser_error& e) {
+        cerr << "#ERROR# ; " << e.what() << endl;
+        cerr << "#ERROR# ; " << "Failed to convert to json" << endl;
         return false;
     }
     return true;

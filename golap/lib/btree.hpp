@@ -48,12 +48,14 @@ namespace kgmod {
         
         // xxx_btree_2[{変数, 値}] = レコードNo; xxx: str/num
         // High Cardinality用のbitmapを使わないインデックス
-        typedef btree::btree_multimap<pair<string, string>, Ewah> str_btree_hc_t;
-        typedef btree::btree_multimap<pair<string, double>, Ewah> num_btree_hc_t;
-        str_btree_hc_t str_btree_hc;
-        num_btree_hc_t num_btree_hc;
+        typedef btree::btree_multimap<pair<string, string>, size_t> str_hc_btree_t;
+        typedef btree::btree_multimap<pair<string, double>, size_t> num_hc_btree_t;
+        str_hc_btree_t str_hc_btree;
+        num_hc_btree_t num_hc_btree;
         
         unordered_map<double, string> num_str;
+        
+        Ewah resBmp;
         
     public:
         void PutDbName(const string dataTypeMapDb, const string dbName);
@@ -73,6 +75,8 @@ namespace kgmod {
         struct kvHandle {
             str_btree_t::iterator str_iter;
             num_btree_t::iterator num_iter;
+            str_hc_btree_t::iterator str_hc_iter;
+            num_hc_btree_t::iterator num_hc_iter;
         };
         void GetAllKeyValue(const string& Key, pair<string, Ewah>& out, kvHandle*& kvh);
         void save(bool clean);
