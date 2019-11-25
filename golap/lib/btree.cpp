@@ -101,6 +101,7 @@ void kgmod::BTree::SetBit(const string& Key, const string& KeyValue, size_t bit)
             dbl = stod(KeyValue);
         }
         num_hc_btree.insert({{Key, dbl}, bit});
+        num_str[dbl] = KeyValue;
     }
 }
 
@@ -274,7 +275,7 @@ void kgmod::BTree::GetVal(const vector<string> Keys, const vector<string> KeyVal
 }
 
 bool kgmod::BTree::GetValMulti(const string& Key, const string& LikeKey, Ewah& Bitmap) {
-    if (DataTypeMap[Key] != STR) return false;
+    if (DataTypeMap[Key] != STR && DataTypeMap[Key] != STR_HC) return false;
     size_t FirstWild = min(LikeKey.find("*"), LikeKey.find("?"));
     string StartWith = LikeKey.substr(0, FirstWild);
     string EndOfSearch = StartWith;
