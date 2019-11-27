@@ -118,7 +118,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.numFields")) {
             itemAttFile.numFields = Cmn::CsvStr::Parse(*val);
         }
-        if (boost::optional<string> val = Prm.get<string>("traAttFile.highCardinality")) {
+        if (boost::optional<string> val = Prm.get<string>("itemAttFile.highCardinality")) {
             itemAttFile.highCardinality = Cmn::CsvStr::Parse(*val);
         }
         for (auto i = itemAttFile.strFields.begin(); i != itemAttFile.strFields.end(); i++) {

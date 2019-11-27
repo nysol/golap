@@ -39,6 +39,7 @@ namespace kgmod {
         string dbName;
         string dataTypeMapDb;
         map<string, DataType> DataTypeMap;
+        map<string, size_t> card;
         
         // xxx_btree[{変数, 値}] = ビットマップ; xxx: str/num
         typedef btree::btree_map<pair<string, string>, Ewah> str_btree_t;
@@ -88,6 +89,7 @@ namespace kgmod {
         size_t CountKeyValue(const vector<string>& Keys, const Ewah* traFilter = NULL);
         size_t CountKeyValue(const string& Key, const Ewah* traFilter = NULL);
         DataType getDataType(const string& Key);
+        size_t cardinality(const string& key);
     };
 }
 

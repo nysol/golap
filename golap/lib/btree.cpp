@@ -649,7 +649,8 @@ void kgmod::BTree::save(bool clean) {
     ofstream ofs(dataTypeMapDb, ios::app);
     try {
         for (auto i = DataTypeMap.begin(); i != DataTypeMap.end(); i++) {
-            ofs << i->first << "," << i->second << endl;
+            ofs << i->first << "," << i->second;
+            ofs << "," << cardinality(i->first) << endl;
         }
     } catch(int e) {
         ofs.close();
@@ -721,7 +722,7 @@ void kgmod::BTree::load(void) {
     try {
         while (getline(ifs, dt)) {
             vector<string> var = Cmn::CsvStr::Parse(dt);
-            if (var.size() != 2) throw 0;
+            if (var.size() < 2) throw 0;               // [0]:field name, [1]:data type, [2]:cardinality(option)
             DataType tmp = (DataType)stoi(var[1]);
             InitKey(var[0], tmp);
         }
@@ -929,4 +930,46 @@ DataType kgmod::BTree::getDataType(const string& Key) {
     } else {
         return DataTypeMap[Key];
     }
+}
+
+size_t kgmod::BTree::cardinality(const string& key) {
+    size_t card = 0;
+    if (DataTypeMap[key] == STR) {
+        string buf(">*<>*<");
+        for (auto i = str_btree.lower_bound({key, ""}), ei = str_btree.end(); i != ei; i++) {
+            if (i->first.first != key) break;
+            if (i->first.second != buf) {
+                card++;
+                buf = i->first.second;
+            }
+        }
+    } else if (DataTypeMap[key] == NUM) {
+        double buf = DBL_MAX;
+        for (auto i = num_btree.lower_bound({key, -DBL_MAX}), ei = num_btree.end(); i != ei; i++) {
+            if (i->first.first != key) break;
+            if (i->first.second != buf) {
+                card++;
+                buf = i->first.second;
+            }
+        }
+    } else if (DataTypeMap[key] == STR_HC) {
+        string buf(">*<>*<");
+        for (auto i = str_hc_btree.lower_bound({key, ""}), ei = str_hc_btree.end(); i != ei; i++) {
+            if (i->first.first != key) break;
+            if (i->first.second != buf) {
+                card++;
+                buf = i->first.second;
+            }
+        }
+    } else if (DataTypeMap[key] == NUM_HC) {
+        double buf = DBL_MAX;
+        for (auto i = num_hc_btree.lower_bound({key, -DBL_MAX}), ei = num_hc_btree.end(); i != ei; i++) {
+            if (i->first.first != key) break;
+            if (i->first.second != buf) {
+                card++;
+                buf = i->first.second;
+            }
+        }
+    }
+    return card;
 }
