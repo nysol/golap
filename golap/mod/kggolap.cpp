@@ -953,12 +953,18 @@ int kgmod::kgGolap::run() {
         while (true) {
             cmdcache->save();
             
+            cerr << "starting io_service" << endl;
             asio::io_service io_service;
+            cerr << "executing server" << endl;
             exec server(this, io_service, config->port);
+            cerr << "starting server" << endl;
             server.start();
+            cerr << "running io_service" << endl;
             io_service.run();
             if (server.isClosing()) break;
+            cerr << "stopping server" << endl;
             server.stop();
+            cerr << "stopping io_service" << endl;
             io_service.stop();
         }
         occ->exBmpList.save(true);

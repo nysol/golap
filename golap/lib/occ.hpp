@@ -21,6 +21,7 @@
 #define occ_hpp
 
 #include <boost/functional/hash.hpp>
+#include <boost/thread/mutex.hpp>
 #include <unordered_map>
 #include <map>
 #include <kgConfig.h>
@@ -55,7 +56,7 @@ namespace kgmod {
         BTree ex_occ;
         
     private:
-        mutex ex_occ_mtx;
+        boost::mutex ex_occ_mtx;
         
     public:
         Occ(Config* config, kgEnv* env);
