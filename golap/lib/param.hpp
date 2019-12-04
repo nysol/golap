@@ -31,6 +31,7 @@ using namespace std;
 namespace kgmod {
     class Param {
         string ParamFile;
+	string originalText;
         boost::interprocess::file_lock* flock;
         boost::property_tree::ptree pt;
 

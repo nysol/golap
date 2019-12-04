@@ -49,6 +49,14 @@ void kgmod::Param::FileUnlock(void) {
 bool kgmod::Param::ReadParam(void) {
     if (! Cmn::FileExists(ParamFile)) return true;
     try {
+        ifstream ifs(ParamFile);
+        if (ifs.fail()) {
+            cerr << "#ERROR# ; " << "Failed to read file: " << ParamFile << endl;
+            return false;
+        }
+        originalText = string((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
+	cerr << "config: " << originalText << endl;
+	
         boost::property_tree::read_json(ParamFile, pt);
     }
     catch (boost::property_tree::json_parser_error& e) {
@@ -75,7 +83,8 @@ bool kgmod::Param::convJson(string& json) {
     try {
         stringstream ss;
         boost::property_tree::write_json(ss, pt, true);
-        json = ss.str();
+//        json = ss.str();
+	json = originalText;
     }
     catch (boost::property_tree::json_parser_error& e) {
         cerr << "#ERROR# ; " << e.what() << endl;
