@@ -114,6 +114,7 @@ golap
 		'Topic :: Scientific/Engineering :: Information Analysis',
 		'Topic :: Scientific/Engineering :: Mathematics',
 	],
+	scripts=['scripts/golapsrv.py'],
 	ext_modules =[golapmod]
 )
        
