@@ -75,7 +75,7 @@ bool kgmod::Param::convJson(string& json) {
     try {
         stringstream ss;
         boost::property_tree::write_json(ss, pt, true);
-        json = ss.str();
+        json = ss.str().c_str();
     }
     catch (boost::property_tree::json_parser_error& e) {
         cerr << "#ERROR# ; " << e.what() << endl;

@@ -788,9 +788,13 @@ string kgmod::kgGolap::proc(string reqbody) {
         // 各ファンクション内のループの先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
         setTimer(request.deadlineTimer);
         if (request.mode == "control") {
-            return doControl(request.etcRec);
+        		string ttrtn = doControl(request.etcRec);
+		        cancelTimer();
+            return ttrtn;
         } else if (request.mode == "retrieve") {
-            return doRetrieve(request.etcRec);
+            string ttrtn = doRetrieve(request.etcRec);
+		        cancelTimer();
+            return ttrtn;
         } else if (request.mode == "query") {
             co_occurrence(request.query, res);
         } else if (request.mode == "nodestat") {
