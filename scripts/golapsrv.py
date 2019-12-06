@@ -26,7 +26,11 @@ app = Flask(__name__)
 def reqpost():
 
 	ss= request.get_data()
-	sjson = json.loads(ss.decode())
+	try:
+		sjson = json.loads(ss.decode())
+	except:
+		return Response("status:-1\njson parse error\n",mimetype='text/plain')
+
 	return Response( golapM.query(json.dumps(sjson,ensure_ascii=False)),mimetype='text/plain')
 
 
