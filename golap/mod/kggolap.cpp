@@ -39,7 +39,7 @@
 #include "param.hpp"
 #include "cmdcache.hpp"
 #include "filter.hpp"
-#include "http.hpp"
+//#include "http.hpp"
 #include "kggolap.hpp"
 
 using namespace std;
@@ -50,6 +50,7 @@ using namespace kgmod;
 // -----------------------------------------------------------------------------
 kgmod::kgGolap::kgGolap(void)
 {
+/*
     _name    = "golap";
     _version = "###VERSION###";
     
@@ -59,6 +60,7 @@ kgmod::kgGolap::kgGolap(void)
 #ifdef JPN_FORMAT
 #include <help/jp/kggolapHelp.h>
 #endif
+*/
 }
 
 kgmod::kgGolap::~kgGolap(void) {
@@ -70,13 +72,15 @@ kgmod::kgGolap::~kgGolap(void) {
 // -----------------------------------------------------------------------------
 // 引数の設定
 // -----------------------------------------------------------------------------
+/*
 void kgmod::kgGolap::setArgs(void) {
+
     _args.paramcheck("i=,-d",kgArgs::COMMON|kgArgs::IODIFF|kgArgs::NULL_IN);
     
     opt_inf = _args.toString("i=", false);
     opt_debug = _args.toBool("-d");
 }
-
+*/
 Result kgmod::Enum(Query& query, Ewah& dimBmp) {
     const string csvHeader = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
     cerr << "enumerating" << endl;
@@ -375,7 +379,8 @@ void kgmod::MT_Enum(mq_t* mq, Query* query, map<string, Result>* res) {
     }
 }
 
-void kgmod::exec::co_occurrence(Query& query, map<string, Result>& res) {
+//void kgmod::exec::co_occurrence(Query& query, map<string, Result>& res) {
+void kgmod::kgGolap::co_occurrence(Query& query, map<string, Result>& res) {
     if (query.dimension.DimBmpList.size() == 0) {
         res[""] = kgmod::Enum(query, mt_occ->liveTra);
     } else {
@@ -412,8 +417,8 @@ void kgmod::exec::co_occurrence(Query& query, map<string, Result>& res) {
         }
     }
 }
-
-void kgmod::exec::axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList) {
+//void kgmod::exec::axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList) {
+void kgmod::kgGolap::axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList) {
     valsList.reserve(flds.size());
     for (size_t i = 0; i < flds.size(); i++) {
         vector<pivAtt_t> vals;
@@ -434,7 +439,8 @@ void kgmod::exec::axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList)
     }
 }
 
-void kgmod::exec::combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp) {
+//void kgmod::exec::combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp) {
+void kgmod::kgGolap::combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp) {
     size_t level = tmp.size();
     if (level == 0) {
         size_t hdrCnt = 1;
@@ -452,7 +458,8 @@ void kgmod::exec::combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<piv
     }
 }
 
-void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
+//void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
+void kgmod::kgGolap::nodestat(NodeStat& nodestat, map<string, Result>& res) {
     cerr << "start nodestat" << endl;
     
     signed int stat = 0;
@@ -480,7 +487,8 @@ void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
     res[""].insert(make_pair(-FLT_MAX, buf));
 }
 
-void kgmod::exec::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
+//void kgmod::exec::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
+void kgmod::kgGolap::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
     cerr << "start nodeimage" << endl;
     
     vector<string> imageList;
@@ -501,7 +509,8 @@ void kgmod::exec::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
     res[""].insert(make_pair(0, mt_config->itemAttFile.imageField));
 }
 
-void kgmod::exec::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
+//void kgmod::exec::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
+void kgmod::kgGolap::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
     cerr << "start worksheet" << endl;
     
     signed int stat = 0;
@@ -595,7 +604,8 @@ void kgmod::exec::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
     res[""].insert(make_pair(-FLT_MAX, buf));
 }
 
-void kgmod::exec::pivot(Pivot& pivot, map<string, Result>& res) {
+//void kgmod::exec::pivot(Pivot& pivot, map<string, Result>& res) {
+void kgmod::kgGolap::pivot(Pivot& pivot, map<string, Result>& res) {
     cerr << "start pivot" << endl;
     vector<vector<vector<pivAtt_t>>> valsList(2);    // [0] -> X axis, [1] -> Y axis
     vector<vector<vector<pivAtt_t>>> hdrs(2);        // [0] -> X axis, [1] -> Y axis
@@ -688,7 +698,8 @@ void kgmod::exec::pivot(Pivot& pivot, map<string, Result>& res) {
     }
 }
 
-void kgmod::exec::saveFilters(Query& query) {
+//void kgmod::exec::saveFilters(Query& query) {
+void kgmod::kgGolap::saveFilters(Query& query) {
     ofstream traFile(mt_config->outDir + "/trafilter.csv", ios::out);
     traFile << mt_config->traFile.traFld << "\n";
     for (auto i = query.traFilter.begin(), ei = query.traFilter.end(); i != ei; i++) {
@@ -704,102 +715,9 @@ void kgmod::exec::saveFilters(Query& query) {
     itemFile.close();
 }
 
-void kgmod::exec::co_occrence_mcmd(Query& query) {
-    int stat;
-    // mcommon i=../bra3/receiptJAN.csv m=traFilter.csv k=receitID o=xxbase0
-    stringstream cmd0;
-    cmd0 << "/usr/local/bin/mjoin m=" << mt_config->traAttFile.name << " k=" << mt_config->traFile.traFld;
-    cmd0 << " i=" << mt_config->traFile.name << " | ";
-    cmd0 << "/usr/local/bin/mcommon m=" << mt_config->outDir << "/traFilter.csv k=" << mt_config->traFile.traFld;
-    cmd0 << " o=" << mt_config->outDir << "/xxbase0";
-    cerr << "exec: " << cmd0.str() << endl;
-    stat = system(cmd0.str().c_str());
-    if (stat != 0) {cerr << "#ERROR# failed in " << cmd0.str() << endl; return;}
-    
-    // mjoin i=xxbase0 m=../bra3/receipt.csv k=receiptID |\
-    // mjoin m=../bra3/jan.csv k=JAN |\
-    // mcommon m=itemFilter.csv k=JAN |\
-    // mcut f="MemberID,ProductNo" |\
-    // muniq k="MemberID,ProductNo" o=xxbase
-    stringstream cmd1;
-    cmd1 << "/usr/local/bin/mcommon i=" << mt_config->outDir << "/xxbase0 m=";
-    cmd1 << mt_config->outDir << "/itemFilter.csv k=" << mt_config->traFile.itemFld << " | ";
-    cmd1 << "/usr/local/bin/mjoin m=" << mt_config->itemAttFile.name;
-    cmd1 << " k=" << mt_config->traFile.itemFld << " | ";
-    cmd1 << "/usr/local/bin/mcut f='" << Cmn::CsvStr::Join(query.granularity.first) << ",";
-    cmd1 << Cmn::CsvStr::Join(query.granularity.second) << "' | ";
-    cmd1 << "/usr/local/bin/muniq k='" << Cmn::CsvStr::Join(query.granularity.first) << ",";
-    cmd1 << Cmn::CsvStr::Join(query.granularity.second);
-    cmd1 << "' o=" << mt_config->outDir << "/xxbase";
-    cerr << "exec: " << cmd1.str() << endl;
-    stat = system(cmd1.str().c_str());
-    if (stat != 0) {cerr << "#ERROR# failed in " << cmd1.str() << endl; return;}
-    
-    // muniq f=MemberID i=xxbase0 | mcount a=total o=xxtotal
-    stringstream cmd2;
-    cmd2 << "/usr/local/bin/muniq k=" << Cmn::CsvStr::Join(query.granularity.first);
-    cmd2 << " i=" << mt_config->outDir << "/xxbase0 | ";
-    cmd2 << "/usr/local/bin/mcount a=total o=" << mt_config->outDir << "/xxtotal";
-    cerr << "exec: " << cmd2.str() << endl;
-    stat = system(cmd2.str().c_str());
-    if (stat != 0) {cerr << "#ERROR# failed in " << cmd2.str() << endl; return;}
 
-    stringstream cmd3;
-    cmd3 << "/usr/local/bin/mcombi k=" << Cmn::CsvStr::Join(query.granularity.first);
-    cmd3 << " f=" << Cmn::CsvStr::Join(query.granularity.second);
-    cmd3 << " a=node1,node2 n=2 i=" << mt_config->outDir << "/xxbase | ";
-    cmd3 << "/usr/local/bin/mcount k=node1,node2 a=frequency o=" << mt_config->outDir << "/xxcombi2";
-    cerr << "exec: " << cmd3.str() << endl;
-    stat = system(cmd3.str().c_str());
-    if (stat != 0) {cerr << "#ERROR# failed in " << cmd3.str() << endl; return;}
-    
-    // mcount k=MemberID a=nfreq i=xxbase o=xxcnt
-    stringstream cmd4;
-    cmd4 << "/usr/local/bin/mcount k=" << Cmn::CsvStr::Join(query.granularity.second);
-    cmd4 << " a=nfreq i=";
-    cmd4 << mt_config->outDir <<"/xxbase o=" << mt_config->outDir << "/xxcnt";
-    cerr << "exec: " << cmd4.str() << endl;
-    stat = system(cmd4.str().c_str());
-    if (stat != 0) {cerr << "#ERROR# failed in " << cmd4.str() << endl; return;}
-    
-    // mjoin k=node1 K=ProductNo f=nfreq:frequency1 m=xxcnt i=xxcombi2 |\
-    // mjoin k=node2 K=ProductNo f=nfreq:frequency2 m=xxcnt |\
-    // mproduct f=total m=xxtotal |\
-    // mcal c='format(${frequency}/${total},"%.5f")' a=support |\
-    // mcal c='format(${frequency} / (${frequency1} + ${frequency2}} - ${frequency} ),"%.5f")' a=jac
-    // mcal c='format((${frequency} * ${total}) / (${frequency1} * ${frequency2}),"%.5f")' a=lift
-    // mcal c='format(ln((${frequency} / ${total}) / ((${frequency1} / ${total}) * ${frequency2} / ${total})) / (-1) * ln((${frequency} / ${total})),"%.5f")' a=PMI |\
-    // mcut f=item1,item2,frequency,frequency1,frequency2,total |\
-    // msortf f=frequency |\
-    // mfldname -q o=test.csv
-    stringstream cmd5;
-    cmd5 << "/usr/local/bin/mjoin k=node1 K=" << Cmn::CsvStr::Join(query.granularity.second);
-    cmd5 << " f=nfreq:frequency1 m=" << mt_config->outDir << "/xxcnt i=";
-    cmd5 << mt_config->outDir << "/xxcombi2 | ";
-    cmd5 << "/usr/local/bin/mjoin k=node2 K=" << Cmn::CsvStr::Join(query.granularity.second);
-    cmd5 << " f=nfreq:frequency2 m=" << mt_config->outDir << "/xxcnt | ";
-    cmd5 << "/usr/local/bin/mproduct f=total m=";
-    cmd5 << mt_config->outDir << "/xxtotal | ";
-    cmd5 << "/usr/local/bin/mcal c='format(${frequency}/${total},\"%.5f\")' a=support | ";
-    cmd5 << "/usr/local/bin/mcal c='format(${frequency}/${frequency1},\"%.5f\")' a=confidence | ";
-    cmd5 << "/usr/local/bin/mcal c='format(${frequency} / (${frequency1} + ${frequency2} - ${frequency}),\"%.5f\")' a=jaccard | ";
-    cmd5 << "/usr/local/bin/mcal c='format((${frequency} * ${total}) / (${frequency1} * ${frequency2}),\"%.5f\")' a=lift | ";
-    cmd5 << "/usr/local/bin/mcal c='format((ln((${frequency} / ${total}) / ((${frequency1} / ${total}) * (${frequency2} / ${total})))) / ((-1) * ln(${frequency} / ${total})),\"%.5f\")' a=PMI | ";
-    cmd5 << "/usr/local/bin/msel c='and(${support}>=" << query.selCond.minSup;
-    cmd5 << ",${confidence}>=" << query.selCond.minConf << ",${jaccard}>=" << query.selCond.minJac;
-    cmd5 << ",${lift}>=" << query.selCond.minLift << ",${PMI}>=" << query.selCond.minPMI << ")' | ";
-    cmd5 << "/usr/local/bin/mcut f=node1,node2,frequency,frequency1,frequency2,total,support,confidence,jaccard,lift,PMI | ";
-    cmd5 << "/usr/local/bin/msortf f=frequency%nr | /usr/local/bin/mfldname -q o=" << mt_config->outDir << "/result.csv";
-    cerr << "exec: " << cmd5.str() << endl;
-    stat = system(cmd5.str().c_str());
-    if (stat != 0) {cerr << "#ERROR# failed in " << cmd5.str() << endl; return;}
-}
-
-void kgmod::exec::diff_res_vs_mcmd(void) {
-    
-}
-
-void kgmod::exec::doControl(EtcReq& etcReq) {
+//void kgmod::exec::doControl(EtcReq& etcReq) {
+void kgmod::kgGolap::doControl(EtcReq& etcReq) {
     string res_body;
     if (boost::iequals(etcReq.func, "bye")) {
         cerr << "bye message recieved" << endl;
@@ -818,11 +736,13 @@ void kgmod::exec::doControl(EtcReq& etcReq) {
         cerr << "unknown control request" << endl;
         res_body = "unknown control request\n";
     }
-    put_send_data(res_body);
-    Http::proc();
+    
+    //put_send_data(res_body);
+    //Http::proc();
 }
 
-void kgmod::exec::doRetrieve(EtcReq& etcReq) {
+//void kgmod::exec::doRetrieve(EtcReq& etcReq) {
+void kgmod::kgGolap::doRetrieve(EtcReq& etcReq) {
     string res_body;
     cerr << etcReq.func << endl;
     if (boost::iequals(etcReq.func, "ListTraAtt")) {
@@ -831,30 +751,30 @@ void kgmod::exec::doRetrieve(EtcReq& etcReq) {
         for (auto att = traAtts.begin(); att != traAtts.end(); att++) {
             res_body += *att; res_body += "\n";
         }
-//    } else if (boost::iequals(etcReq.func, "ListItemAtt")) {
     } else if (boost::iequals(etcReq.func, "GetTraAtt")) {
         res_body = etcReq.func;  res_body += "\n";
         vector<string> attVal = mt_occ->evalKeyValue(etcReq.args[0]);
         for (auto att = attVal.begin(); att != attVal.end(); att++) {
             res_body += *att; res_body += "\n";
         }
-//    } else if (boost::iequals(etcReq.func, "GetItemAtt")) {
     } else {
         cerr << "unknown control request" << endl;
         res_body = "unknown control request\n";
     }
-    put_send_data(res_body);
-    Http::proc();
+    //put_send_data(res_body);
+    //Http::proc();
 }
 
-void kgmod::exec::proc(void) {
+string kgmod::kgGolap::proc(string reqbody) {
     try {
         chrono::system_clock::time_point timeStart;
         chrono::system_clock::time_point timeEnd;
         double elapsedTime;
         timeStart = chrono::system_clock::now();
-        Request request(mt_config, mt_occ, mt_factTable, golap_->fil);
-        request.evalRequest(req_body());
+        Request request(mt_config, mt_occ, mt_factTable, fil);
+        //request.evalRequest(req_body());
+        request.evalRequest(reqbody);
+        
         timeEnd = chrono::system_clock::now();
         elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
         cerr << "filter eval time: " << elapsedTime / 1000 << " sec" << endl;
@@ -892,7 +812,7 @@ void kgmod::exec::proc(void) {
                 cerr << "#WARNING# dataCheck mode is not executed, if 'dimension' element is set in query" << endl;
             } else {
                 saveFilters(request.query);
-                co_occrence_mcmd(request.query);
+                //co_occrence_mcmd(request.query);
             }
         }
         
@@ -907,14 +827,15 @@ void kgmod::exec::proc(void) {
             }
             body += "\n";
         }
-        put_send_data(body);
-        Http::proc();
+        return body;
+        //put_send_data(body);
+        //Http::proc();
     }
     catch(string& msg) {
         cerr << msg << endl;
-        put_send_data(msg);
-        Http::proc();
-        return;
+        //put_send_data(msg);
+        //Http::proc();
+        return string(msg);
     }
     catch(kgError& err){
         auto msg = err.message();
@@ -922,16 +843,45 @@ void kgmod::exec::proc(void) {
         for (auto i = msg.begin(); i != msg.end(); i++) {
             body += *i + "\n";
         }
-        put_send_data(body);
-        Http::proc();
-        return;
+        //put_send_data(body);
+        //Http::proc();
+        return body;
     }
 }
+
+int kgmod::kgGolap::prerun() {
+
+		//_env = &_lenv;
+		// setArgs();
+		cerr <<"inf" << opt_inf << endl;
+		config = new Config(opt_inf);
+		config->dump(opt_debug);
+		mt_config = config;         // マルチスレッド用反則技
+        
+		//occ = new Occ(config, _env);
+		occ = new Occ(config, &_lenv);
+		occ->load();
+		occ->dump(opt_debug);
+		mt_occ = occ;               // マルチスレッド用反則技
+        
+  	//factTable = new FactTable(config, _env, occ);
+  	factTable = new FactTable(config, &_lenv, occ);
+
+  	factTable->load();
+  	mt_factTable = factTable;   // マルチスレッド用反則技
+        
+  	cmdcache = new cmdCache(config, _env, false);
+  	cmdcache->dump(opt_debug);
+
+   	fil = new Filter(occ, cmdcache, config, _env, opt_debug);
+
+}
+
 
 //
 int kgmod::kgGolap::run() {
     try {
-        setArgs();
+        //setArgs();
         config = new Config(opt_inf);
         config->dump(opt_debug);
         mt_config = config;         // マルチスレッド用反則技
@@ -947,8 +897,9 @@ int kgmod::kgGolap::run() {
         
         cmdcache = new cmdCache(config, _env, false);
         cmdcache->dump(opt_debug);
+
         fil = new Filter(occ, cmdcache, config, _env, opt_debug);
-        
+        /*
         cerr << "port#: " << config->port << endl;
         while (true) {
             cmdcache->save();
@@ -967,17 +918,18 @@ int kgmod::kgGolap::run() {
             cerr << "stopping io_service" << endl;
             io_service.stop();
         }
+        */
         occ->exBmpList.save(true);
         occ->ex_occ.save(true);
         cerr << "terminated" << endl;
         
     } catch(kgError& err){
-        errorEnd(err);
+        //errorEnd(err);
         return EXIT_FAILURE;
         
     } catch(char* er){
         kgError err(er);
-        errorEnd(err);
+        //errorEnd(err);
         return EXIT_FAILURE;
     }
     

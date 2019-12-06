@@ -23,6 +23,7 @@
 #include <pthread.h>
 #include <map>
 #include <boost/thread.hpp>
+#include <kgEnv.h>
 #include <kgError.h>
 #include <kgMethod.h>
 #include <kgConfig.h>
@@ -33,7 +34,7 @@
 #include "config.hpp"
 #include "btree.hpp"
 #include "filter.hpp"
-#include "http.hpp"
+//#include "http.hpp"
 #include "request.hpp"
 #include "thread.hpp"
 #include "facttable.hpp"
@@ -41,7 +42,9 @@
 using namespace std;
 using namespace kglib;
 
+
 namespace kgmod {
+
     typedef btree::btree_multimap<float, string> Result;
     
     static pthread_t pt;
@@ -85,7 +88,7 @@ namespace kgmod {
 
     //
     // kgGolap 定義
-    class kgGolap : public kgMod {
+    class kgGolap {
     private:
         string opt_inf;
         
@@ -96,12 +99,21 @@ namespace kgmod {
         FactTable* factTable = NULL;
         Filter* fil = NULL;
         cmdCache* cmdcache;
-        
+				bool closing_ = false;
     private:
         void setArgs(void);
         
     public:
+
+				kgEnv   _lenv;    
+				kgEnv * _env;
+
+
         kgGolap(void);
+				kgGolap(char *fn){
+					std::cerr << "cc " << fn << std::endl;
+					opt_inf = string(fn);
+				}
         ~kgGolap(void);
         
         Dimension makeDimBitmap(string& cmdline);
@@ -115,10 +127,28 @@ namespace kgmod {
 //        Result Enum(Query& query, Ewah& DimBmp);
         void Output(Result& res);
         int run(void);
+			int prerun(void);
+	    void doControl(EtcReq& etcReq);
+  	  void doRetrieve(EtcReq& etcReq);
+			void co_occurrence(Query& query, map<string, Result>& res);
+			void nodestat(NodeStat& nodestat, map<string, Result>& res);
+			void nodeimage(NodeImage& nodeimage, map<string, Result>& res);
+			void worksheet(WorkSheet& worksheet, map<string, Result>& res);
+			void pivot(Pivot& pivot, map<string, Result>& res);
+      
+      
+      void setQueryDefault(Query& query);        
+      void axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList);
+      void combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp);
+    	void saveFilters(Query& query);
+    	string proc(string bd);
+    	
+
     };
     
-    //
+
     // exec 定義
+/*    
     class exec : public Http {
         kgGolap* golap_;
         u_short port;
@@ -131,21 +161,15 @@ namespace kgmod {
         bool isClosing(void) {return closing_;}
         
     private:
-        void doControl(EtcReq& etcReq);
-        void doRetrieve(EtcReq& etcReq);
-        void setQueryDefault(Query& query);
-        void co_occurrence(Query& query, map<string, Result>& res);
-        void nodestat(NodeStat& nodestat, map<string, Result>& res);
-        void nodeimage(NodeImage& nodeimage, map<string, Result>& res);
+        void setQueryDefault(Query& query);        
         void axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList);
         void combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp);
-        void worksheet(WorkSheet& worksheet, map<string, Result>& res);
-        void pivot(Pivot& pivot, map<string, Result>& res);
         void saveFilters(Query& query);
         void co_occrence_mcmd(Query& query);
         void diff_res_vs_mcmd(void);
         void proc(void) override;
     };
+*/
 }
 
 #endif /* kggolap_h */

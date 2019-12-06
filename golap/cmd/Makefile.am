@@ -5,8 +5,7 @@ AM_CXXFLAGS = -std=gnu++11 -fpermissive -I$(top_srcdir)/golap/mod -I$(top_srcdir
 
 
 bin_PROGRAMS = \
-cregdb \
-golap
+cregdb 
 
 ### excmd command end ###
 
