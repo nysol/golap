@@ -26,8 +26,8 @@ app = Flask(__name__)
 def reqpost():
 
 	ss= request.get_data()
-	sjson = json.loads(str(ss))
-	return Response( golapM.query(json.dumps(sjson)),mimetype='text/plain')
+	sjson = json.loads(ss.decode())
+	return Response( golapM.query(json.dumps(sjson,ensure_ascii=False)),mimetype='text/plain')
 
 
 if __name__ == '__main__':
