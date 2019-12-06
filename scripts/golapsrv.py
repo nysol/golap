@@ -26,7 +26,7 @@ app = Flask(__name__)
 def reqpost():
 
 	ss= request.get_data()
-	sjson = json.loads(ss)
+	sjson = json.loads(str(ss))
 	return Response( golapM.query(json.dumps(sjson)),mimetype='text/plain')
 
 
