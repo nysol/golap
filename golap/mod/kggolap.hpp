@@ -128,8 +128,8 @@ namespace kgmod {
         void Output(Result& res);
         int run(void);
 			int prerun(void);
-	    void doControl(EtcReq& etcReq);
-  	  void doRetrieve(EtcReq& etcReq);
+	    string doControl(EtcReq& etcReq);
+  	  string doRetrieve(EtcReq& etcReq);
 			void co_occurrence(Query& query, map<string, Result>& res);
 			void nodestat(NodeStat& nodestat, map<string, Result>& res);
 			void nodeimage(NodeImage& nodeimage, map<string, Result>& res);

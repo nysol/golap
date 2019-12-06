@@ -717,7 +717,7 @@ void kgmod::kgGolap::saveFilters(Query& query) {
 
 
 //void kgmod::exec::doControl(EtcReq& etcReq) {
-void kgmod::kgGolap::doControl(EtcReq& etcReq) {
+string kgmod::kgGolap::doControl(EtcReq& etcReq) {
     string res_body;
     if (boost::iequals(etcReq.func, "bye")) {
         cerr << "bye message recieved" << endl;
@@ -736,13 +736,13 @@ void kgmod::kgGolap::doControl(EtcReq& etcReq) {
         cerr << "unknown control request" << endl;
         res_body = "unknown control request\n";
     }
-    
+    return res_body;
     //put_send_data(res_body);
     //Http::proc();
 }
 
 //void kgmod::exec::doRetrieve(EtcReq& etcReq) {
-void kgmod::kgGolap::doRetrieve(EtcReq& etcReq) {
+string kgmod::kgGolap::doRetrieve(EtcReq& etcReq) {
     string res_body;
     cerr << etcReq.func << endl;
     if (boost::iequals(etcReq.func, "ListTraAtt")) {
@@ -761,6 +761,7 @@ void kgmod::kgGolap::doRetrieve(EtcReq& etcReq) {
         cerr << "unknown control request" << endl;
         res_body = "unknown control request\n";
     }
+    return res_body;
     //put_send_data(res_body);
     //Http::proc();
 }
@@ -787,9 +788,9 @@ string kgmod::kgGolap::proc(string reqbody) {
         // 各ファンクション内のループの先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
         setTimer(request.deadlineTimer);
         if (request.mode == "control") {
-            doControl(request.etcRec);
+            return doControl(request.etcRec);
         } else if (request.mode == "retrieve") {
-            doRetrieve(request.etcRec);
+            return doRetrieve(request.etcRec);
         } else if (request.mode == "query") {
             co_occurrence(request.query, res);
         } else if (request.mode == "nodestat") {
