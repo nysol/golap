@@ -33,7 +33,7 @@ def reqpost():
 
 	if 'control' in sjson : 
 		if sjson['control'] == 'config':
-			return Response( "status:{sts}\n{json}\n".format(**golapM.getConf()),mimetype='text/plain' )
+			return Response( "status:{sts}\n{rtn}\n".format(**golapM.getConf()),mimetype='text/plain' )
 		elif sjson['control'] == 'bye':
 			golapM.save()
 			exit()
