@@ -13,9 +13,9 @@ cregdb_SOURCES = cregdb.cpp
 #cregdb_LDADD = -lkgmod3  $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
 cregdb_LDADD = -lkgmod3 @BTHREAD@ $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
 
-golap_SOURCES = golap.cpp
+#golap_SOURCES = golap.cpp
 #golap_LDADD = -lkgmod3 $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
-golap_LDADD = -lkgmod3 @BTHREAD@ $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
+#golap_LDADD = -lkgmod3 @BTHREAD@ $(top_builddir)/golap/mod/libgolapmod@MOD_MAJOR_VERSION@.la $(top_builddir)/golap/lib/libgolaplib@MOD_MAJOR_VERSION@.la
 
 install-exec-hook:
 if DARWIN_CERT 
