@@ -767,18 +767,21 @@ string kgmod::kgGolap::doRetrieve(EtcReq& etcReq) {
 }
 
 string kgmod::kgGolap::proc(string reqbody) {
-    try {
-        chrono::system_clock::time_point timeStart;
-        chrono::system_clock::time_point timeEnd;
-        double elapsedTime;
-        timeStart = chrono::system_clock::now();
-        Request request(mt_config, mt_occ, mt_factTable, fil);
+
+	try {
+		chrono::system_clock::time_point timeStart;
+		chrono::system_clock::time_point timeEnd;
+
+		double elapsedTime;
+		timeStart = chrono::system_clock::now();
+		
+    Request request(mt_config, mt_occ, mt_factTable, fil);
         //request.evalRequest(req_body());
-        request.evalRequest(reqbody);
+    request.evalRequest(reqbody);
         
-        timeEnd = chrono::system_clock::now();
-        elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
-        cerr << "filter eval time: " << elapsedTime / 1000 << " sec" << endl;
+		timeEnd = chrono::system_clock::now();
+		elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
+		cerr << "filter eval time: " << elapsedTime / 1000 << " sec" << endl;
         
         // Excecuting Enum on each dimention
         map<string, Result> res;
@@ -858,7 +861,6 @@ int kgmod::kgGolap::prerun() {
 
 		//_env = &_lenv;
 		// setArgs();
-		cerr <<"inf" << opt_inf << endl;
 		config = new Config(opt_inf);
 		config->dump(opt_debug);
 		mt_config = config;         // マルチスレッド用反則技

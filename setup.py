@@ -87,7 +87,7 @@ golapmod = Extension('nysolgolap/_nysolgolap_core',
 	],
 	include_dirs=['golap','golap/lib','golap/mod'],
 	libraries=nmodLibs,
-	extra_compile_args=['-std=gnu++11', '-fpermissive']
+	extra_compile_args=['-std=gnu++11', '-fpermissive','-Wno-sign-compare',"-Wno-#pragma-messages"]
 )
 
 setup(name = 'nysolgolap',

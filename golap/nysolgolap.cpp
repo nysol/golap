@@ -28,6 +28,7 @@ extern "C" {
 #endif
 
 
+/*
 PyObject* pivot(PyObject* self, PyObject* args)
 {
 	try {
@@ -153,6 +154,7 @@ PyObject* control(PyObject* self, PyObject* args)
 	}
 	return PyLong_FromLong(1);
 }
+*/
 
 void py_kggolap_free(PyObject *obj){
 	kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(obj,"kggolapP");
@@ -211,13 +213,13 @@ static PyMethodDef callmethods[] = {
 	{"init", 	   reinterpret_cast<PyCFunction>(start)    , METH_VARARGS },
 	{"load", 	   reinterpret_cast<PyCFunction>(load)     , METH_VARARGS },
 	{"run", 	   reinterpret_cast<PyCFunction>(run)     , METH_VARARGS },
-	{"control",  reinterpret_cast<PyCFunction>(control)  , METH_VARARGS },
-	{"retrieve", reinterpret_cast<PyCFunction>(retrieve) , METH_VARARGS },
-	{"query",	   reinterpret_cast<PyCFunction>(query)    , METH_VARARGS },
-	{"nodestat", reinterpret_cast<PyCFunction>(nodestat) , METH_VARARGS },
-	{"nodeimage",reinterpret_cast<PyCFunction>(nodeimage), METH_VARARGS },
-	{"worksheet",reinterpret_cast<PyCFunction>(worksheet), METH_VARARGS },
-	{"pivot",    reinterpret_cast<PyCFunction>(pivot)    , METH_VARARGS },
+//	{"control",  reinterpret_cast<PyCFunction>(control)  , METH_VARARGS },
+//	{"retrieve", reinterpret_cast<PyCFunction>(retrieve) , METH_VARARGS },
+//	{"query",	   reinterpret_cast<PyCFunction>(query)    , METH_VARARGS },
+//	{"nodestat", reinterpret_cast<PyCFunction>(nodestat) , METH_VARARGS },
+//	{"nodeimage",reinterpret_cast<PyCFunction>(nodeimage), METH_VARARGS },
+//	{"worksheet",reinterpret_cast<PyCFunction>(worksheet), METH_VARARGS },
+//	{"pivot",    reinterpret_cast<PyCFunction>(pivot)    , METH_VARARGS },
 	{NULL}
 };
 

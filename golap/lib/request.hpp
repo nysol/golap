@@ -27,6 +27,7 @@
 #include "facttable.hpp"
 
 namespace kgmod {
+
     typedef struct {
         double minSup;
         double minConf;

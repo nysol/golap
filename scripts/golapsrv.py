@@ -31,6 +31,16 @@ def reqpost():
 	except:
 		return Response("status:-1\njson parse error\n",mimetype='text/plain')
 
+	if 'control' in sjson : 
+		if sjson['control'] == 'config':
+			return Response( "status:{sts}\n{json}\n".format(**golapM.getConf()),mimetype='text/plain' )
+		elif sjson['control'] == 'bye':
+			golapM.save()
+			exit()
+		else:
+			return Response( "status:-1\nunknown control request\n",mimetype='text/plain' )
+			
+
 	return Response( golapM.query(json.dumps(sjson,ensure_ascii=False)),mimetype='text/plain')
 
 

@@ -111,7 +111,6 @@ namespace kgmod {
 
         kgGolap(void);
 				kgGolap(char *fn){
-					std::cerr << "cc " << fn << std::endl;
 					opt_inf = string(fn);
 				}
         ~kgGolap(void);
@@ -124,26 +123,24 @@ namespace kgmod {
             }
             return out;
         }
+
 //        Result Enum(Query& query, Ewah& DimBmp);
+
         void Output(Result& res);
         int run(void);
-			int prerun(void);
-	    string doControl(EtcReq& etcReq);
-  	  string doRetrieve(EtcReq& etcReq);
-			void co_occurrence(Query& query, map<string, Result>& res);
-			void nodestat(NodeStat& nodestat, map<string, Result>& res);
-			void nodeimage(NodeImage& nodeimage, map<string, Result>& res);
-			void worksheet(WorkSheet& worksheet, map<string, Result>& res);
-			void pivot(Pivot& pivot, map<string, Result>& res);
-      
-      
-      void setQueryDefault(Query& query);        
-      void axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList);
-      void combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp);
-    	void saveFilters(Query& query);
-    	string proc(string bd);
-    	
-
+				int prerun(void);
+		    string doControl(EtcReq& etcReq);
+  		  string doRetrieve(EtcReq& etcReq);
+				void co_occurrence(Query& query, map<string, Result>& res);
+				void nodestat(NodeStat& nodestat, map<string, Result>& res);
+				void nodeimage(NodeImage& nodeimage, map<string, Result>& res);
+				void worksheet(WorkSheet& worksheet, map<string, Result>& res);
+				void pivot(Pivot& pivot, map<string, Result>& res);
+	      void setQueryDefault(Query& query);        
+  	    void axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList);
+    	  void combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp);
+    		void saveFilters(Query& query);
+	    	string proc(string bd);
     };
     
 
