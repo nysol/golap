@@ -238,6 +238,7 @@ void kgmod::FactTable::item2traBmp(const Ewah& itemBmp, Ewah& traBmp) {
 }
 
 bool kgmod::FactTable::getVals(const size_t trano, const size_t itmno, vals_t*& vals) {
+
     if (_occ->traAtt->traMax + 1 < trano) return false;
     auto it = _factTable[trano].find(itmno);
     if (it == _factTable[trano].end()) return false;
@@ -400,4 +401,58 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
     }
     cerr << "(" << skipCount0 << "," << skipCount << "," << hitCount << ":" << lineCount << ") " << endl;
     return lineCount;
+}
+
+void kgmod::FactTable::aggregate(
+	const pair<string&, Ewah&>& traBmp, 
+	const pair<string&, Ewah&>& itemBmp,
+	vector<pair<AggrFunc, string>>& vals,
+	vector< vector <string> > & rtn
+	) {
+    size_t skipCount0 = 0, skipCount = 0, hitCount = 0;
+
+    vector<vals_t> factVals(_flds.size());
+    for (size_t p = 0; p < factVals.size(); p++) {
+        factVals[p].reserve(256); // なぜ256
+    }
+		// extract
+    for (auto i = itemBmp.second.begin(), ei = itemBmp.second.end(); i != ei; i++) {
+        Ewah* tmpBmp;
+        if (! _occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*i], tmpBmp)) {
+            skipCount0++;
+            continue;
+        }
+        Ewah tarTraBmp = *tmpBmp & traBmp.second;
+        for (auto t = tarTraBmp.begin(), et = tarTraBmp.end(); t != et; t++) {
+            vals_t* fvals;
+            if (! getVals(*t, *i, fvals)) {
+                skipCount++;
+                continue;
+            }
+            hitCount++;
+            for (size_t p = 0; p < fvals->size(); p++) {
+                factVals[p].push_back((*fvals)[p]);
+            }
+        }
+    }
+		// calc
+    size_t lineCount = 1;
+		if (factVals[0].empty()) { return; }
+		vector <string> boby;
+
+    if (traBmp.first != "") {
+    	boby.push_back(traBmp.first);
+    }
+    boby.push_back(itemBmp.first);
+    char conv[128];
+
+    for (size_t i = 0; i < vals.size(); i++) {
+    	sprintf(conv,"%g",vals[i].first.calc(factVals));
+	  	boby.push_back(conv);
+	  }
+	  rtn.push_back(boby);
+	  
+
+    cerr << "(" << skipCount0 << "," << skipCount << "," << hitCount << ":" << lineCount << ") " << endl;
+    return;
 }

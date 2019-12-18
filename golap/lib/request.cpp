@@ -102,18 +102,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         deadlineTimer = _config->deadlineTimer;
     }
     
-    if (boost::optional<string> val = pt.get_optional<string>("control")) {
-        mode = "control";
-        etcRec.func = *val;
-    } else if (boost::optional<string> val = pt.get_optional<string>("retrieve")) {
-        mode = "retrieve";
-        vector<string> vec = Cmn::CsvStr::Parse(*val);
-        etcRec.args.reserve(vec.size() - 1);
-        etcRec.func = vec[0];
-        for (size_t i = 1; i < vec.size(); i++) {
-            etcRec.args.push_back(vec[i]);
-        }
-    } else if (boost::optional<string> val = pt.get_optional<string>("query")) {
+		if (boost::optional<string> val = pt.get_optional<string>("query")) {
         mode = "query";
         setQueryDefault();
         if (boost::optional<string> val2 = pt.get_optional<string>("query.traFilter")) {
@@ -258,6 +247,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             string msg = "nodestat.itemVal must be set in request\n";
             throw kgError(msg);
         }
+
         if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.values")) {
             vector<string> vec = Cmn::CsvStr::Parse(*val2);
             nodestat.vals.resize(vec.size());
@@ -274,6 +264,7 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                 }
             }
         }
+
     } else if (boost::optional<string> val = pt.get_optional<string>("nodeimage")) {
         mode = "nodeimage";
         if (_config->itemAttFile.imageField.empty()) {
@@ -402,7 +393,6 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                 vector<string>vec = Cmn::Split(i, ':');
                 if (vec.size() == 1) {
                     if (! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) {
-//                        (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
                         string msg = vec[0] + " is not transaction attribute\n";
                         throw kgError(msg);
                     }
@@ -412,7 +402,6 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     string msg;
                     if (vec[0][0] == 'T') {
                         if (! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) {
-//                            (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
                             msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }
@@ -436,7 +425,6 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                 vector<string>vec = Cmn::Split(i, ':');
                 if (vec.size() == 1) {
                     if (! Cmn::posInVector(_config->traAttFile.strFields, vec[0])) {
-//                        (! Cmn::posInVector(_config->traAttFile.catFields, vec[0]))) {
                         string msg = vec[0] + " is not transaction attribute\n";
                         throw kgError(msg);
                     }
@@ -446,7 +434,6 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
                     string msg;
                     if (vec[0][0] == 'T') {
                         if (! Cmn::posInVector(_config->traAttFile.strFields, vec[1])) {
-//                            (! Cmn::posInVector(_config->traAttFile.catFields, vec[1]))) {
                             msg = vec[1] + " is not transaction attribute\n";
                             throw kgError(msg);
                         }

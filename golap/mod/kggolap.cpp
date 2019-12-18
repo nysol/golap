@@ -68,34 +68,38 @@ kgmod::kgGolap::~kgGolap(void) {
     if (config != NULL) delete config;
 };
 
-
 // -----------------------------------------------------------------------------
 // 引数の設定
 // -----------------------------------------------------------------------------
-/*
-void kgmod::kgGolap::setArgs(void) {
+Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 
-    _args.paramcheck("i=,-d",kgArgs::COMMON|kgArgs::IODIFF|kgArgs::NULL_IN);
-    
-    opt_inf = _args.toString("i=", false);
-    opt_debug = _args.toBool("-d");
-}
-*/
-Result kgmod::Enum(Query& query, Ewah& dimBmp) {
-    const string csvHeader = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
+	// Timer 設置
+	int isTimeOut=0;
+	pthread_t pt;
+	timChkT timerST;
+	timerST.isTimeOut = &isTimeOut;
+	timerST.timerInSec = tlimit;
+
+	if (tlimit){ // 要エラーチェック
+		cerr << "setTimer: " << tlimit << " sec" << endl;
+		pthread_create(&pt, NULL, timerLHandle, &timerST);			
+	}
+
+	string headstr = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
+	vector<string> csvHeader = splitToken(headstr,',');
+	Result res(csvHeader.size());
+	res.setHeader(csvHeader);
     cerr << "enumerating" << endl;
     size_t hit = 0;
     bool notSort = false;
     signed int stat = 0;
-    Result res;
     unordered_map<size_t, size_t> itemFreq;
     
     Ewah tarTraBmp = query.traFilter & dimBmp & mt_occ->liveTra;
     size_t traNum = tarTraBmp.numberOfOnes();
     if (traNum == 0) {
         cerr << "trabitmap is empty" << endl;
-        res.insert(make_pair(0, "status:0,sent:0,hit:0"));
-        res.insert(make_pair(1, csvHeader));
+        res.setSTS(0,0,0);
         return res;
     }
     
@@ -132,12 +136,7 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
             vnode2.resize(1);
             vnode2[0] = node2;
         }
-        
-        bool br = false;
-        if (node2 == "30/-天竺 半袖Tシャツ_キッズ女児") {
-            br = true;
-        }
-        
+                
         if (itemFreq.find(*i2) == itemFreq.end()) {
             if (isTraGranu) {
                 itemFreq[*i2] = mt_occ->attFreq(query.granularity.second, vnode2,
@@ -183,8 +182,6 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                     // t2の属性から、requestで指定された粒度で対象トランザクションを拡張した上で、対象itemNo(1)を拡張する
                     mt_occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp,
                                               query.itemFilter, item_i1, ex_occ_cacheOnceQuery);
-//                    item_i1 = item_i1 & query.itemFilter;
-//                    cerr << "!!!"; Cmn::CheckEwah(item_i1);
                 } else {
                     item_i1 = mt_occ->occ[*t2] & query.itemFilter;
                 }
@@ -199,7 +196,6 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                     } else {
                         continue;
                     }
-                    
                     // itemNo(1)が持つ属性(vnode1)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt1)
                     Ewah itemInTheAtt1 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
                     itemInTheAtt1 = itemInTheAtt1 & query.itemFilter;
@@ -313,7 +309,6 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
             }
             float conf1 = (float)freq / itemFreq[i1->first];
             if (conf1 < query.selCond.minConf) continue;
-//            float conf2 = (float)freq / itemFreq[*i2];
             
             float jac = (float)freq / (itemFreq[i1->first] + itemFreq[*i2] - freq);
             if (jac < query.selCond.minJac) continue;
@@ -323,16 +318,31 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
             float pmi = Cmn::calcPmi(freq, itemFreq[i1->first], itemFreq[*i2], traNum);
             if (pmi < query.selCond.minPMI) continue;
             
-            char msg[1024];
+            //char msg[1024];
             // node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n
-            const char* fmt = "%s,%s,%d,%d,%d,%d,%.5f,%.5f,%.5lf,%.5f,%.5f,%s,%s";
-            sprintf(msg, fmt, item1.c_str(), item2.c_str(), freq, itemFreq[i1->first], itemFreq[*i2], traNum,
-                    sup, conf1, lift, jac, pmi, itemName1.c_str(), itemName2.c_str());
+            //const char* fmt = "%s,%s,%d,%d,%d,%d,%.5f,%.5f,%.5lf,%.5f,%.5f,%s,%s";
+            //sprintf(msg, fmt, item1.c_str(), item2.c_str(), freq, itemFreq[i1->first], itemFreq[*i2], traNum,
+            //        sup, conf1, lift, jac, pmi, itemName1.c_str(), itemName2.c_str());
+						vector<string> dt(13);
+						dt[0] = item1; 
+						dt[1] = item2; 
+						dt[2] = toString(freq); 
+						dt[3] = toString(itemFreq[i1->first]); 
+						dt[4] = toString(itemFreq[*i2]); 
+						dt[5] = toString(traNum); 
+						char conv[64];
+						sprintf(conv,"%.5f",sup);   dt[6] = conv; 
+						sprintf(conv,"%.5f",conf1); dt[7] = conv; 
+						sprintf(conv,"%.5lf",lift); dt[8] = conv; 
+						sprintf(conv,"%.5f",jac);   dt[9] = conv; 
+						sprintf(conv,"%.5f",pmi);   dt[10]= conv; 
+						dt[11] = itemName1; 
+						dt[12] = itemName2; 
+
             float skey;
             if (query.sortKey == SORT_SUP) {
                 skey = -sup;
             } else if (query.sortKey == SORT_CONF) {
-//                skey = -min(conf1,conf2);
                 skey = -conf1;
             } else if (query.sortKey == SORT_LIFT) {
                 skey = -lift;
@@ -344,362 +354,362 @@ Result kgmod::Enum(Query& query, Ewah& dimBmp) {
                 notSort = true;
                 skey = -10;
             }
-            res.insert(make_pair(skey, string(msg)));
-            
+            res.insert(make_pair(skey,dt));
             if (res.size() > query.sendMax) {
-                auto pos = res.end();
-                pos--;
-                res.erase(pos);
-                stat = 1;
-                if (notSort) break;
+            	res.pop();
+              stat = 1;
+              if (notSort) break;
             }
             hit++;
         }
     }
-    
-    string buf = "status:" + to_string(stat);
-    buf += ",sent:" + to_string(res.size());
-    buf += ",hit:" + to_string(hit);
-    cerr << buf << endl;
-    buf += "\n";
-    buf += csvHeader;
-    res.insert(make_pair(-FLT_MAX, buf));
-    return res;
-}
+		if (tlimit){ 
+      if (!isTimeOut) {
+				pthread_cancel(pt);
+				cerr << "timer canceled" << endl;
+			}
+		}
+			
 
-void kgmod::MT_Enum(mq_t* mq, Query* query, map<string, Result>* res) {
+		res.setSTS(stat,res.size(),hit);
+		res.showSTS();
+
+		return res;
+}
+void kgmod::MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res ,unsigned int *dl) {
     mq_t::th_t* T = mq->pop();
     while (T != NULL) {
         cerr << "#" << T->first << ") tarTra:"; Cmn::CheckEwah(T->second.second);
-        Result rr = Enum(*query, *(T->second.second));
+        Result rr = Enum(*query, *(T->second.second),*dl);
         (*res)[T->second.first] = rr;
         delete T->second.second;
         delete T;
         T = mq->pop();
     }
 }
+map<string, Result> kgmod::kgGolap::runQuery(
+		string traFilter,string itemFilter,
+		string gTransaction,string gNode,
+		string SelMinSup,string SelMinConf,string SelMinLift,
+		string SelMinJac,string SelMinPMI,
+		string sortKey,string sendMax,string dimension,string deadline
+){
 
-//void kgmod::exec::co_occurrence(Query& query, map<string, Result>& res) {
-void kgmod::kgGolap::co_occurrence(Query& query, map<string, Result>& res) {
-    if (query.dimension.DimBmpList.size() == 0) {
-        res[""] = kgmod::Enum(query, mt_occ->liveTra);
-    } else {
-        mq_t::th_t *th;
-        if (mt_config->mt_enable) {
-            mq_t mq;
-            size_t threadNo = 0;
-            for (auto i = query.dimension.DimBmpList.begin(); i != query.dimension.DimBmpList.end(); i++) {
-                cerr << "running with multi-threading (";
-                cerr << threadNo << " of " << query.dimension.DimBmpList.size() << ")" << endl;
-                th = new mq_t::th_t;
-                th->first = threadNo;
-                th->second.first = i->first;
-                th->second.second = new Ewah;
-                th->second.second->expensive_copy(i->second);
-                mq.push(th);
-                threadNo++;
-            }
-            
-            vector<boost::thread> thg;
-            for (int i = 0; i < mt_config->mt_degree; i++) {
-                thg.push_back(boost::thread([&mq, &query, &res] {
-                    MT_Enum(&mq, &query, &res);
-                }));
-            }
-            
-            for (boost::thread& th : thg) {
-                th.join();
-            }
-        } else {
-            for (auto i = query.dimension.DimBmpList.begin(); i != query.dimension.DimBmpList.end(); i++) {
-                res[i->first] = kgmod::Enum(query, i->second);
-            }
-        }
-    }
-}
-//void kgmod::exec::axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList) {
-void kgmod::kgGolap::axisValsList(axis_t& flds, vector<vector<pivAtt_t>>& valsList) {
-    valsList.reserve(flds.size());
-    for (size_t i = 0; i < flds.size(); i++) {
-        vector<pivAtt_t> vals;
-        vector<string> tmp;
-        if (flds[i].first == 'T') {
-            tmp = mt_occ->bmpList.EvalKeyValue(flds[i].second);
-            vals.reserve(tmp.size());
-        } else if (flds[i].first == 'I') {
-            tmp = mt_occ->itemAtt->bmpList.EvalKeyValue(flds[i].second);
-            vals.reserve(tmp.size());
-        }
-        
-        for (auto& t : tmp) {
-            pivAtt_t att = {flds[i].first, t};
-            vals.push_back(att);
-        }
-        valsList.push_back(vals);
-    }
-}
+	QueryParams qPara(
+		occ->traAtt->traMax , 
+		occ->itemAtt->itemMax ,
+		config->sendMax,
+		config->traFile.traFld ,
+		config->traFile.itemFld
+	);
 
-//void kgmod::exec::combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp) {
-void kgmod::kgGolap::combiAtt(vector<vector<pivAtt_t>>& valsList, vector<vector<pivAtt_t>>& hdr, vector<pivAtt_t> tmp) {
-    size_t level = tmp.size();
-    if (level == 0) {
-        size_t hdrCnt = 1;
-        for (auto& vals : valsList) hdrCnt *= vals.size();
-        hdr.reserve(hdrCnt);
-        tmp.reserve(valsList.size());
-    } else if (level == valsList.size()) {
-        hdr.push_back(tmp);
-        return;
-    }
-    for (auto& val : valsList[level]) {
-        vector<pivAtt_t> tmp2 = tmp;
-        tmp2.push_back(val);
-        combiAtt(valsList, hdr, tmp2);
-    }
-}
+	if(!traFilter.empty()){
+		qPara.traFilter = fil->makeTraBitmap(traFilter);
+	}
+	if(!itemFilter.empty()){
+		qPara.itemFilter = fil->makeItemBitmap(itemFilter);
+	}
 
-//void kgmod::exec::nodestat(NodeStat& nodestat, map<string, Result>& res) {
-void kgmod::kgGolap::nodestat(NodeStat& nodestat, map<string, Result>& res) {
-    cerr << "start nodestat" << endl;
-    
-    signed int stat = 0;
-    string header = Cmn::CsvStr::Join(nodestat.granularity.second, ":");
-    for (auto& v : nodestat.vals) {
-        header += ",";
-        header += v.second;
-    }
-    
-    string line;
-    string traHeader = "";
-    res[""].insert(make_pair(0, header));
-    
-    Ewah itemBmp;
-    mt_occ->itemAtt->bmpList.GetVal(nodestat.granularity.second, nodestat.itemVal, itemBmp);
-    itemBmp = itemBmp & nodestat.itemFilter;
-    string itemVal = Cmn::CsvStr::Join(nodestat.itemVal, ":");
-    size_t cnt = mt_factTable->aggregate({traHeader, nodestat.traFilter}, {itemVal, itemBmp},
-                                         nodestat.vals, line);
-    res[""].insert(make_pair(1, line));
-    
-    string buf = "status:" + to_string(stat);
-    buf += ",sent:" + to_string(cnt);
-    cerr << buf << endl;
-    res[""].insert(make_pair(-FLT_MAX, buf));
-}
+	if(!gTransaction.empty()){
+		vector<string> buf = Cmn::CsvStr::Parse(gTransaction.c_str());
+		if (! buf.empty()) {
+			qPara.granularity.first.clear();
+			qPara.granularity.first.reserve(buf.size());
+			for (auto& f : buf) {
+				if(!config->isinTraGranuFLD(f)){
+					string msg = "nodeimage.granularity.transaction(";
+					msg += gTransaction;
+					msg += ") must be set in config file (traAttFile.granuFields)\n";
+					throw kgError(msg);
+				}
+				qPara.granularity.first.push_back(f);
+			}
+		}
+	}
+	if(!gNode.empty()){
+		vector<string> buf = Cmn::CsvStr::Parse(gNode.c_str());
+		if (! buf.empty()) {
+			qPara.granularity.second.clear();
+			qPara.granularity.second.reserve(buf.size());
+			for (auto& f : buf) {
+				if (! occ->itemAtt->isItemAtt(f)) {
+					string msg = f;
+					msg += " is not item attribute\n";
+					throw kgError(msg);
+				}
+				qPara.granularity.second.push_back(f);
+			}
+		}
+	}
 
-//void kgmod::exec::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
-void kgmod::kgGolap::nodeimage(NodeImage& nodeimage, map<string, Result>& res) {
-    cerr << "start nodeimage" << endl;
-    
-    vector<string> imageList;
-    Ewah tmpItemBmp;
-    Ewah itemBmp;
-    mt_occ->itemAtt->bmpList.GetVal(nodeimage.granularity.second, nodeimage.itemVal, tmpItemBmp);
-    tmpItemBmp = tmpItemBmp & nodeimage.itemFilter;
-    mt_occ->filterItemBmpByTraBmp(tmpItemBmp, nodeimage.traFilter, itemBmp);
-    mt_occ->itemAtt->getImageList(itemBmp, imageList);
-    for (size_t i = 0; i < imageList.size(); i++) {
-        res[""].insert(make_pair(i + 1, imageList[i]));
+	if(!dimension.empty()){
+    vector<string> param = Cmn::CsvStr::Parse(dimension);
+    qPara.dimension.key = param[0];
+    for (size_t i = 1; i < param.size(); i++) {
+      qPara.dimension.DimBmpList[param[i]] = occ->bmpList.GetVal(qPara.dimension.key, param[i]);
     }
-    
-    string buf = "status:0,sent:" + to_string(imageList.size());
-    buf += ",hit:" + to_string(imageList.size());
-    cerr << buf << endl;
-    res[""].insert(make_pair(-FLT_MAX, buf));
-    res[""].insert(make_pair(0, mt_config->itemAttFile.imageField));
-}
+  }
 
-//void kgmod::exec::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
-void kgmod::kgGolap::worksheet(WorkSheet& worksheet, map<string, Result>& res) {
-    cerr << "start worksheet" << endl;
-    
-    signed int stat = 0;
-    vector<vector<pivAtt_t>> traValsList;
-    axisValsList(worksheet.traAtt, traValsList);
-    vector<pivAtt_t> work0;
-    vector<vector<pivAtt_t>> traHdrs;
-    combiAtt(traValsList, traHdrs, work0);
-    vector<Ewah> traBmp(traHdrs.size());
-    for (size_t i = 0; i < traHdrs.size(); i++) {
-        if (isTimeOut) {stat = 2; break;}
-        traBmp[i].padWithZeroes(mt_occ->traAtt->traMax + 1);
-        traBmp[i].inplace_logicalnot();
-        for (size_t j = 0; j < traHdrs[i].size(); j++) {
-            if (isTimeOut) {stat = 2; break;}
-            Ewah* tmp;
-            mt_occ->bmpList.GetVal(worksheet.traAtt[j].second, traHdrs[i][j].second, tmp);
-            traBmp[i] = traBmp[i] & *tmp;
-        }
-    }
-    
-    vector<vector<pivAtt_t>> itemValsList;
-    axisValsList(worksheet.itemAtt, itemValsList);
-    vector<pivAtt_t> work1;
-    vector<vector<pivAtt_t>> itemHdrs;
-    combiAtt(itemValsList, itemHdrs, work1);
-    vector<Ewah> itemBmp(itemHdrs.size());
-    for (size_t i = 0; i < itemHdrs.size(); i++) {
-        if (isTimeOut) {stat = 2; break;}
-        itemBmp[i].padWithZeroes(mt_occ->itemAtt->itemMax + 1);
-        itemBmp[i].inplace_logicalnot();
-        for (size_t j = 0; j < itemHdrs[i].size(); j++) {
-            if (isTimeOut) {stat = 2; break;}
-            Ewah* tmp;
-            mt_occ->itemAtt->bmpList.GetVal(worksheet.itemAtt[j].second, itemHdrs[i][j].second, tmp);
-            itemBmp[i] = itemBmp[i] & *tmp;
-        }
-    }
-    
-    string line1;
-    size_t lnum = 0;
-    for (auto& fld : worksheet.traAtt) {
-        line1 += fld.second + ",";
-    }
-    for (auto& fld : worksheet.itemAtt) {
-        line1 += fld.second + ",";
-    }
-    if (worksheet.vals.size() == 0) {
-        line1 += mt_factTable->valNames();
-    } else {
-        for (auto& f : worksheet.vals) {
-            line1 += f.second + ",";
-        }
-        Cmn::EraseLastChar(line1);
-    }
-    res[""].insert(make_pair(lnum++, line1));
-    
-    cerr << "extracting" << endl;
-    size_t cnt = 0;
-    for (size_t t = 0; t < traBmp.size(); t++) {
-        if (isTimeOut) {stat = 2; break;}
-        string traHeader;
-        for (auto& h : traHdrs[t]) {
-            traHeader += h.second + ",";
-        }
-        Cmn::EraseLastChar(traHeader);
-        cerr << traHeader << ":";
-        for (size_t i = 0; i < itemBmp.size(); i++) {
-            if (isTimeOut) {stat = 2; break;}
-            string line;
-            string itemHeader;
-            for (auto& h : itemHdrs[i]) {
-                itemHeader += h.second + ",";
-            }
-            Cmn::EraseLastChar(itemHeader);
-            
-            size_t c = mt_factTable->aggregate({traHeader, traBmp[t]}, {itemHeader, itemBmp[i]}, worksheet.vals, line);
-            if (c != 0) {
-                cnt += c;
-//                cerr << itemHeader << " ";
-                res[""].insert(make_pair(lnum++, line));
-            }
-        }
-        cerr << endl;
-    }
-    
-    string buf = "status:" + to_string(stat);
-    buf += ",sent:" + to_string(cnt);
-//    buf += ",hit:" + to_string(hit);
-    cerr << buf << endl;
-    res[""].insert(make_pair(-FLT_MAX, buf));
+	if (  boost::iequals(sortKey , "SUP")){
+		qPara.sortKey = SORT_SUP;
+	}else if(  boost::iequals(sortKey ,"CONF")){
+		qPara.sortKey = SORT_CONF;
+	}else if(  boost::iequals(sortKey,"LIFT")){
+		qPara.sortKey = SORT_LIFT;
+	}else if(  boost::iequals(sortKey ,"JAC")){
+		qPara.sortKey = SORT_JAC;
+	}else if ( boost::iequals(sortKey , "PMI")){
+		qPara.sortKey = SORT_PMI;
+	}else{
+		qPara.sortKey = SORT_NONE;
+	}
+	if(!sendMax.empty()){
+		qPara.sendMax = atoll(sendMax.c_str());
+	}
+	// selCond
+	if(!SelMinSup.empty()){
+		qPara.selCond.minSup = atof(SelMinSup.c_str());
+	}
+	if(!SelMinConf.empty()){
+		qPara.selCond.minConf = atof(SelMinConf.c_str());
+	}
+	if(!SelMinLift.empty()){
+		qPara.selCond.minLift = atof(SelMinLift.c_str());
+	}
+	if(!SelMinJac.empty()){
+		qPara.selCond.minJac = atof(SelMinJac.c_str());
+	}
+	if(!SelMinPMI.empty()){
+		qPara.selCond.minPMI = atof(SelMinPMI.c_str());
+	}
+
+	unsigned int dline = config->deadlineTimer;
+	if(! deadline.empty()){
+		dline = atol(deadline.c_str());
+	}
+	
+
+
+	map<string, Result> res;
+
+	if (qPara.dimension.DimBmpList.size() == 0) {	
+		res[""] =kgmod::Enum(qPara, mt_occ->liveTra,dline); 
+	}
+	else{
+
+		if (mt_config->mt_enable) {
+			mq_t::th_t *th;
+			mq_t mq;
+			size_t threadNo = 0;
+			for (auto i = qPara.dimension.DimBmpList.begin(); i != qPara.dimension.DimBmpList.end(); i++) {
+				cerr << "running with multi-threading (";
+				cerr << threadNo << " of " << qPara.dimension.DimBmpList.size() << ")" << endl;
+				th = new mq_t::th_t;
+				th->first = threadNo;
+				th->second.first = i->first;
+				th->second.second = new Ewah;
+				th->second.second->expensive_copy(i->second);
+				mq.push(th);
+				threadNo++;
+			}
+   	 vector<boost::thread> thg;
+   	 for (int i = 0; i < mt_config->mt_degree; i++) {
+				thg.push_back(
+					boost::thread([&mq, &qPara, &res,&dline] {MT_Enum(&mq, &qPara, &res ,&dline);})
+				);
+			}
+			for (boost::thread& th : thg) { th.join();}
+  	}
+  	else{
+    	for (auto i = qPara.dimension.DimBmpList.begin(); i != qPara.dimension.DimBmpList.end(); i++) {
+      	res[i->first] = kgmod::Enum(qPara, i->second,dline);
+	    }
+		}
+
+	}
+	return res;
+	
 }
 
-//void kgmod::exec::pivot(Pivot& pivot, map<string, Result>& res) {
-void kgmod::kgGolap::pivot(Pivot& pivot, map<string, Result>& res) {
-    cerr << "start pivot" << endl;
-    vector<vector<vector<pivAtt_t>>> valsList(2);    // [0] -> X axis, [1] -> Y axis
-    vector<vector<vector<pivAtt_t>>> hdrs(2);        // [0] -> X axis, [1] -> Y axis
-    vector<map<vector<pivAtt_t>, Ewah>> bmps(2);      // [0] -> X axis, [1] -> Y axis
-    
-    // xy: [0] -> X axis, [1] -> Y axis
-    for (size_t xy = 0; xy < 2; xy++) {
-        axisValsList(pivot.axes[xy], valsList[xy]);
-        vector<pivAtt_t> work;
-        combiAtt(valsList[xy], hdrs[xy], work);
-        
-        for (auto vals = hdrs[xy].begin(), evals = hdrs[xy].end(); vals != evals; vals++) {
-            bmps[xy][*vals].padWithZeroes(mt_occ->traAtt->traMax + 1);
-            bmps[xy][*vals].inplace_logicalnot();
-            for (size_t i = 0, ei = vals->size(); i < ei; i++) {
-                if (isTimeOut) return;
-                Ewah bmp;
-                if ((*vals)[i].first == 'T') {
-                    mt_occ->bmpList.GetVal(pivot.axes[xy][i].second, (*vals)[i].second, bmp);
-                } else if ((*vals)[i].first == 'I') {
-                    mt_occ->item2traBmp(pivot.axes[xy][i].second, (*vals)[i].second, bmp);
-                }
-                bmps[xy][*vals] = bmps[xy][*vals] & bmp;
-            }
-        }
-    }
-    
-    cerr << "calculating matrix" << endl;
-    map<pair<vector<pivAtt_t>, vector<pivAtt_t>>, float> mat;
-    vector<map<vector<pivAtt_t>, bool>> axesHeader(2);
-    for (auto& x : bmps[0]) {
-        for (auto& y : bmps[1]) {
-            if (isTimeOut) return;
-            Ewah cross = x.second & y.second;
-            cross = cross & pivot.traFilter;
-            size_t num = cross.numberOfOnes();
-            if ((float)num > pivot.cutoff) {
-                mat[{x.first, y.first}] = (float)num;
-                axesHeader[0][x.first] = true;
-                axesHeader[1][y.first] = true;
-            }
-        }
-    }
-    
-    // enumerating header
-    float lnum = 0;
-    string lineHead;
-    for (size_t i = 0; i < pivot.axes[1].size(); i++) lineHead += ",";
-    bool isFirstOne = true;
-    vector<string> lines(pivot.axes[0].size());
-    for (size_t i = 0; i < lines.size(); i++) lines[i] = lineHead;
-    for (auto x_hfld = axesHeader[0].begin(), ex_hfld = axesHeader[0].end(); x_hfld != ex_hfld; x_hfld++) {
-        size_t c = 0;
-        for (auto x_hdr = x_hfld->first.begin(), ex_hdr = x_hfld->first.end(); x_hdr != ex_hdr; x_hdr++) {
-            if (isTimeOut) return;
-            if (! isFirstOne) lines[c] += ",";
-            lines[c] += x_hdr->second;
-            c++;
-        }
-        isFirstOne = false;
-    }
-    
-    for (size_t i = 0; i < lines.size(); i++) {
-        res[""].insert(make_pair(lnum, lines[i]));
-        lnum++;
-    }
-    
-    // enumerating result
-    cerr << "formatting matrix" << endl;
-    for (auto y_hdr = axesHeader[1].begin(), ey_hdr = axesHeader[1].end(); y_hdr != ey_hdr; y_hdr++) {
-        string line;
-        for (auto y_hfld = y_hdr->first.begin(), ey_hfld = y_hdr->first.end(); y_hfld != ey_hfld; y_hfld++) {
-            line += y_hfld->second; line += ",";
-        }
-        bool isFirst = true;
-        for (auto x_hdr = axesHeader[0].begin(), ex_hdr = axesHeader[0].end(); x_hdr != ex_hdr; x_hdr++) {
-            if (isTimeOut) return;
-            if (isFirst) isFirst = false;
-            else line += ",";
-            size_t cnt;
-            if (mat.find({x_hdr->first, y_hdr->first}) == mat.end()) {
-                cnt = 0;
-            } else {
-                cnt = mat[{x_hdr->first, y_hdr->first}];
-            }
-            if (cnt == 0) line += "";
-            else line += to_string(cnt);
-        }
-        res[""].insert(make_pair(lnum, line));
-    }
+vector< vector<string> > kgmod::kgGolap::nodestat(
+	string traFilter,string itemFilter,
+	string gTransaction,string gNode,
+	string itemVal,string values
+) {
+
+	NodeStatParams nSpara(
+		occ->traAtt->traMax , 
+		occ->itemAtt->itemMax ,
+		config->traFile.traFld ,
+		config->traFile.itemFld
+	);
+	
+	if(!traFilter.empty()){
+		nSpara.traFilter = fil->makeTraBitmap(traFilter);
+	}
+	if(!itemFilter.empty()){
+		nSpara.itemFilter = fil->makeItemBitmap(itemFilter);
+	}
+
+	if(!gTransaction.empty()){
+		vector<string> buf = Cmn::CsvStr::Parse(gTransaction.c_str());
+		if (! buf.empty()) {
+			nSpara.granularity.first.clear();
+			nSpara.granularity.first.reserve(buf.size());
+			for (auto& f : buf) {
+				if(!config->isinTraGranuFLD(f)){
+					string msg = "nodeimage.granularity.transaction(";
+					msg += gTransaction;
+					msg += ") must be set in config file (traAttFile.granuFields)\n";
+					throw kgError(msg);
+				}
+				nSpara.granularity.first.push_back(f);
+			}
+		}
+	}
+	if(!gNode.empty()){
+		vector<string> buf = Cmn::CsvStr::Parse(gNode.c_str());
+		if (! buf.empty()) {
+			nSpara.granularity.second.clear();
+			nSpara.granularity.second.reserve(buf.size());
+			for (auto& f : buf) {
+				if (! occ->itemAtt->isItemAtt(f)) {
+					string msg = f;
+					msg += " is not item attribute\n";
+					throw kgError(msg);
+				}
+				nSpara.granularity.second.push_back(f);
+			}
+		}
+	}
+
+	if(!itemVal.empty()){
+		nSpara.itemVal.reserve(1);
+		nSpara.itemVal.push_back(itemVal);
+	}
+	else {
+		throw kgError("nodestat.itemVal must be set in request\n");
+	}
+
+	if(!values.empty()){
+		vector<string> vec = Cmn::CsvStr::Parse(values.c_str());
+		nSpara.vals.resize(vec.size());
+
+		for (size_t i = 0; i < vec.size(); i++) {
+			nSpara.vals[i].first.setValPosMap(factTable->valPosMap());
+			vector<string> v = Cmn::Split(vec[i], ':');
+			nSpara.vals[i].first.parse(v[0]);
+      if      (v.size() == 1) { nSpara.vals[i].second = v[0];} 
+      else if (v.size() == 2) { nSpara.vals[i].second = v[1];} 
+      else { throw kgError("error in nodestat.values"); }
+		}
+	}
+	else{	
+		throw kgError("nodestat.value must be set in request\n");
+	}
+	
+	vector< vector<string> > rnb;
+
+	//signed int stat = 0;
+	vector<string> header;
+	header.push_back(Cmn::CsvStr::Join(nSpara.granularity.second, ":")) ;
+	for (auto& v : nSpara.vals) {
+		header.push_back(v.second);
+	}
+	rnb.push_back(header);
+
+	string traHeader = "";
+
+	Ewah itemBmp;
+	mt_occ->itemAtt->bmpList.GetVal(nSpara.granularity.second, nSpara.itemVal, itemBmp);
+	itemBmp = itemBmp & nSpara.itemFilter;
+	string itemValj = Cmn::CsvStr::Join(nSpara.itemVal, ":");
+
+	mt_factTable->aggregate(
+		{traHeader, nSpara.traFilter}, 
+		{itemValj, itemBmp},
+		nSpara.vals, rnb);
+
+	return rnb;
+
 }
 
-//void kgmod::exec::saveFilters(Query& query) {
-void kgmod::kgGolap::saveFilters(Query& query) {
+
+
+CsvFormat kgmod::kgGolap::nodeimage(
+	string traFilter,string itemFilter,
+	string gTransaction,string gNode,
+	string itemVal) 
+{
+
+	NodeImageParams nIpara(
+		occ->traAtt->traMax , 
+		occ->itemAtt->itemMax ,
+		config->traFile.traFld ,
+		config->traFile.itemFld
+	);
+
+	if(!traFilter.empty()){
+		nIpara.traFilter = fil->makeTraBitmap(traFilter);
+	}
+	if(!itemFilter.empty()){
+		nIpara.itemFilter = fil->makeItemBitmap(itemFilter);
+	}
+
+	if(!gTransaction.empty()){
+		vector<string> buf = Cmn::CsvStr::Parse(gTransaction.c_str());
+		if (! buf.empty()) {
+			nIpara.granularity.first.clear();
+			nIpara.granularity.first.reserve(buf.size());
+			for (auto& f : buf) {
+				if(!config->isinTraGranuFLD(f)){
+					string msg = "nodeimage.granularity.transaction(";
+					msg += gTransaction;
+					msg += ") must be set in config file (traAttFile.granuFields)\n";
+					throw kgError(msg);
+				}
+				nIpara.granularity.first.push_back(f);
+			}
+		}
+	}
+
+	if(!gNode.empty()){
+		vector<string> buf = Cmn::CsvStr::Parse(gNode.c_str());
+		if (! buf.empty()) {
+			nIpara.granularity.second.clear();
+			nIpara.granularity.second.reserve(buf.size());
+			for (auto& f : buf) {
+				if (! occ->itemAtt->isItemAtt(f)) {
+					string msg = f;
+					msg += " is not item attribute\n";
+					throw kgError(msg);
+				}
+				nIpara.granularity.second.push_back(f);
+			}
+		}
+	}
+	if(!itemVal.empty()){
+		nIpara.itemVal.reserve(1);
+		nIpara.itemVal.push_back(itemVal);
+	}
+	else {
+		string msg = "nodeimage.itemVal must be set in request\n";
+		throw kgError(msg);
+	}
+
+	Ewah tmpItemBmp;
+	Ewah itemBmp;
+	mt_occ->itemAtt->bmpList.GetVal(nIpara.granularity.second, nIpara.itemVal, tmpItemBmp);
+	tmpItemBmp = tmpItemBmp & nIpara.itemFilter;
+	mt_occ->filterItemBmpByTraBmp(tmpItemBmp, nIpara.traFilter, itemBmp);
+
+	CsvFormat imageList(1);
+	mt_occ->itemAtt->getImageList(itemBmp, imageList);
+
+	return imageList;
+
+}
+void kgmod::kgGolap::saveFilters(QueryParams& query) {
     ofstream traFile(mt_config->outDir + "/trafilter.csv", ios::out);
     traFile << mt_config->traFile.traFld << "\n";
     for (auto i = query.traFilter.begin(), ei = query.traFilter.end(); i != ei; i++) {
@@ -714,231 +724,29 @@ void kgmod::kgGolap::saveFilters(Query& query) {
     }
     itemFile.close();
 }
-
-
-//void kgmod::exec::doControl(EtcReq& etcReq) {
-string kgmod::kgGolap::doControl(EtcReq& etcReq) {
-    string res_body;
-    if (boost::iequals(etcReq.func, "bye")) {
-        cerr << "bye message recieved" << endl;
-        closing_ = true;
-        res_body = "terminated\n";
-    } else if (boost::iequals(etcReq.func, "config")) {
-        cerr << "bye message recieved" << endl;
-        string configJson;
-        if (mt_config->getJson(configJson)) {
-            res_body = "status:0\n";
-            res_body += configJson;
-        } else {
-            res_body = "status:-1\nFailed to convert json";
-        }
-    } else {
-        cerr << "unknown control request" << endl;
-        res_body = "unknown control request\n";
-    }
-    return res_body;
-    //put_send_data(res_body);
-    //Http::proc();
-}
-
-//void kgmod::exec::doRetrieve(EtcReq& etcReq) {
-string kgmod::kgGolap::doRetrieve(EtcReq& etcReq) {
-    string res_body;
-    cerr << etcReq.func << endl;
-    if (boost::iequals(etcReq.func, "ListTraAtt")) {
-        res_body ="TraAtt\n";
-        vector<string> traAtts = mt_occ->traAtt->listAtt();
-        for (auto att = traAtts.begin(); att != traAtts.end(); att++) {
-            res_body += *att; res_body += "\n";
-        }
-    } else if (boost::iequals(etcReq.func, "GetTraAtt")) {
-        res_body = etcReq.func;  res_body += "\n";
-        vector<string> attVal = mt_occ->evalKeyValue(etcReq.args[0]);
-        for (auto att = attVal.begin(); att != attVal.end(); att++) {
-            res_body += *att; res_body += "\n";
-        }
-    } else {
-        cerr << "unknown control request" << endl;
-        res_body = "unknown control request\n";
-    }
-    return res_body;
-    //put_send_data(res_body);
-    //Http::proc();
-}
-
-string kgmod::kgGolap::proc(string reqbody) {
-
-	try {
-		chrono::system_clock::time_point timeStart;
-		chrono::system_clock::time_point timeEnd;
-
-		double elapsedTime;
-		timeStart = chrono::system_clock::now();
-		
-    Request request(mt_config, mt_occ, mt_factTable, fil);
-        //request.evalRequest(req_body());
-    request.evalRequest(reqbody);
-        
-		timeEnd = chrono::system_clock::now();
-		elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
-		cerr << "filter eval time: " << elapsedTime / 1000 << " sec" << endl;
-        
-        // Excecuting Enum on each dimention
-        map<string, Result> res;
-        timeStart = chrono::system_clock::now();
-        
-        // 重たい処理の場合、timerによってisTimeOutがfalseからtrueに変えられる
-        // 各ファンクション内のループの先頭でisTimeOutをチェックしtreeの場合ループを強制的に抜ける
-        setTimer(request.deadlineTimer);
-        if (request.mode == "control") {
-        		string ttrtn = doControl(request.etcRec);
-		        cancelTimer();
-            return ttrtn;
-        } else if (request.mode == "retrieve") {
-            string ttrtn = doRetrieve(request.etcRec);
-		        cancelTimer();
-            return ttrtn;
-        } else if (request.mode == "query") {
-            co_occurrence(request.query, res);
-        } else if (request.mode == "nodestat") {
-            nodestat(request.nodestat, res);
-        } else if (request.mode == "nodeimage") {
-            nodeimage(request.nodeimage, res);
-        } else if (request.mode == "worksheet") {
-            worksheet(request.worksheet, res);
-        } else if (request.mode == "pivot") {
-            pivot(request.pivot, res);
-        }
-        cancelTimer();
-        
-        timeEnd = chrono::system_clock::now();
-        elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
-        cerr << "process time: " << elapsedTime / 1000 << " sec" << endl;
-        
-        if (request.query.debug_mode == 2) {
-            if (request.query.dimension.key != "") {
-                cerr << "#WARNING# dataCheck mode is not executed, if 'dimension' element is set in query" << endl;
-            } else {
-                saveFilters(request.query);
-                //co_occrence_mcmd(request.query);
-            }
-        }
-        
-        cerr << "sending" << endl;
-        string body;
-        for (auto i = res.begin(); i != res.end(); i++) {
-            if (i->first != "") {
-                body += request.query.dimension.key; body += ":"; body += i->first; body += "\n";
-            }
-            for (auto j = i->second.begin(); j != i->second.end(); j++) {
-                body += j->second; body += "\n";
-            }
-            body += "\n";
-        }
-        return body;
-        //put_send_data(body);
-        //Http::proc();
-    }
-    catch(string& msg) {
-        cerr << msg << endl;
-        //put_send_data(msg);
-        //Http::proc();
-        return string(msg);
-    }
-    catch(kgError& err){
-        auto msg = err.message();
-        string body = "status:-1\n";
-        for (auto i = msg.begin(); i != msg.end(); i++) {
-            body += *i + "\n";
-        }
-        //put_send_data(body);
-        //Http::proc();
-        return body;
-    }
-}
-
 int kgmod::kgGolap::prerun() {
 
-		//_env = &_lenv;
-		// setArgs();
-		config = new Config(opt_inf);
-		config->dump(opt_debug);
-		mt_config = config;         // マルチスレッド用反則技
+	//_env = &_lenv;
+	// setArgs();
+	config = new Config(opt_inf);
+	config->dump(opt_debug);
+	mt_config = config;         // マルチスレッド用反則技
+      
+	//occ = new Occ(config, _env);
+	occ = new Occ(config, &_lenv);
+	occ->load();
+	occ->dump(opt_debug);
+	mt_occ = occ;               // マルチスレッド用反則技
         
-		//occ = new Occ(config, _env);
-		occ = new Occ(config, &_lenv);
-		occ->load();
-		occ->dump(opt_debug);
-		mt_occ = occ;               // マルチスレッド用反則技
-        
-  	//factTable = new FactTable(config, _env, occ);
-  	factTable = new FactTable(config, &_lenv, occ);
+	//factTable = new FactTable(config, _env, occ);
+	factTable = new FactTable(config, &_lenv, occ);
 
-  	factTable->load();
-  	mt_factTable = factTable;   // マルチスレッド用反則技
+	factTable->load();
+	mt_factTable = factTable;   // マルチスレッド用反則技
         
-  	cmdcache = new cmdCache(config, _env, false);
-  	cmdcache->dump(opt_debug);
+	cmdcache = new cmdCache(config, _env, false);
+	cmdcache->dump(opt_debug);
 
-   	fil = new Filter(occ, cmdcache, config, _env, opt_debug);
-
-}
-
-
-//
-int kgmod::kgGolap::run() {
-    try {
-        //setArgs();
-        config = new Config(opt_inf);
-        config->dump(opt_debug);
-        mt_config = config;         // マルチスレッド用反則技
-        
-        occ = new Occ(config, _env);
-        occ->load();
-        occ->dump(opt_debug);
-        mt_occ = occ;               // マルチスレッド用反則技
-        
-        factTable = new FactTable(config, _env, occ);
-        factTable->load();
-        mt_factTable = factTable;   // マルチスレッド用反則技
-        
-        cmdcache = new cmdCache(config, _env, false);
-        cmdcache->dump(opt_debug);
-
-        fil = new Filter(occ, cmdcache, config, _env, opt_debug);
-        /*
-        cerr << "port#: " << config->port << endl;
-        while (true) {
-            cmdcache->save();
-            
-            cerr << "starting io_service" << endl;
-            asio::io_service io_service;
-            cerr << "executing server" << endl;
-            exec server(this, io_service, config->port);
-            cerr << "starting server" << endl;
-            server.start();
-            cerr << "running io_service" << endl;
-            io_service.run();
-            if (server.isClosing()) break;
-            cerr << "stopping server" << endl;
-            server.stop();
-            cerr << "stopping io_service" << endl;
-            io_service.stop();
-        }
-        */
-        occ->exBmpList.save(true);
-        occ->ex_occ.save(true);
-        cerr << "terminated" << endl;
-        
-    } catch(kgError& err){
-        //errorEnd(err);
-        return EXIT_FAILURE;
-        
-    } catch(char* er){
-        kgError err(er);
-        //errorEnd(err);
-        return EXIT_FAILURE;
-    }
-    
-    return EXIT_SUCCESS;
+	fil = new Filter(occ, cmdcache, config, _env, opt_debug);
+	return 0;
 }

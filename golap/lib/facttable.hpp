@@ -101,6 +101,17 @@ namespace kgmod {
         }
         size_t aggregate(const pair<string&, Ewah&>& traBmp, const pair<string&, Ewah&>& itemBmp,
                          vector<pair<AggrFunc, string>>& vals, string& line);
+
+
+				void aggregate(
+					const pair<string&, Ewah&>& traBmp, const pair<string&, Ewah&>& itemBmp,
+          vector<pair<AggrFunc, string>>& vals,
+					vector< vector <string> >& rtn
+        );
+
+				size_t fldsSize(){ return _flds.size();}
+
+
     };
 }
 

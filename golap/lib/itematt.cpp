@@ -300,14 +300,14 @@ void kgmod::ItemAtt::name2code(const vector<string>& nameFld, const vector<strin
     }
 }
 
-void kgmod::ItemAtt::getImageList(const Ewah& itemBmp, vector<string>& imageList) {
-    imageList.clear();
+void kgmod::ItemAtt::getImageList(const Ewah& itemBmp, CsvFormat& imageList) {
+
     unordered_map<string, bool> checked_images;
     for (auto i = itemBmp.begin(), ei = itemBmp.end(); i != ei; i++) {
         if (image[*i].empty()) continue;
         auto itr = checked_images.find(image[*i]);
         if (itr != checked_images.end()) continue;
         checked_images[image[*i]] = true;
-        imageList.push_back(image[*i]);
+        imageList.pushData(0,image[*i]);
     }
 }

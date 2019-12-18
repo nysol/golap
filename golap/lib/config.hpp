@@ -87,6 +87,10 @@ namespace kgmod {
         Config(string& infile);
         bool getJson(string& json) {return Prm.convJson(json);}
         void dump(bool debug);
+				bool isinTraGranuFLD(string& target){
+					return ( find(traAttFile.granuFields.begin(), traAttFile.granuFields.end(), target) != traAttFile.granuFields.end() );
+				}
+
     };
 }
 

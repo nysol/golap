@@ -26,6 +26,7 @@
 #include <kgmod.h>
 #include "btree.hpp"
 #include "cmn.hpp"
+#include "csvformat.hpp"
 
 using namespace std;
 using namespace kgmod;
@@ -63,7 +64,8 @@ namespace kgmod {
         void code2name(const vector<string>& nameFld, const vector<string>& code, vector<string>& out);
         void name2code(const string& nameFld, const string& name, string& out);
         void name2code(const vector<string>& nameFld, const vector<string>& name, vector<string>& out);
-        void getImageList(const Ewah& itemBmp, vector<string>& imageList);
+
+        void getImageList(const Ewah& itemBmp, CsvFormat& imageList);
         
     private:
         void loadAtt(void);
