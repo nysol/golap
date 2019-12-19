@@ -36,7 +36,6 @@ class mgolap(object):
 	def getTraFieldAtt(self,q):
 	
 		vlist = ng.getTraAtt(self.golapOBJ,q)
-		print(vlist)
 
 		if isinstance(vlist,dict) :
 			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])
@@ -47,6 +46,24 @@ class mgolap(object):
 				rtn += "{}\n".format(v)
 		
 		return rtn
+
+	def getItmFieldAtt(self,q):
+	
+		vlist = ng.getItmAtt(self.golapOBJ,q)
+		print(vlist)
+
+		if isinstance(vlist,dict) :
+			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])
+		
+		else:
+			rtn = "GetItmAtt\n"
+			for v in vlist:
+				rtn += "{}\n".format(v)
+		
+		return rtn
+
+
+
 
 
 	def getNodeIMG(self,q):

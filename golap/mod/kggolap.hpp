@@ -383,6 +383,11 @@ namespace kgmod {
   		  	return occ->evalKeyValue(fldname);
   		  }
 
+  		  vector<string> getItmAtt(string fldname){
+  		  	return occ->evalKeyValueItem(fldname);
+  		  }
+
+
 				vector< vector<string> > nodestat(
 					string traFilter,string itemFilter,
 					string gTransaction,string gnode,

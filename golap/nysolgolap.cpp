@@ -66,6 +66,59 @@ PyObject* save(PyObject* self, PyObject* args)
 }
 
 
+PyObject* getItmAtt(PyObject* self, PyObject* args)
+{
+	try {
+
+		PyObject *ol;
+		char* fldname;
+		if (!PyArg_ParseTuple(args, "Os", &ol , &fldname )){
+ 	   return Py_BuildValue("");
+		}
+		kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(ol,"kggolapP");
+		vector<string> rtn = kolap->getItmAtt(fldname);
+
+		PyObject *rtnList  = PyList_New(rtn.size());
+		for(size_t i=0;i < rtn.size();i++){
+			PyList_SetItem(rtnList,i,PyUnicode_FromString(rtn[i].c_str()));
+		}
+
+		return rtnList;
+
+	}catch(kgError& err){
+		std::cerr << err.message(0) << std::endl;
+		PyObject* kerr = PyDict_New();	
+		PyObject* kvv = PyLong_FromLong(-1);
+		PyDict_SetItemString(kerr,"status",kvv);
+		Py_DECREF(kvv);
+		kvv = PyUnicode_FromString(err.message(0).c_str());
+		PyDict_SetItemString(kerr,"errmsg",kvv);
+		Py_DECREF(kvv);
+		return kerr;
+	}
+	catch(char *msg){
+		std::cerr << msg << std::endl;
+		PyObject* kerr = PyDict_New();	
+		PyObject* kvv = PyLong_FromLong(-1);
+		PyDict_SetItemString(kerr,"status",kvv);
+		Py_DECREF(kvv);
+		kvv = PyUnicode_FromString(msg);
+		PyDict_SetItemString(kerr,"errmsg",kvv);
+		Py_DECREF(kvv);
+		return kerr;
+	}
+		PyObject* kerr = PyDict_New();	
+		PyObject* kvv = PyLong_FromLong(-1);
+		PyDict_SetItemString(kerr,"status",kvv);
+		Py_DECREF(kvv);
+		kvv = PyUnicode_FromString("run Error [ unKnown ERROR ]");
+		PyDict_SetItemString(kerr,"errmsg",kvv);
+		Py_DECREF(kvv);
+		return kerr;
+}
+
+
+
 
 PyObject* getTraAtt(PyObject* self, PyObject* args)
 {
@@ -589,6 +642,8 @@ static PyMethodDef callmethods[] = {
 	{"save",     reinterpret_cast<PyCFunction>(save)     , METH_VARARGS },
 	{"run", 	   reinterpret_cast<PyCFunction>(run)      , METH_VARARGS },
 	{"getTraAtt",reinterpret_cast<PyCFunction>(getTraAtt), METH_VARARGS },
+	{"getItmAtt",reinterpret_cast<PyCFunction>(getItmAtt), METH_VARARGS },
+	
 	{"getNodeIMG",reinterpret_cast<PyCFunction>(getNodeIMG), METH_VARARGS },
 	{"getNodeStat",reinterpret_cast<PyCFunction>(getNodeStat), METH_VARARGS },
 

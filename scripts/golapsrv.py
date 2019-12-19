@@ -34,7 +34,7 @@ def reqpost():
 	ss= request.get_data()
 	utstr = str(time.time())
 	with open(logD+"/"+utstr,"w") as wfp:
-		wfp.write(utstr)
+		wfp.write(ss.decode())
 		
 	try:
 		sjson = json.loads(ss.decode())
@@ -64,6 +64,13 @@ def reqpost():
 				return Response( "status:-1\ngetTraAtt is nesseary field name\n",mimetype='text/plain' )
 
 			return Response( golapM.getTraFieldAtt(kv[1]),mimetype='text/plain' )
+
+		elif kv[0] == 'GetItmAtt':
+			if len(kv) <= 1:
+				return Response( "status:-1\ngetItmAtt is nesseary field name\n",mimetype='text/plain' )
+
+			return Response( golapM.getItmFieldAtt(kv[1]),mimetype='text/plain' )
+
 
 		else:
 			return Response( "status:-1\nunknown retrieve request\n",mimetype='text/plain' )
