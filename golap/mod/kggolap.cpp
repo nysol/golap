@@ -543,7 +543,7 @@ vector< vector<string> > kgmod::kgGolap::nodestat(
 		config->traFile.traFld ,
 		config->traFile.itemFld
 	);
-	
+
 	if(!traFilter.empty()){
 		nSpara.traFilter = fil->makeTraBitmap(traFilter);
 	}

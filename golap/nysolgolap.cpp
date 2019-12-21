@@ -72,11 +72,19 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 
 		PyObject *ol;
 		char* fldname;
-		if (!PyArg_ParseTuple(args, "Os", &ol , &fldname )){
+		char* ifil = NULL;
+		
+		if (!PyArg_ParseTuple(args, "Os|s", &ol , &fldname ,&ifil  )){
  	   return Py_BuildValue("");
 		}
 		kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(ol,"kggolapP");
-		vector<string> rtn = kolap->getItmAtt(fldname);
+		vector<string> rtn;
+		if( ifil == NULL){
+			rtn = kolap->getItmAtt(fldname);
+		}
+		else{
+			rtn = kolap->getItmAtt(fldname,ifil);		
+		}
 
 		PyObject *rtnList  = PyList_New(rtn.size());
 		for(size_t i=0;i < rtn.size();i++){
@@ -415,24 +423,34 @@ PyObject* run(PyObject* self, PyObject* args)
 		if(v){
 			PyObject * vv;
 			vv = PyDict_GetItemString(v,"minSup");
-			if(strCHECK(vv)){ SelMinSup = strGET(vv);	}
-			else if(PyLong_Check(vv)){ SelMinSup = toString(PyLong_AsLong(vv));}
+			if(vv){
+				if(strCHECK(vv)){ SelMinSup = strGET(vv);	}
+				else if(PyLong_Check(vv)){ SelMinSup = toString(PyLong_AsLong(vv));}
+			}
 
 			vv = PyDict_GetItemString(v,"minConf");
-			if(strCHECK(vv)){ SelMinConf = strGET(vv);	}
-			else if(PyLong_Check(vv)){ SelMinConf = toString(PyLong_AsLong(vv));}
+			if(vv){
+				if(strCHECK(vv)){ SelMinConf = strGET(vv);	}
+				else if(PyLong_Check(vv)){ SelMinConf = toString(PyLong_AsLong(vv));}
+			}
 
 			vv = PyDict_GetItemString(v,"minLift");
-			if(strCHECK(vv)){ SelMinLift = strGET(vv);	}
-			else if(PyLong_Check(vv)){ SelMinLift = toString(PyLong_AsLong(vv));}
+			if(vv){
+				if(strCHECK(vv)){ SelMinLift = strGET(vv);	}
+				else if(PyLong_Check(vv)){ SelMinLift = toString(PyLong_AsLong(vv));}
+			}
 
 			vv = PyDict_GetItemString(v,"minJac");
-			if(strCHECK(vv)){ SelMinJac = strGET(vv);	}
-			else if(PyLong_Check(vv)){ SelMinJac = toString(PyLong_AsLong(vv));}
+			if(vv){
+				if(strCHECK(vv)){ SelMinJac = strGET(vv);	}
+				else if(PyLong_Check(vv)){ SelMinJac = toString(PyLong_AsLong(vv));}
+			}
 
 			vv = PyDict_GetItemString(v,"minPMI");
-			if(strCHECK(vv)){ SelMinPMI = strGET(vv);	}
-			else if(PyLong_Check(vv)){ SelMinPMI = toString(PyLong_AsLong(vv));}
+			if(vv){
+				if(strCHECK(vv)){ SelMinPMI = strGET(vv);	}
+				else if(PyLong_Check(vv)){ SelMinPMI = toString(PyLong_AsLong(vv));}
+			}
 		}
 		else{
 			std::cerr << "parameter err" << std::endl;		

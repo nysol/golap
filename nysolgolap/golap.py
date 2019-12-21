@@ -47,10 +47,14 @@ class mgolap(object):
 		
 		return rtn
 
-	def getItmFieldAtt(self,q):
-	
-		vlist = ng.getItmAtt(self.golapOBJ,q)
-		print(vlist)
+	def getItmFieldAtt(self,q,ifil=None):
+
+		if ifil == None :
+			print("aaaa")
+			vlist = ng.getItmAtt(self.golapOBJ,q)
+		else:
+			print("aaaa1")
+			vlist = ng.getItmAtt(self.golapOBJ,q,ifil)
 
 		if isinstance(vlist,dict) :
 			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])

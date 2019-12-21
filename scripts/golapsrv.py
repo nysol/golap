@@ -54,7 +54,7 @@ def reqpost():
 	# 'retrieve'
 	elif 'retrieve' in sjson : 
 		
-		kv = sjson['retrieve'].split(",")
+		kv = sjson['retrieve'].split(",",2)
 
 		if kv[0] == 'ListTraAtt':
 			return Response( golapM.getTraFieldName(),mimetype='text/plain' )
@@ -69,7 +69,11 @@ def reqpost():
 			if len(kv) <= 1:
 				return Response( "status:-1\ngetItmAtt is nesseary field name\n",mimetype='text/plain' )
 
-			return Response( golapM.getItmFieldAtt(kv[1]),mimetype='text/plain' )
+			elif len(kv) == 2:
+				return Response( golapM.getItmFieldAtt(kv[1]),mimetype='text/plain' )
+
+			elif len(kv) == 3:
+				return Response( golapM.getItmFieldAtt(kv[1],kv[2]),mimetype='text/plain' )
 
 
 		else:

@@ -57,7 +57,7 @@ namespace kgmod {
         void dumpKey2attMap(bool debug);
         bool isItemAtt(const string& fldName) {return (bmpList.getDataType(fldName) != NONE);};
         vector<string> listAtt(void);
-        vector<string> evalKeyValue(const string& key) {return bmpList.EvalKeyValue(key);}
+        vector<string> evalKeyValue(const string& key,Ewah* ItmFilter) {return bmpList.EvalKeyValue(key,ItmFilter);}
         string key2att(const size_t _itemNo, const string& attKey);
         vector<string> key2att(const size_t _itemNo, const vector<string>& attKeys);
         void code2name(const string& codeFld, const string& code, string& out);

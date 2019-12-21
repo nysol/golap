@@ -107,8 +107,8 @@ namespace kgmod {
         void filterItemBmpByTraBmp(const Ewah& itemBmp, const Ewah& traBmp, Ewah& filteredItemBmp);
 
 
-        vector<string> evalKeyValueItem(string& key) {
-            return itemAtt->evalKeyValue(key);
+        vector<string> evalKeyValueItem(string& key,Ewah* ItmFilter = NULL) {
+            return itemAtt->evalKeyValue(key, ItmFilter);
         }
  
         
