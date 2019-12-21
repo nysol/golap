@@ -67,9 +67,20 @@ class mgolap(object):
 
 
 	def getNodeIMG(self,q):
-		# ERRORの返す方法考える
+
+		if not 'itemAttFile' in  self.jsondf:
+			rtn = "status:-1\nnot found itemAtt\n"
+			return rtn
+		
+		if not 'imageField' in self.jsondf['itemAttFile']:
+			rtn = "status:-1\nnot found imageField\n"
+			return rtn
+		
+
+		# ERRORの返す方法考える		
 		vlist = ng.getNodeIMG(self.golapOBJ,q)
 
+		print(vlist)
 		if isinstance(vlist,dict) :
 			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])
 		
