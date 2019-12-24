@@ -213,6 +213,7 @@ void kgmod::Cmn::CheckEwah(Ewah* bmp) {
 }
 
 bool kgmod::Cmn::MatchWild(const char* pat, const char* str) {
+
     switch(*pat) {
         case '\0':
             return (*str == '\0');

@@ -73,7 +73,6 @@ bool kgmod::cmdCache::get(const string& key, Ewah& bmp) {
 }
 
 bool kgmod::cmdCache::get(const string& func, const vector<string>& arg, const tra_item traitem, Ewah& bmp) {
-	cerr << "cchach get" << endl; 
     if (! config->cmdCache_enable) return false;
     string key = makeKey(func, arg, traitem);
     return get(key, bmp);

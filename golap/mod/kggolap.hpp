@@ -386,7 +386,6 @@ namespace kgmod {
   		  vector<string> getItmAtt(string fldname,string ifil=""){
 					Ewah itemFilter = fil->makeItemBitmap(ifil);
   		  	return occ->evalKeyValueItem(fldname,&itemFilter);
-
   		  }
 
 

@@ -488,7 +488,9 @@ Ewah kgmod::Filter::makeTraBitmap(string& cmdline) {
 
 Ewah kgmod::Filter::makeItemBitmap(string& cmdline) {
     boost::trim(cmdline);
+
     Ewah bmp;
+
     if (cache->get(cmdline, {}, ITEM, bmp)) {
         cerr << "(item) executing " << cmdline << endl;
         cerr << "found in cache" << endl;
