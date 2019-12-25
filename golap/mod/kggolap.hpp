@@ -73,15 +73,13 @@ namespace kgmod {
 	//}
 	//	return "status:-1\n";
 
-
-
-
 	// PARAMS STRUCT
 	struct NodeImageParams {
 
 		Ewah traFilter;
 		Ewah itemFilter;
-		pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
+		// first:transaction granurality, second:node granurality
+		pair<vector<string>, vector<string>> granularity;   
 		vector<string> itemVal;
 
 		NodeImageParams(size_t traMax,size_t itemMax ,string traFld,string itemFld){
@@ -334,93 +332,88 @@ namespace kgmod {
 		return (void*)NULL;
 	}
 
-    static Config* mt_config;
-    static Occ* mt_occ;
-    static FactTable* mt_factTable;
+	//この3つ必要か確認
+	static Config* mt_config;
+	static Occ* mt_occ;
+  static FactTable* mt_factTable;
 
-    typedef MtQueue<pair<string, Ewah*>> mq_t;
-    void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res, unsigned int *lim);
+	typedef MtQueue<pair<string, Ewah*>> mq_t;
+	void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res, unsigned int *lim);
 
-    // kgGolap 定義
-    class kgGolap {
-    private:
-        string opt_inf;
-        
+	// kgGolap 定義
+	class kgGolap {
+		private:
+			string opt_inf;
+
+		public:
+			bool opt_debug = false;
+			Config* config = NULL;
+			Occ* occ = NULL;
+			FactTable* factTable = NULL;
+			Filter* fil = NULL;
+			cmdCache* cmdcache;
+			bool closing_ = false;
+
+		private:
+			void setArgs(void);
+
     public:
-        bool opt_debug = false;
-        Config* config = NULL;
-        Occ* occ = NULL;
-        FactTable* factTable = NULL;
-        Filter* fil = NULL;
-        cmdCache* cmdcache;
-				bool closing_ = false;
-    private:
-        void setArgs(void);
-        
-    public:
 
-				kgEnv   _lenv;    
-				kgEnv * _env;
+			kgEnv   _lenv;    
+			kgEnv * _env;
 
-        kgGolap(void);
+			kgGolap(void);
 				kgGolap(char *fn){
-					opt_inf = string(fn);
-				}
-        ~kgGolap(void);
+				opt_inf = string(fn);
+			}
+			~kgGolap(void);
         
-        Dimension makeDimBitmap(string& cmdline);
+			Dimension makeDimBitmap(string& cmdline);
 
 
-        void Output(Result& res);
-				int prerun(void);
+      void Output(Result& res);
+			int prerun(void);
 
 
-	      void setQueryDefault(QueryParams& query);        
+	    void setQueryDefault(QueryParams& query);        
 
-    		void saveFilters(QueryParams& query);
+    	void saveFilters(QueryParams& query);
 
-  		  vector<string> getTraAtt(string fldname){
-  		  	return occ->evalKeyValue(fldname);
-  		  }
+  		vector<string> getTraAtt(string fldname){
+  		  return occ->evalKeyValue(fldname);
+  		}
 
-  		  vector<string> getItmAtt(string fldname,string ifil=""){
-					Ewah itemFilter = fil->makeItemBitmap(ifil);
-  		  	return occ->evalKeyValueItem(fldname,&itemFilter);
-  		  }
-
-
-				vector< vector<string> > nodestat(
-					string traFilter,string itemFilter,
-					string gTransaction,string gnode,
-					string itemVal,string values
-				);
-
-				CsvFormat nodeimage(
-					string traFilter,string itemFilter,
-					string gTransaction,string gnode,
-					string itemVal
-				);
-
-				map<string, Result> runQuery(
-					string traFilter,string itemFilter,
-					string gTransaction,string gNode,
-					string SelMinSup,string SelMinConf,string SelMinLift,
-					string SelMinJac,string SelMinPMI,
-					string sortKey,string sendMax,string dimension,string deadline
-				);
-
-				
-				void save(){
-	        occ->exBmpList.save(true);
-  	      occ->ex_occ.save(true);		
-				}
+  		vector<string> getItmAtt(string fldname,string ifil=""){
+				Ewah itemFilter = fil->makeItemBitmap(ifil);
+				return occ->evalKeyValueItem(fldname,&itemFilter);
+			}
 
 
+			vector< vector<string> > nodestat(
+				string traFilter,string itemFilter,
+				string gTransaction,string gnode,
+				string itemVal,string values
+			);
 
-    };
-    
+			CsvFormat nodeimage(
+				string traFilter,string itemFilter,
+				string gTransaction,string gnode,
+				string itemVal
+			);
 
+			map<string, Result> runQuery(
+				string traFilter,string itemFilter,
+				string gTransaction,string gNode,
+				string SelMinSup,string SelMinConf,string SelMinLift,
+				string SelMinJac,string SelMinPMI,
+				string sortKey,string sendMax,string dimension,string deadline
+			);
 
+			void save(){
+				occ->exBmpList.save(true);
+				occ->ex_occ.save(true);		
+			}
+  };
 }
 
 #endif /* kggolap_h */
