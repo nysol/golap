@@ -279,8 +279,8 @@ bool kgmod::BTree::GetValMulti(const string& Key, const string& LikeKey, Ewah& B
     if (DataTypeMap[Key] != STR && DataTypeMap[Key] != STR_HC) return false;
     
     size_t FirstWild=0;
-    std::string::size_type pos_a = LikeKey.find(LikeKey.find("*"));
-    std::string::size_type pos_b = LikeKey.find(LikeKey.find("?"));
+    std::string::size_type pos_a = LikeKey.find("*");
+    std::string::size_type pos_b = LikeKey.find("?");
     if( pos_a != std::string::npos || pos_b != std::string::npos ){
     	     if( pos_a == std::string::npos ){ FirstWild = pos_b; }
     	else if( pos_b == std::string::npos ){ FirstWild = pos_a; }
