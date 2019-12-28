@@ -47,9 +47,9 @@ class mgolap(object):
 		
 		return rtn
 
-	def getItmFieldAtt(self,q,ifil=None):
+	def getItmFieldAtt(self,q,ifil=""):
 
-		if ifil == None :
+		if ifil == None or ifil == "" :
 			vlist = ng.getItmAtt(self.golapOBJ,q)
 		else:
 			vlist = ng.getItmAtt(self.golapOBJ,q,ifil)
