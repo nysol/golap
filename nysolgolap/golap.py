@@ -7,7 +7,7 @@ class mgolap(object):
 	def __init__(self,confF):
 		if not os.path.isfile(confF): 
 			raise Exception("FILE Not FOUND " + confF)
-		
+
 		#json読み込み
 		with open(confF) as f:
 			self.jsondf = json.load(f)
@@ -25,27 +25,20 @@ class mgolap(object):
 				if fldname in self.jsondf['traAttFile']:
 					flds.extend(self.jsondf['traAttFile'][fldname].split(','))
 
-		rtn = "TraAtt\n"
 		flds.sort()
-		for v in flds:
-			rtn += "{}\n".format(v)
-			
-		return rtn
+		return flds
 
 
 	def getTraFieldAtt(self,q):
 	
 		vlist = ng.getTraAtt(self.golapOBJ,q)
 
+		# エラー
 		if isinstance(vlist,dict) :
-			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])
+			raise Exception(vlist["errmsg"])		
 		
-		else:
-			rtn = "GetTraAtt\n"
-			for v in vlist:
-				rtn += "{}\n".format(v)
-		
-		return rtn
+		return vlist
+
 
 	def getItmFieldAtt(self,q,ifil=""):
 
@@ -54,56 +47,39 @@ class mgolap(object):
 		else:
 			vlist = ng.getItmAtt(self.golapOBJ,q,ifil)
 
+		# エラー
 		if isinstance(vlist,dict) :
-			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])
-		
-		else:
-			rtn = "GetItmAtt\n"
-			for v in vlist:
-				rtn += "{}\n".format(v)
-		
-		return rtn
+			raise Exception(vlist["errmsg"])
 
-
-
+		return vlist
 
 
 	def getNodeIMG(self,q):
 
 		if not 'itemAttFile' in  self.jsondf:
-			rtn = "status:-1\nnot found itemAtt\n"
-			return rtn
-		
-		if not 'imageField' in self.jsondf['itemAttFile']:
-			rtn = "status:-1\nnot found imageField\n"
-			return rtn
-		
+			raise Exception("not found itemAtt")
 
-		# ERRORの返す方法考える		
+		if not 'imageField' in self.jsondf['itemAttFile']:
+			raise Exception("not found imageField")
+
 		vlist = ng.getNodeIMG(self.golapOBJ,q)
 
-		print(vlist)
+		# エラー
 		if isinstance(vlist,dict) :
-			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])
+			raise Exception(vlist["errmsg"])
 		
-		else:
-			rtn = "status:0,sent:{size},hit:{size}\n{fldname}\n".format(size=str(len(vlist)),fldname=self.jsondf['itemAttFile']['imageField'])
-			rtn += "\n".join(vlist)
+		return vlist
 
-		return rtn
 
 	def getNodeStat(self,q):
-		# ERRORの返す方法考える
+		print(q)
 		vlist = ng.getNodeStat(self.golapOBJ,q)
 
+		# エラー
 		if isinstance(vlist,dict) :
-			rtn = "status:%s\n%s\n"%(vlist["status"],vlist["errmsg"])
-		else:
-			rtn = "status:0,sent:{size},hit:{size}\n".format(size=str(len(vlist)-1))
-			for v in vlist:
-				rtn += "{}\n".format(','.join(v))
-
-		return rtn
+			raise Exception(vlist["errmsg"])
+			
+		return vlist
 
 
 	def query(self,q):
@@ -111,7 +87,19 @@ class mgolap(object):
 		rtnobj = ng.run(self.golapOBJ,q)		
 
 		if isinstance(rtnobj,list) :
+			for vv in rtnobj:
+				if vv["status"] == -1 :
+					raise Exception(vv["errmsg"])
+		
+		else:
+			if rtnobj["status"] == -1 :
+				raise Exception(rtnobj["errmsg"])
+			
+		return rtnobj
+		
 
+
+		if isinstance(rtnobj,list) :
 			rtn = ""
 			for vv in rtnobj:
 				rtn += "%s:%s\n"%(vv["dmName"],vv["dmValue"])
@@ -134,17 +122,30 @@ class mgolap(object):
 
 		return rtn
 
-		#return ng.run0(self.golapOBJ,q)
-
-
-
 
 	def save(self):
 		return ng.save(self.golapOBJ)
 	
 	def getConf(self):
-		try:
-			return { "sts":0 , "rtn" : json.dumps(self.jsondf,ensure_ascii=False,indent=4) }
-		except:
-			return { "sts":-1, "rtn" : "Failed to convert json" }
-		
+		return self.jsondf
+
+	def getImgFldName(self):
+
+		if itemAttFile in self.jsondf and 'imageField' in self.jsondf['itemAttFile'] :
+			return self.jsondf['itemAttFile']['imageField']
+
+		return ""
+
+
+def makeIdx(confF,mp=0):
+
+	if not os.path.isfile(confF): 
+		raise Exception("FILE Not FOUND " + confF)
+	
+	if mp==0:
+		ng.makeindex(confF)
+	else:
+		ng.makeindex(confF,mp)
+	
+	return mgolap(confF)
+

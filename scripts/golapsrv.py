@@ -40,58 +40,127 @@ def reqpost():
 		sjson = json.loads(ss.decode())
 	except:
 		return Response("status:-1\njson parse error\n",mimetype='text/plain')
+
 	print(sjson)
+
 	# control
 	if 'control' in sjson : 
+
 		if sjson['control'] == 'config':
-			return Response( "status:{sts}\n{rtn}\n".format(**golapM.getConf()),mimetype='text/plain' )
+			cnf = golapM.getConf()
+			try:
+				jsonconf = json.dumps(cnf,ensure_ascii=False,indent=4)
+				return Response("status:0\n{}\n".format(jsonconf),mimetype='text/plain' )
+			except:
+				return Response("status:-1\nFailed to convert json\n",mimetype='text/plain' )
+
 		elif sjson['control'] == 'bye':
 			golapM.save()
-			exit()
+			return Response( "status:0\nserver state save\n",mimetype='text/plain' )
+
 		else:
 			return Response( "status:-1\nunknown control request\n",mimetype='text/plain' )
 
 	# 'retrieve'
 	elif 'retrieve' in sjson : 
+
+		rtn = ""
+		vlist = None
+
+		try:
+			kv  = sjson['retrieve'].split(",",2)
 		
-		kv     = sjson['retrieve'].split(",",2)
-		itmfil = ""
-		if 'itemFilter' in sjson :
-			itmfil = sjson['itemFilter']
+			if kv[0] == 'ListTraAtt':
+				vlist = golapM.getTraFieldName()
+				rtn += "TraAtt\n"
+	
+			elif kv[0] == 'GetTraAtt':
+				if len(kv) <= 1:
+					raise Exception("getTraAtt is nesseary field name")
+				
+				vlist = golapM.getTraFieldAtt(kv[1])
+				rtn += "GetTraAtt\n"
 
-		if kv[0] == 'ListTraAtt':
-			return Response( golapM.getTraFieldName(),mimetype='text/plain' )
 
-		elif kv[0] == 'GetTraAtt':
-			if len(kv) <= 1:
-				return Response( "status:-1\ngetTraAtt is nesseary field name\n",mimetype='text/plain' )
+			elif kv[0] == 'GetItmAtt':
+				if len(kv) <= 1:
+					raise Exception("getItmAtt is nesseary field name")
 
-			return Response( golapM.getTraFieldAtt(kv[1]),mimetype='text/plain' )
+				itmfil = ""
+				if 'itemFilter' in sjson :
+					itmfil = sjson['itemFilter']
+				
+				vlist = golapM.getItmFieldAtt(kv[1],itmfil)
+				rtn += "GetItmAtt\n"
 
-		elif kv[0] == 'GetItmAtt':
-			if len(kv) <= 1:
-				return Response( "status:-1\ngetItmAtt is nesseary field name\n",mimetype='text/plain' )
+			else:
+				raise Exception("unknown retrieve request")
 
-			return Response( golapM.getItmFieldAtt(kv[1],itmfil),mimetype='text/plain' )
+		except Exception as ep :
+			return Response( "status:-1\n{}".format(str(ep)) , mimetype='text/plain' )
 
-		else:
-			return Response( "status:-1\nunknown retrieve request\n",mimetype='text/plain' )
+		for v in vlist:
+			rtn += "{}\n".format(v)
+
+		return Response( rtn , mimetype='text/plain' )
 
 	# 'nodeimage'
 	elif 'nodeimage' in sjson : 
-		return Response( golapM.getNodeIMG(sjson),mimetype='text/plain')
+		try:
+			vlist = golapM.getNodeIMG(sjson)
+		except Exception as ep :
+			return Response( "status:-1\n{}".format(str(ep)) , mimetype='text/plain' )
+
+		rtn = "status:0,sent:{size},hit:{size}\n{fldname}\n".format(size=str(len(vlist)),fldname=golapM.getImgFldName())
+		for v in vlist:
+			rtn += "{}\n".format(v)
+
+		return Response( rtn ,mimetype='text/plain')
 
 	# 'nodeimage'
 	elif 'nodestat' in sjson : 
-		return Response( golapM.getNodeStat(sjson),mimetype='text/plain')
+		try:
+			vlist = golapM.getNodeStat(sjson)
+		except Exception as ep :
+			return Response( "status:-1\n{}".format(str(ep)) , mimetype='text/plain' )
+
+		rtn = "status:0,sent:{size},hit:{size}\n".format(size=str(len(vlist)-1))
+		for v in vlist:
+			rtn += "{}\n".format(','.join(v))
+
+		return Response( rtn ,mimetype='text/plain')
 
 	elif 'query' in sjson : 
-		return Response( golapM.query(sjson),mimetype='text/plain')
-		
+
+		try:
+			rtnobj = golapM.query(sjson)
+
+		except Exception as ep :
+			return Response( "status:-1\n{}".format(str(ep)) , mimetype='text/plain' )
+
+		rtn = ""
+		if isinstance(rtnobj,list) :
+
+			for vv in rtnobj:
+				rtn += "%s:%s\n"%(vv["dmName"],vv["dmValue"])
+				rtn += "status:%ld,sent:%ld,hit:%ld\n"%(vv["status"],vv["sent"],vv["hit"])
+				rtn += "{}\n".format( ','.join(vv["header"]) )		
+				for v in vv["data"]:
+					rtn += "{}\n".format(','.join(v))
+				rtn += "\n"
+
+		else:
+
+			rtn = "status:%ld,sent:%ld,hit:%ld\n"%(rtnobj["status"],rtnobj["sent"],rtnobj["hit"])
+			rtn += "{}\n".format( ','.join(rtnobj["header"]) )		
+			for v in rtnobj["data"]:
+				rtn += "{}\n".format(','.join(v))
+
+		return Response( rtn ,mimetype='text/plain')
+
 	else:
 		# query
 		return Response("status:-1\nUnknown Request Pattern\n",mimetype='text/plain')
-		#return Response( golapM.query(json.dumps(sjson,ensure_ascii=False)),mimetype='text/plain')
 
 
 if __name__ == '__main__':

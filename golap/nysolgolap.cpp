@@ -4,6 +4,7 @@
 //#include <kgMethod.h>
 //#include <kgCSV.h>
 #include <kggolap.hpp>
+#include <kgcregdb.hpp>
 //using namespace kgmod;
 //using namespace kglib;
 #include <iostream>
@@ -104,7 +105,7 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
-	catch(char *msg){
+	catch(char const * msg){
 		std::cerr << msg << std::endl;
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
@@ -115,6 +116,7 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
+	catch(...){
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
@@ -123,10 +125,8 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 		PyDict_SetItemString(kerr,"errmsg",kvv);
 		Py_DECREF(kvv);
 		return kerr;
+	}
 }
-
-
-
 
 PyObject* getTraAtt(PyObject* self, PyObject* args)
 {
@@ -158,7 +158,7 @@ PyObject* getTraAtt(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
-	catch(char *msg){
+	catch(char const *msg){
 		std::cerr << msg << std::endl;
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
@@ -169,6 +169,7 @@ PyObject* getTraAtt(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
+	catch(...){
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
@@ -177,6 +178,7 @@ PyObject* getTraAtt(PyObject* self, PyObject* args)
 		PyDict_SetItemString(kerr,"errmsg",kvv);
 		Py_DECREF(kvv);
 		return kerr;
+	}
 }
 
 PyObject* getNodeIMG(PyObject* self, PyObject* args)
@@ -247,7 +249,7 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
-	catch(char *msg){
+	catch(char const *msg){
 		std::cerr << msg << std::endl;
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
@@ -258,6 +260,7 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
+	catch(...){
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
@@ -266,11 +269,13 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 		PyDict_SetItemString(kerr,"errmsg",kvv);
 		Py_DECREF(kvv);
 		return kerr;
+	}
 }
 
 
 PyObject* getNodeStat(PyObject* self, PyObject* args)
 {
+	cerr << "v000" << endl;
 	try {
 
 		PyObject *ol;
@@ -278,7 +283,9 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		if (!PyArg_ParseTuple(args, "OO", &ol , &jsonDict )){
  	   return Py_BuildValue("");
 		}
+	cerr << "v001" << endl;
 		kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(ol,"kggolapP");
+	cerr << "v002" << endl;
 		//NodeImage nodeImageParams;
 		string traFilter;
 		string itemFilter;
@@ -286,30 +293,43 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		string gNode;
 		string itemVal;
 		string values;
+	cerr << "v003" << endl;
 
 		PyObject * ni = PyDict_GetItemString(jsonDict,"nodestat");
 		if(!ni){
 			std::cerr << "parameter err" << std::endl;
 		}
+	cerr << "v004" << endl;
 		PyObject * v;
 
 		v = PyDict_GetItemString(ni,"traFilter");
 		if(v){ traFilter = strGET(v); }
+	cerr << "v005" << endl;
 
 		v = PyDict_GetItemString(ni,"itemFilter");
 		if(v){ itemFilter = strGET(v); }
+	cerr << "v006" << endl;
 
 		v = PyDict_GetItemString(ni,"itemVal");
-		if(v){ itemVal = strGET(v); }
-		else { throw("nodestat.itemVal must be set in request");}
-
-		v = PyDict_GetItemString(ni,"values");
-		if(v){ values = strGET(v); }
-		else { 
-			std::cerr << "nodestat.values must be set in request" << std::endl;
-			throw("nodestat.values must be set in request"); 
-		
+		if(v){
+			if(strCHECK(v)){ itemVal = strGET(v); }
+			else if(PyLong_Check(v)){
+				long lv = PyLong_AsLong(v);
+				itemVal = toString(lv);
+			} 
+			else{
+				throw("nodestat.itemVal unsupprt datatype");
+			}
 		}
+		else { 
+			throw("nodestat.itemVal must be set in request");
+		}
+		cerr << "vvv0" << endl;
+		v = PyDict_GetItemString(ni,"values");
+		cerr << "vvv1" << endl;
+		if(v){ values = strGET(v); }
+		else { throw("nodestat.values must be set in request"); }
+		cerr << "vvv2" << endl;
 
 		PyObject *gv = PyDict_GetItemString(ni,"granularity");
 		if(gv){
@@ -353,7 +373,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
-	catch(char *msg){
+	catch(char const *msg){
 		std::cerr << msg << std::endl;
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
@@ -364,6 +384,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
 	}
+	catch(...){
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
@@ -372,6 +393,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		PyDict_SetItemString(kerr,"errmsg",kvv);
 		Py_DECREF(kvv);
 		return kerr;
+	}
 }
 
 PyObject* run(PyObject* self, PyObject* args)
@@ -619,18 +641,18 @@ PyObject* run(PyObject* self, PyObject* args)
 		Py_DECREF(kvv);
 		return kerr;
         
-  } catch(char* er){
-		std::cerr << er << std::endl;
+  }	catch(char const *msg){
+		std::cerr << msg << std::endl;
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
-		kvv = PyUnicode_FromString(er);
+		kvv = PyUnicode_FromString(msg);
 		PyDict_SetItemString(kerr,"errmsg",kvv);
 		Py_DECREF(kvv);
 		return kerr;
-  }
-
+	}
+  catch(...){
 		PyObject* kerr = PyDict_New();	
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
@@ -639,8 +661,44 @@ PyObject* run(PyObject* self, PyObject* args)
 		PyDict_SetItemString(kerr,"errmsg",kvv);
 		Py_DECREF(kvv);
 		return kerr;
+	}
 
 }
+
+
+PyObject* makeindex(PyObject* self, PyObject* args){
+
+	char *fname;
+	char *mpsize=NULL;
+
+	if (!PyArg_ParseTuple(args, "s|s", &fname,&mpsize)){
+    return Py_BuildValue("");
+  }
+  kgEnv    env;
+  kgCreGdb kgmod;
+
+	const char* vv[3];
+
+	vv[0]="cregdb";
+
+	// fname
+	string ipara = "i="+string(fname);
+	vv[1]=ipara.c_str();
+
+	if(mpsize==NULL){
+		kgmod.init(2, vv, &env);	
+	}
+	else{
+		string mpara = "mp=" + string(mpsize);
+		vv[2] = mpara.c_str();
+		kgmod.init(3, vv, &env);
+	}
+	kgmod.run();
+
+	return PyLong_FromLong(0); 
+
+}
+
 
 
 PyObject* start(PyObject* self, PyObject* args){
@@ -655,23 +713,15 @@ PyObject* start(PyObject* self, PyObject* args){
 
 
 static PyMethodDef callmethods[] = {
-	{"init", 	   reinterpret_cast<PyCFunction>(start)    , METH_VARARGS },
-	{"load", 	   reinterpret_cast<PyCFunction>(load)     , METH_VARARGS },
-	{"save",     reinterpret_cast<PyCFunction>(save)     , METH_VARARGS },
-	{"run", 	   reinterpret_cast<PyCFunction>(run)      , METH_VARARGS },
-	{"getTraAtt",reinterpret_cast<PyCFunction>(getTraAtt), METH_VARARGS },
-	{"getItmAtt",reinterpret_cast<PyCFunction>(getItmAtt), METH_VARARGS },
-	
-	{"getNodeIMG",reinterpret_cast<PyCFunction>(getNodeIMG), METH_VARARGS },
+	{"init"       ,reinterpret_cast<PyCFunction>(start)      , METH_VARARGS },
+	{"makeindex"  ,reinterpret_cast<PyCFunction>(makeindex)  , METH_VARARGS },
+	{"load" 	    ,reinterpret_cast<PyCFunction>(load)       , METH_VARARGS },
+	{"save" 	    ,reinterpret_cast<PyCFunction>(save)       , METH_VARARGS },
+	{"run" 	      ,reinterpret_cast<PyCFunction>(run)        , METH_VARARGS },
+	{"getTraAtt"  ,reinterpret_cast<PyCFunction>(getTraAtt)  , METH_VARARGS },
+	{"getItmAtt"  ,reinterpret_cast<PyCFunction>(getItmAtt)  , METH_VARARGS },
+	{"getNodeIMG" ,reinterpret_cast<PyCFunction>(getNodeIMG) , METH_VARARGS },
 	{"getNodeStat",reinterpret_cast<PyCFunction>(getNodeStat), METH_VARARGS },
-
-//	{"control",  reinterpret_cast<PyCFunction>(control)  , METH_VARARGS },
-//	{"retrieve", reinterpret_cast<PyCFunction>(retrieve) , METH_VARARGS },
-//	{"query",	   reinterpret_cast<PyCFunction>(query)    , METH_VARARGS },
-//	{"nodestat", reinterpret_cast<PyCFunction>(nodestat) , METH_VARARGS },
-//	{"nodeimage",reinterpret_cast<PyCFunction>(nodeimage), METH_VARARGS },
-//	{"worksheet",reinterpret_cast<PyCFunction>(worksheet), METH_VARARGS },
-//	{"pivot",    reinterpret_cast<PyCFunction>(pivot)    , METH_VARARGS },
 	{NULL}
 };
 

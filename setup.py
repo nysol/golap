@@ -79,11 +79,12 @@ nmodLibs.extend(check_for_boost())
 
 
 golapmod = Extension('nysolgolap/_nysolgolap_core',
-	sources = ['golap/nysolgolap.cpp','golap/mod/kggolap.cpp',
-'golap/lib/btree.cpp','golap/lib/cmdcache.cpp','golap/lib/cmn.cpp',
-'golap/lib/config.cpp','golap/lib/facttable.cpp','golap/lib/filter.cpp',
-'golap/lib/itematt.cpp','golap/lib/occ.cpp','golap/lib/param.cpp',
-'golap/lib/request.cpp','golap/lib/traatt.cpp'
+	sources = [
+		'golap/nysolgolap.cpp','golap/mod/kggolap.cpp','golap/mod/kgcregdb.cpp',
+		'golap/lib/btree.cpp','golap/lib/cmdcache.cpp','golap/lib/cmn.cpp',
+		'golap/lib/config.cpp','golap/lib/facttable.cpp','golap/lib/filter.cpp',
+		'golap/lib/itematt.cpp','golap/lib/occ.cpp','golap/lib/param.cpp',
+		'golap/lib/request.cpp','golap/lib/traatt.cpp'
 	],
 	include_dirs=['golap','golap/lib','golap/mod'],
 	libraries=nmodLibs,

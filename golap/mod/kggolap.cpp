@@ -748,5 +748,6 @@ int kgmod::kgGolap::prerun() {
 	cmdcache->dump(opt_debug);
 
 	fil = new Filter(occ, cmdcache, config, _env, opt_debug);
+
 	return 0;
 }
