@@ -35,7 +35,7 @@ def reqpost():
 	utstr = str(time.time())
 	with open(logD+"/"+utstr,"w") as wfp:
 		wfp.write(ss.decode())
-		
+
 	try:
 		sjson = json.loads(ss.decode())
 	except:

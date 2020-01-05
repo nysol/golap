@@ -110,7 +110,7 @@ void kgmod::AggrFunc::parse(const string& cmd){
     if (! opeStack.empty()) throw kgError("formula error: " + _original);
     
     eval();
-    dump();
+    //dump();
 }
 
 void kgmod::AggrFunc::eval(void) {

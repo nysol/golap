@@ -275,17 +275,13 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 
 PyObject* getNodeStat(PyObject* self, PyObject* args)
 {
-	cerr << "v000" << endl;
 	try {
-
 		PyObject *ol;
 		PyObject *jsonDict;
 		if (!PyArg_ParseTuple(args, "OO", &ol , &jsonDict )){
  	   return Py_BuildValue("");
 		}
-	cerr << "v001" << endl;
 		kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(ol,"kggolapP");
-	cerr << "v002" << endl;
 		//NodeImage nodeImageParams;
 		string traFilter;
 		string itemFilter;
@@ -293,22 +289,19 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		string gNode;
 		string itemVal;
 		string values;
-	cerr << "v003" << endl;
 
 		PyObject * ni = PyDict_GetItemString(jsonDict,"nodestat");
 		if(!ni){
 			std::cerr << "parameter err" << std::endl;
 		}
-	cerr << "v004" << endl;
+
 		PyObject * v;
 
 		v = PyDict_GetItemString(ni,"traFilter");
 		if(v){ traFilter = strGET(v); }
-	cerr << "v005" << endl;
 
 		v = PyDict_GetItemString(ni,"itemFilter");
 		if(v){ itemFilter = strGET(v); }
-	cerr << "v006" << endl;
 
 		v = PyDict_GetItemString(ni,"itemVal");
 		if(v){
@@ -324,12 +317,10 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		else { 
 			throw("nodestat.itemVal must be set in request");
 		}
-		cerr << "vvv0" << endl;
+
 		v = PyDict_GetItemString(ni,"values");
-		cerr << "vvv1" << endl;
 		if(v){ values = strGET(v); }
 		else { throw("nodestat.values must be set in request"); }
-		cerr << "vvv2" << endl;
 
 		PyObject *gv = PyDict_GetItemString(ni,"granularity");
 		if(gv){

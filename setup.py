@@ -115,7 +115,7 @@ golap
 		'Topic :: Scientific/Engineering :: Information Analysis',
 		'Topic :: Scientific/Engineering :: Mathematics',
 	],
-	scripts=['scripts/golapsrv.py'],
+	scripts=['scripts/golapsrv.py','scripts/cregdb.py'],
 	ext_modules =[golapmod]
 )
        

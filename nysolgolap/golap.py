@@ -72,7 +72,7 @@ class mgolap(object):
 
 
 	def getNodeStat(self,q):
-		print(q)
+
 		vlist = ng.getNodeStat(self.golapOBJ,q)
 
 		# エラー
@@ -131,7 +131,7 @@ class mgolap(object):
 
 	def getImgFldName(self):
 
-		if itemAttFile in self.jsondf and 'imageField' in self.jsondf['itemAttFile'] :
+		if 'itemAttFile' in self.jsondf and 'imageField' in self.jsondf['itemAttFile'] :
 			return self.jsondf['itemAttFile']['imageField']
 
 		return ""
