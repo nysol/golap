@@ -5,6 +5,10 @@ import nysolgolap._nysolgolap_core as ng
 class mgolap(object):
 
 	def __init__(self,confF):
+		'''
+			load bitmap-index base on config file
+		'''
+
 		if not os.path.isfile(confF): 
 			raise Exception("FILE Not FOUND " + confF)
 
@@ -86,42 +90,17 @@ class mgolap(object):
 
 		rtnobj = ng.run(self.golapOBJ,q)		
 
+		# エラー		
 		if isinstance(rtnobj,list) :
 			for vv in rtnobj:
 				if vv["status"] == -1 :
 					raise Exception(vv["errmsg"])
-		
 		else:
 			if rtnobj["status"] == -1 :
 				raise Exception(rtnobj["errmsg"])
 			
 		return rtnobj
 		
-
-
-		if isinstance(rtnobj,list) :
-			rtn = ""
-			for vv in rtnobj:
-				rtn += "%s:%s\n"%(vv["dmName"],vv["dmValue"])
-
-				rtn += "status:%ld,sent:%ld,hit:%ld\n"%(vv["status"],vv["sent"],vv["hit"])
-				rtn += "{}\n".format( ','.join(vv["header"]) )		
-				for v in vv["data"]:
-					rtn += "{}\n".format(','.join(v))
-
-				rtn += "\n"
-		else:
-			if rtnobj["status"] == -1 :
-				rtn = "status:-1\n%s\n"%(rtnobj["errmsg"])
-			
-			else:
-				rtn = "status:%ld,sent:%ld,hit:%ld\n"%(rtnobj["status"],rtnobj["sent"],rtnobj["hit"])
-				rtn += "{}\n".format( ','.join(rtnobj["header"]) )		
-				for v in rtnobj["data"]:
-					rtn += "{}\n".format(','.join(v))
-
-		return rtn
-
 
 	def save(self):
 		return ng.save(self.golapOBJ)
