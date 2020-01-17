@@ -19,13 +19,27 @@ useport = jconf['etc']['port']
 logD = jconf["dbDir"]+"/log"
 if 'logDir' in jconf:
 	logD = jconf['logDir']
-	
+
 os.makedirs(logD, exist_ok=True)
+
+
+
+
+	
+
 
 
 golapM = ngolap.mgolap(confF)
 from flask import Flask ,request , Response
-app = Flask(__name__)
+
+option = {}
+if 'staticFolder' in jconf:
+	option['static_folder'] = jconf['staticFolder']
+
+if 'staticUrl' in jconf:
+	option['static_url_path'] = jconf['staticUrl']
+
+app = Flask(__name__,**option)
 
 
 @app.route('/',methods=["POST"])
@@ -164,7 +178,7 @@ def reqpost():
 
 
 if __name__ == '__main__':
-
+	print(app.url_map)
 	app.run(host='0.0.0.0',port=useport,threaded=True)
 	
 	
