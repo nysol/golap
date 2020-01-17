@@ -16,9 +16,13 @@ class mgolap(object):
 		with open(confF) as f:
 			self.jsondf = json.load(f)
 
+		if 'staticFolder' in self.jsondf:
+			del self.jsondf['staticFolder']
+		if 'staticUrl' in self.jsondf:
+			del self.jsondf['staticUrl']
+
 		self.golapOBJ = ng.init(confF)
 		ng.load(self.golapOBJ)
-		
 
 
 	def getTraFieldName(self):
