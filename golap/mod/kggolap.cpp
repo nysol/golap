@@ -100,6 +100,13 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
     if (traNum == 0) {
         cerr << "trabitmap is empty" << endl;
         res.setSTS(0,0,0);
+				if (tlimit){ 
+    		  if (!isTimeOut) {
+						pthread_cancel(pt);
+						cerr << "timer canceled" << endl;
+					}
+				}
+
         return res;
     }
     
@@ -110,6 +117,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
                         (query.granularity.second[0] != mt_config->traFile.itemFld);
     vector<string> tra2key;     // [traNo] -> 当該トランザクションが有するTraAttの値リスト(csv)
     // transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書きする
+
     if (isTraGranu) {
         // vector版countKeyValueは処理が比較的重いので、マルチバリューかどうかで処理を分ける
         if (query.granularity.first.size() == 1) {
@@ -120,10 +128,11 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             mt_occ->getTra2KeyValue(query.granularity.first, tra2key);
         }
     }
-    
+
     unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
     unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
     for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
+
         if (isTimeOut) {stat = 2; break;}
         vector<string> vnode2;
         string node2;
@@ -136,7 +145,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             vnode2.resize(1);
             vnode2[0] = node2;
         }
-                
+
         if (itemFreq.find(*i2) == itemFreq.end()) {
             if (isTraGranu) {
                 itemFreq[*i2] = mt_occ->attFreq(query.granularity.second, vnode2,
@@ -146,8 +155,10 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
                                                 tarTraBmp, query.itemFilter);
             }
         }
+
         if (itemFreq[*i2] == 0) continue;
         
+
         // すでに処理済みのキーの場合はcontinueする。
         if (checked_node2.find(vnode2) == checked_node2.end()) {
             checked_node2[vnode2] = true;
@@ -155,6 +166,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             continue;
         }
         
+
         map<size_t, size_t> coitems;
         unordered_map<pair<string, string>, bool, boost::hash<pair<string, string>>> checked_node1;
                                                             // [vnodes, traAtt(:区切り)] -> exists
@@ -165,6 +177,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
         // itemNo(2)の属性(vnode2)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt2)
         Ewah itemInTheAtt2 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
         itemInTheAtt2 = itemInTheAtt2 & query.itemFilter;
+
         for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
             if (isTimeOut) {stat = 2; break;}
             Ewah* tra_i2_tmp;
@@ -362,6 +375,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             }
             hit++;
         }
+
     }
 		if (tlimit){ 
       if (!isTimeOut) {
@@ -527,6 +541,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 		}
 
 	}
+
 	return res;
 	
 }
