@@ -318,6 +318,7 @@ namespace kgmod {
 	};
 
   Result Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
+  Result Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
 
 	struct timChkT{
 		unsigned int timerInSec;

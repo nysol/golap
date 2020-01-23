@@ -110,7 +110,23 @@ namespace kgmod {
         vector<string> evalKeyValueItem(string& key,Ewah* ItmFilter = NULL) {
             return itemAtt->evalKeyValue(key, ItmFilter);
         }
- 
+				// Itmlistを持つtra
+				/*
+        Ewah* makexxx(Ewah* Itmlist,Ewah& Tra) {
+        	bool first=true;
+        	for (auto at2 = Itmlist->begin(), eat2 = Itmlist->end() ; at2 != eat2 ; at2++) {
+	        	Ewah* tra_i2_tmp;
+            bmpList.GetVal(occKey, itemAtt->item[*at2], tra_i2_tmp);
+            if(first){
+	            Tra = tra_i2_tmp;
+	          }
+	          else{
+	          }
+          }
+
+        }
+        */
+
         
         size_t sendMax(void) {return _config->sendMax;}
     };

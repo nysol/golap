@@ -431,7 +431,6 @@ PyObject* run(PyObject* self, PyObject* args)
 		v = PyDict_GetItemString(ni,"itemFilter");
 		if(v){ itemFilter = strGET(v); }
 
-
 		v = PyDict_GetItemString(ni,"selCond");
 		if(v){
 			PyObject * vv;
@@ -439,30 +438,35 @@ PyObject* run(PyObject* self, PyObject* args)
 			if(vv){
 				if(strCHECK(vv)){ SelMinSup = strGET(vv);	}
 				else if(PyLong_Check(vv)){ SelMinSup = toString(PyLong_AsLong(vv));}
+				else if(PyFloat_Check(vv)){ SelMinSup = to_string(PyFloat_AsDouble(vv));}
 			}
 
 			vv = PyDict_GetItemString(v,"minConf");
 			if(vv){
 				if(strCHECK(vv)){ SelMinConf = strGET(vv);	}
 				else if(PyLong_Check(vv)){ SelMinConf = toString(PyLong_AsLong(vv));}
+				else if(PyFloat_Check(vv)){ SelMinConf = to_string(PyFloat_AsDouble(vv));}
 			}
 
 			vv = PyDict_GetItemString(v,"minLift");
 			if(vv){
 				if(strCHECK(vv)){ SelMinLift = strGET(vv);	}
 				else if(PyLong_Check(vv)){ SelMinLift = toString(PyLong_AsLong(vv));}
+				else if(PyFloat_Check(vv)){ SelMinConf = to_string(PyFloat_AsDouble(vv));}
 			}
 
 			vv = PyDict_GetItemString(v,"minJac");
 			if(vv){
 				if(strCHECK(vv)){ SelMinJac = strGET(vv);	}
 				else if(PyLong_Check(vv)){ SelMinJac = toString(PyLong_AsLong(vv));}
+				else if(PyFloat_Check(vv)){ SelMinConf = to_string(PyFloat_AsDouble(vv));}
 			}
 
 			vv = PyDict_GetItemString(v,"minPMI");
 			if(vv){
 				if(strCHECK(vv)){ SelMinPMI = strGET(vv);	}
 				else if(PyLong_Check(vv)){ SelMinPMI = toString(PyLong_AsLong(vv));}
+				else if(PyFloat_Check(vv)){ SelMinConf = to_string(PyFloat_AsDouble(vv));}
 			}
 		}
 		else{
