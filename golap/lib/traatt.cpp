@@ -74,7 +74,7 @@ void kgmod::TraAtt::build(BTree& bmpList) {
         for (auto fld = fldName.begin(); fld != fldName.end(); fld++) {
         		
             int cnt = (int)(fld - fldName.begin());
-            //if (cnt == traFldPos) continue;
+            if (cnt == traFldPos) continue;
             string fldVal = traAttF.getVal(cnt);
             
             if (isFirst[cnt]) {
