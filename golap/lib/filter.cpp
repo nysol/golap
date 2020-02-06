@@ -39,11 +39,12 @@ bool kgmod::Filter::existsFldName(const string& fldName, const tra_item traitem)
     if (traitem == TRA) {
         stat =  Cmn::posInVector(config->traAttFile.numFields, fldName) ||
                 Cmn::posInVector(config->traAttFile.strFields, fldName);
-//                Cmn::posInVector(config->traAttFile.catFields, fldName);
     } else if (traitem == ITEM) {
         stat =  Cmn::posInVector(config->itemAttFile.numFields, fldName) ||
                 Cmn::posInVector(config->itemAttFile.strFields, fldName);
-//                Cmn::posInVector(config->itemAttFile.catFields, fldName);
+    } else if (traitem == FACT) {
+        stat =  Cmn::posInVector(config->traFile.numFields, fldName) ||
+                Cmn::posInVector(config->traFile.strFields, fldName);
     } else {
         stringstream msg;
         msg << "invalid tra_item: " << traitem;
@@ -58,6 +59,8 @@ Ewah& kgmod::Filter::logicalnot(Ewah& bmp, const tra_item traitem) {
         bmpCnt = occ->traAtt->traMax + 1;
     } else if (traitem == ITEM) {
         bmpCnt = occ->itemAtt->itemMax + 1;
+    } else if (traitem == FACT) {
+        bmpCnt = fact->recMax + 1;
     } else {
         stringstream msg;
         msg << "invalid tra_item: " << traitem;
@@ -80,6 +83,8 @@ BTree* kgmod::Filter::setModeTraItem(const tra_item traitem) {
         bmpList = &(occ->bmpList);
     } else if (traitem == ITEM) {
         bmpList = &(occ->itemAtt->bmpList);
+    } else if (traitem == FACT) {
+        bmpList = &(fact->bmplist);
     } else {
         stringstream msg;
         msg << "invalid tra_item: " << traitem;
@@ -97,6 +102,9 @@ pair<BTree*, string> kgmod::Filter::setModeTraItem2(const tra_item traitem) {
     } else if (traitem == ITEM) {
         bmpList = &(occ->itemAtt->bmpList);
         key = config->traFile.itemFld;
+    } else if (traitem == FACT) {
+        bmpList = &(fact->bmplist);
+        key = "";
     } else {
         stringstream msg;
         msg << "invalid tra_item: " << traitem;
@@ -115,6 +123,10 @@ Ewah kgmod::Filter::sel(const values_t& values, const tra_item traitem) {
             num = occ->traAtt->traNo[*val];
         } else if (traitem == ITEM) {
             num = occ->itemAtt->itemNo[*val];
+        } else if (traitem == FACT) {
+            stringstream msg;
+            msg << "cannot use sel for fact filter" << traitem;
+            throw kgError(msg.str());
         } else {
             stringstream msg;
             msg << "invalid tra_item: " << traitem;
@@ -129,6 +141,11 @@ Ewah kgmod::Filter::sel(const values_t& values, const tra_item traitem) {
 }
 
 Ewah kgmod::Filter::del(const values_t& values, const tra_item traitem) {
+    if (traitem == FACT) {
+        stringstream msg;
+        msg << "cannot use del for fact filter" << traitem;
+        throw kgError(msg.str());
+    }
     Ewah bmp = sel(values, traitem);
     Ewah out = logicalnot(bmp, traitem);
     return out;
@@ -194,13 +211,12 @@ Ewah kgmod::Filter::range(const string& key, const pair<string, string>& values,
     if (! existsFldName(key, traitem)) throw kgError(key + " does not exist");
     Ewah out;
     BTree* bmpList;
-    string k;
     if (traitem == TRA) {
         bmpList = &(occ->bmpList);
-        k = config->traFile.traFld;
     } else if (traitem == ITEM) {
         bmpList = &(occ->itemAtt->bmpList);
-        k = config->traFile.itemFld;
+    } else if (traitem == FACT) {
+        bmpList = &(fact->bmplist);
     } else {
         stringstream msg;
         msg << "invalid tra_item: " << traitem;
@@ -501,6 +517,27 @@ Ewah kgmod::Filter::makeItemBitmap(string& cmdline) {
             cerr << "(item) executing " << cmdline << endl;
             bmp = runcmd(&cmd, ITEM);
             cache->put(cmdline, {}, ITEM, bmp);
+        }
+        cerr << "(item) result: "; Cmn::CheckEwah(bmp);
+    }
+    return bmp;
+}
+
+Ewah kgmod::Filter::makeFactBitmap(string& cmdline) {
+    boost::trim(cmdline);
+    Ewah bmp;
+    if (cache->get(cmdline, {}, FACT, bmp)) {
+        cerr << "(item) executing " << cmdline << endl;
+        cerr << "found in cache" << endl;
+    } else {
+        char* cmd = (char*)cmdline.c_str();
+        if (cmdline == "") {
+            cerr << "(item) all items" << endl;
+            bmp = allone(ITEM);
+        } else {
+            cerr << "(item) executing " << cmdline << endl;
+            bmp = runcmd(&cmd, FACT);
+            cache->put(cmdline, {}, FACT, bmp);
         }
         cerr << "(item) result: "; Cmn::CheckEwah(bmp);
     }

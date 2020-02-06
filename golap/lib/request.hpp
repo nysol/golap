@@ -46,6 +46,7 @@ namespace kgmod {
     struct Query {
         Ewah traFilter;
         Ewah itemFilter;
+        Ewah factFilter;
         sel_cond selCond;
         sort_key sortKey;
         size_t sendMax;
@@ -56,6 +57,7 @@ namespace kgmod {
         void dump(void) {
             cerr << "traFilter; ";  Cmn::CheckEwah(traFilter);
             cerr << "itemFilter; "; Cmn::CheckEwah(itemFilter);
+            cerr << "factFilter; "; Cmn::CheckEwah(factFilter);
             selCond.dump();
             if (sortKey == SORT_SUP)  cerr << "sortKey: SUP"  << endl;
             else if (sortKey == SORT_CONF) cerr << "sortKey: CONF" << endl;
@@ -83,6 +85,7 @@ namespace kgmod {
     struct NodeStat {
         Ewah traFilter;
         Ewah itemFilter;
+        Ewah factFilter;
         pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
         vector<string> itemVal;
         vector<pair<AggrFunc, string>> vals;
@@ -90,6 +93,7 @@ namespace kgmod {
         void dump(void) {
             cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
             cerr << "itemFilter: "; Cmn::CheckEwah(itemFilter);
+            cerr << "factFilter; "; Cmn::CheckEwah(factFilter);
             cerr << "granularity(transaction): ";
             for (auto& f : granularity.first) cerr << f << " ";
             cerr << endl;
@@ -103,12 +107,14 @@ namespace kgmod {
     struct NodeImage {
         Ewah traFilter;
         Ewah itemFilter;
+        Ewah factFilter;
         pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
         vector<string> itemVal;
         
         void dump(void) {
             cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
             cerr << "itemFilter: "; Cmn::CheckEwah(itemFilter);
+            cerr << "factFilter; "; Cmn::CheckEwah(factFilter);
             cerr << "granularity(transaction): ";
             for (auto& f : granularity.first) cerr << f << " ";
             cerr << endl;
@@ -122,6 +128,7 @@ namespace kgmod {
     struct WorkSheet {
         Ewah traFilter;
         Ewah itemFilter;
+        Ewah factFilter;
         axis_t traAtt;              // first:'T'固定
         axis_t itemAtt;             // first:'I'固定
         vector<pair<AggrFunc, string>> vals;
@@ -129,6 +136,7 @@ namespace kgmod {
         void dump(void) {
             cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
             cerr << "itemFilter: "; Cmn::CheckEwah(itemFilter);
+            cerr << "factFilter; "; Cmn::CheckEwah(factFilter);
             cerr << "itemAtt: ";
             for (auto& t : traAtt) cerr << t.second << " ";
             cerr << "\ntraAtt: ";
@@ -141,6 +149,7 @@ namespace kgmod {
     struct Pivot {
         Ewah traFilter;
         Ewah itemFilter;
+        Ewah factFilter;
         vector<axis_t> axes;                    // first:x-axis second:y-axis
         float cutoff;
         

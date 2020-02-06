@@ -31,10 +31,10 @@ using namespace std;
 namespace kgmod {
     class Param {
         string ParamFile;
-	string originalText;
+        string originalText;
         boost::interprocess::file_lock* flock;
         boost::property_tree::ptree pt;
-
+        
     public:
         Param(string& ParamFile);
         ~Param(void);

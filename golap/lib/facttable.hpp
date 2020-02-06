@@ -30,6 +30,7 @@
 #include "traatt.hpp"
 #include "itematt.hpp"
 #include "occ.hpp"
+#include "btree.hpp"
 
 using namespace std;
 
@@ -70,19 +71,28 @@ namespace kgmod {
         Config* _config;
         kgEnv* _env;
         Occ* _occ;
+        
+        string _key2recFile;
+        
         typedef vector<factVal_t> vals_t;
-        typedef pair<size_t, size_t> addr_t;
         typedef map<size_t, vals_t> itemMap_t;
-        vector<itemMap_t> _factTable;       // [traNo][itemNo]
-        vector<string> _flds;
-        unordered_map<string, int> _fldPos;
-        // どこで実装すべきか？？？
-        typedef btree::btree_multimap<string, size_t> valsIndex_t;
-        vector<valsIndex_t> _valsIndex;     // [_fldPos][value] -> index in _factTable
+        
+        // numField only
+        vector<itemMap_t> _numFldTbl;           // [traNo][itemNo] -> binary value (numField only)
+        unordered_map<string, int> _numFldPos;  // [fieldName] -> _numFldPos (numField only)
+        
+        // both of numField and strField
+        typedef pair<size_t, size_t> addr_t;
+        vector<addr_t> _addr;                   // [factTable recNo] -> {traNo, itemNo}
+//        btree::btree_multimap<addr_t, size_t> _recNo; // [{traNo, itemNo}] -> factTable recNo
+        multimap<addr_t, size_t> _recNo; // [{traNo, itemNo}] -> factTable recNo
         
     public:
-        FactTable(Config* config, kgEnv* env, Occ* occ)
-        : _config(config), _env(env), _occ(occ) {};
+        size_t recMax;
+        BTree bmplist;                          // [{key, value}] -> bitmap of facttable recNo
+
+    public:
+        FactTable(Config* config, kgEnv* env, Occ* occ);
         
     private:
         boost::optional<int> fldPos(const string fld);
@@ -91,16 +101,46 @@ namespace kgmod {
         bool getItems(const size_t traNo, Ewah& itemBmp);
         
     public:
+        void build(void);
+        void save(const bool clean);
         void load(void);
-        size_t valCount(void) {return _fldPos.size();}
-        unordered_map<string, int>* valPosMap(void) {return &_fldPos;};
+        void recNo2keys(size_t recNo, size_t& traNo, size_t& itemNo) {
+            addr_t& tmp = _addr[recNo];
+            traNo = tmp.first;
+            itemNo = tmp.second;
+        }
+        bool existInFact(const size_t traNo, const size_t itemNo, const Ewah& factBmp) {
+            bool stat = false;
+            for (auto r = _recNo.lower_bound({traNo, itemNo}), er = _recNo.end(); r != er; r++) {
+                if (r->first.first != traNo || r->first.second !=itemNo) break;
+                size_t rn = r->second;
+                stat = factBmp.get(rn);
+                if (stat) break;
+            }
+            return stat;
+        }
+        bool existInFact(const Ewah& traNo, const size_t itemNo, const Ewah& factBmp) {
+            bool stat = false;
+            for (auto i = traNo.begin(), ei = traNo.end(); i != ei; i++) {
+                stat = existInFact(*i, itemNo, factBmp);
+                if (stat) break;
+            }
+            return stat;
+        }
+        
+        void toTraItemBmp(const Ewah& factFilter, const Ewah& itemFilter, Ewah& traBmp, Ewah& itemBmp);
+//        void toItemBmp(const Ewah& factFilter, const Ewah& traFilter,
+//                       const Ewah& itemFilter, Ewah& itemBmp);
+        size_t valCount(void) {return _numFldPos.size();}
+        unordered_map<string, int>* valPosMap(void) {return &_numFldPos;};
         string valNames(void);
         void funcParse(const string& func, vector<string>& f);
         void setFlds(const vector<string>& flds) {
-            for (int i = 0; i < flds.size(); i++) _fldPos[flds[i]] = i;
+            for (int i = 0; i < flds.size(); i++) _numFldPos[flds[i]] = i;
         }
         size_t aggregate(const pair<string&, Ewah&>& traBmp, const pair<string&, Ewah&>& itemBmp,
                          vector<pair<AggrFunc, string>>& vals, string& line);
+        void dump(void);
     };
 }
 

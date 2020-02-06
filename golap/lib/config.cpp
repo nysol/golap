@@ -61,7 +61,15 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         } else {
             throw kgError("traFile.itemFld is mandatory: " + infile);
         }
-
+        if (boost::optional<string> val = Prm.get<string>("traFile.strFields")) {
+            traFile.strFields = Cmn::CsvStr::Parse(*val);
+        }
+        if (boost::optional<string> val = Prm.get<string>("traFile.numFields")) {
+            traFile.numFields = Cmn::CsvStr::Parse(*val);
+        }
+        if (boost::optional<string> val = Prm.get<string>("traFile.highCardinality")) {
+            traFile.highCardinality = Cmn::CsvStr::Parse(*val);
+        }
         traDataType[traFile.traFld] = STR;
         itemDataType[traFile.itemFld] = STR;
         

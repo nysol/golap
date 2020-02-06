@@ -18,6 +18,8 @@
  ////////// LICENSE INFO ////////////////////*/
 
 #include <string>
+#include <cstdint>
+#include <stdint.h>
 #include <map>
 #include <boost/algorithm/string.hpp>
 #include <kgCSV.h>
@@ -228,6 +230,14 @@ void kgmod::AggrFunc::dump(void) {
 
 
 // class FactTable
+kgmod::FactTable::FactTable(Config* config, kgEnv* env, Occ* occ)
+: _config(config), _env(env), _occ(occ) {
+    string dtmDb = config->dbDir + "/fact_table.dtm";
+    string occDb = config->dbDir + "/fact_table.dat";
+    bmplist.PutDbName(dtmDb, occDb);
+    _key2recFile = config->dbDir + "/ft_key2rec.dat";
+}
+
 void kgmod::FactTable::item2traBmp(const Ewah& itemBmp, Ewah& traBmp) {
     traBmp.reset();
     for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
@@ -239,15 +249,15 @@ void kgmod::FactTable::item2traBmp(const Ewah& itemBmp, Ewah& traBmp) {
 
 bool kgmod::FactTable::getVals(const size_t trano, const size_t itmno, vals_t*& vals) {
     if (_occ->traAtt->traMax + 1 < trano) return false;
-    auto it = _factTable[trano].find(itmno);
-    if (it == _factTable[trano].end()) return false;
+    auto it = _numFldTbl[trano].find(itmno);
+    if (it == _numFldTbl[trano].end()) return false;
     vals = &(it->second);
     return true;
 }
 
 bool kgmod::FactTable::getItems(const size_t traNo, Ewah& itemBmp) {
-    auto ib = _factTable[traNo].begin();
-    auto ie = _factTable[traNo].end();
+    auto ib = _numFldTbl[traNo].begin();
+    auto ie = _numFldTbl[traNo].end();
     if (ib == ie) return false;
     for (auto i = ib; i != ie; i++) {
         itemBmp.set(i->first);
@@ -255,46 +265,276 @@ bool kgmod::FactTable::getItems(const size_t traNo, Ewah& itemBmp) {
     return true;
 }
 
-void kgmod::FactTable::load(void) {
-    cerr << "loading fact table" << endl;
+void kgmod::FactTable::build(void) {
     kgCSVfld ft;
     ft.open(_config->traFile.name, _env, false);
     ft.read_header();
+    
+    cerr << "building transaction and fact index" << endl;
     vector<string> fldName = ft.fldName();
-    int pos = 0, traIDPos = 0, itemIDPos = 0;
+    int traIDPos = -1, itemIDPos = -1;
+    size_t factCnt = 0;
+    string traIDFld = _config->traFile.traFld;
+    string itemIDFld = _config->traFile.itemFld;
     for (int i = 0; i < fldName.size(); i++) {
         if (fldName[i] == _config->traFile.traFld) {
             traIDPos = i;
         } else if (fldName[i] == _config->traFile.itemFld) {
             itemIDPos = i;
         } else {
-            _flds.push_back(fldName[i]);
-            _fldPos[fldName[i]] = pos;
-            pos++;
+            if (Cmn::posInVector(_config->traFile.strFields, fldName[i])) {
+                if (Cmn::posInVector(_config->traFile.highCardinality, fldName[i])) {
+                    bmplist.InitKey(fldName[i], STR_HC);
+                } else {
+                    bmplist.InitKey(fldName[i], STR);
+                }
+                factCnt++;
+            } else if (auto pos = Cmn::posInVector(_config->traFile.numFields, fldName[i])) {
+                _numFldPos[fldName[i]] = (int)(*pos);
+                
+                if (Cmn::posInVector(_config->traFile.highCardinality, fldName[i])) {
+                    bmplist.InitKey(fldName[i], NUM_HC);
+                } else {
+                    bmplist.InitKey(fldName[i], NUM);
+                }
+                factCnt++;
+            }
         }
     }
-    if (_fldPos.empty()) return;
     
-    _factTable.resize(_occ->traAtt->traMax + 1);
+    if (traIDPos == -1) {
+        stringstream ss;
+        ss << traIDFld << " is not found on " << _config->traFile.name;
+        throw kgError(ss.str());
+    }
+    if (itemIDPos == -1) {
+        stringstream ss;
+        ss << itemIDFld << " is not found on " << _config->traFile.name;
+        throw kgError(ss.str());
+    }
+    
+    if (factCnt == 0) return;
+    
+    //
+    map<string, bool> checkedTra;
+    for (auto i = _occ->traAtt->traNo.begin(), ie = _occ->traAtt->traNo.end(); i != ie; i++) {
+        checkedTra[i->first] = false;
+    }
+    
+    _numFldTbl.resize(_occ->traAtt->traMax + 1);
+    bool isError = false;
+    set<string> errKeyList;
     while (ft.read() != EOF) {
         string traID = ft.getVal(traIDPos);
-        size_t traNo  = _occ->traAtt->traNo[traID];
+        size_t traNo = _occ->traAtt->traNo[traID];
         string itemID = ft.getVal(itemIDPos);
         size_t itemNo = _occ->itemAtt->itemNo[itemID];
-        _factTable[traNo][itemNo].reserve(_fldPos.size());
+        _numFldTbl[traNo][itemNo].resize(_numFldPos.size());
+        
+        bool errThisTime = false;
         for (int i = 0; i < fldName.size(); i++) {
-            if (i == traIDPos) continue;
-            if (i == itemIDPos) continue;
-            factVal_t val = stof(ft.getVal(i));
-            _factTable[traNo][itemNo].push_back(val);
+            if (i == traIDPos) {
+                // traNoがtraAttに登録されていなければエラーとするが，処理は全て実施する
+                if (_occ->traAtt->traNo.find(traID) == _occ->traAtt->traNo.end()) {
+                    isError = true;
+                    string buf = traIDFld + ":" + traID;
+                    if (errKeyList.find(buf) == errKeyList.end()) {
+                        stringstream ss;
+                        ss << "#ERROR# " << buf << " is not found on " << _config->traAttFile.name;
+                        cerr << ss.str() << endl;
+                        errKeyList.insert(buf);
+                    }
+                    errThisTime = true;
+                }
+                continue;
+            }
+            if (i == itemIDPos) {
+                // itemNoがitemAttに登録されていなければエラーとするが，処理は全て実施する
+                if (_occ->itemAtt->itemNo.find(itemID) == _occ->itemAtt->itemNo.end()) {
+                    isError = true;
+                    string buf = itemIDFld + ":" + itemID;
+                    if (errKeyList.find(buf) == errKeyList.end()) {
+                        stringstream ss;
+                        ss << "#ERROR# " << buf << " is not found on " << _config->itemAttFile.name;
+                        cerr << ss.str() << endl;
+                        errKeyList.insert(buf);
+                    }
+                    errThisTime = true;
+                }
+                continue;
+            }
+            // configファイルに登録されていないデータ項目は処理しない
+            if (!Cmn::posInVector(_config->traFile.strFields, fldName[i]) &&
+                !Cmn::posInVector(_config->traFile.numFields, fldName[i])) continue;
+            
+            string fld = fldName[i];
+            string val = ft.getVal(i);
+            if (auto p = Cmn::posInVector(_config->traFile.numFields, fld)) {
+                _numFldTbl[traNo][itemNo][*p] = stod(ft.getVal(i));
+            }
+            bmplist.SetBit(fld, val, ft.recNo() - 1);
+        }
+        _occ->bmpList.SetBit(_occ->occKey, itemID, _occ->traAtt->traNo[traID]);
+        if (_occ->traAtt->traNo[traID] >= _occ->occ.size()) _occ->occ.resize(_occ->traAtt->traNo[traID] + 1);
+        Ewah tmp;
+        tmp.set(_occ->itemAtt->itemNo[itemID]);
+        _occ->occ[_occ->traAtt->traNo[traID]] = _occ->occ[_occ->traAtt->traNo[traID]] | tmp;
+        checkedTra[traID] = true;
+        
+        _addr.push_back({traNo, itemNo});               // it means {traNo, itemNo} set to [ft.recNo() - 1]
+        size_t rn = ft.recNo() - 1;
+        _recNo.insert({{traNo, itemNo}, rn});
+    }
+    recMax = ft.recNo() - 1;
+    ft.close();
+    
+    _occ->liveTra.padWithZeroes(_occ->traAtt->traMax + 1); _occ->liveTra.inplace_logicalnot();
+    for (auto i = checkedTra.begin(), ie = checkedTra.end(); i != ie; i++) {
+        if (i->second) continue;
+        cerr << "#WARNING# " << traIDFld << ":" << i->first << " does not exist on " << _config->traFile.name << endl;
+        
+        Ewah tmp; tmp.set(_occ->traAtt->traNo[i->first]);
+        _occ->liveTra = _occ->liveTra - tmp;
+    }
+    
+    if (isError) throw kgError("error occurred in building transaction index");
+}
+
+void kgmod::FactTable::save(const bool clean = true) {
+    bmplist.save(clean);
+    
+    cerr << "writing " << _key2recFile << " ..." << endl;
+    FILE* fp = fopen(_key2recFile.c_str(), "wb");
+    if (fp == NULL) {
+        stringstream msg;
+        msg << "failed to open " + _key2recFile;
+        throw kgError(msg.str());
+    }
+    
+    try {
+        size_t rc;
+        size_t fldCnt = _config->traFile.numFields.size();
+        rc = fwrite(&fldCnt, sizeof(size_t), 1, fp);
+        if (rc == 0) throw 0;
+        
+        for (size_t i = 0; i < _addr.size(); i++) {
+            size_t traNo = _addr[i].first;
+            size_t itemNo = _addr[i].second;
+            
+            rc = fwrite(&i, sizeof(size_t), 1, fp);
+            if (rc == 0) throw 0;
+            rc = fwrite(&traNo, sizeof(size_t), 1, fp);
+            if (rc == 0) throw 0;
+            rc = fwrite(&itemNo, sizeof(size_t), 1, fp);
+            if (rc == 0) throw 0;
+            
+            for (size_t c = 0; c < fldCnt; c++) {
+                rc = fwrite(&(_numFldTbl[traNo][itemNo][c]), sizeof(factVal_t), 1, fp);
+                if (rc == 0) throw 0;
+            }
         }
     }
-    ft.close();
+    catch(int e) {
+        fclose(fp);
+        stringstream msg;
+        msg << "failed to write " << _key2recFile;
+        throw kgError(msg.str());
+    }
+    fclose(fp);
 }
+
+void kgmod::FactTable::load(void) {
+    cerr << "loading fact table" << endl;
+    bmplist.load();
+    //    bmplist.dump(true);
+    
+    for (int pos = 0; pos < _config->traFile.numFields.size(); pos++) {
+        _numFldPos[_config->traFile.numFields[pos]] = pos;
+    }
+    
+    cerr << "reading " << _key2recFile << "..." << endl;
+    _numFldTbl.resize(_occ->traAtt->traMax + 1);
+    FILE* fp = fopen(_key2recFile.c_str(), "rb");
+    if (fp == NULL) {
+        stringstream msg;
+        msg << "failed to open " + _key2recFile;
+        throw kgError(msg.str());
+    }
+    try {
+        size_t fldCnt;
+        size_t rc = 0;
+        rc = fread(&fldCnt, sizeof(size_t), 1, fp);
+        while (true) {
+            size_t recNo = 0;
+            size_t traNo = 0;
+            size_t itemNo = 0;
+            size_t rc = 0;
+            rc = fread(&recNo, sizeof(size_t), 1, fp);
+            if (rc == 0) break;
+            rc = fread(&traNo, sizeof(size_t), 1, fp);
+            if (rc == 0) throw 0;
+            rc = fread(&itemNo, sizeof(size_t), 1, fp);
+            if (rc == 0) throw 0;
+            
+            _addr.push_back({traNo, itemNo});
+            _recNo.insert({{traNo, itemNo}, recNo});
+            _numFldTbl[traNo][itemNo].resize(fldCnt);
+            for (size_t c = 0; c < fldCnt; c++) {
+                rc = fread(&(_numFldTbl[traNo][itemNo][c]), sizeof(factVal_t), 1, fp);
+                if (rc == 0) throw 0;
+            }
+            recMax = recNo;
+        }
+    }
+    catch(int e) {
+        fclose(fp);
+        stringstream msg;
+        msg << "failed to read " << _key2recFile;
+        throw kgError(msg.str());
+    }
+    fclose(fp);
+}
+
+void kgmod::FactTable::toTraItemBmp(const Ewah& factFilter, const Ewah& itemFilter,
+                                    Ewah& traBmp, Ewah& itemBmp) {
+    set<size_t> traWork;
+    set<size_t> itemWork;
+    for (auto i = factFilter.begin(), ei = factFilter.end(); i != ei; i++) {
+        if (itemFilter.get(_addr[*i].second)) {
+            traWork.insert(_addr[*i].first);
+            itemWork.insert(_addr[*i].second);
+        }
+    }
+    
+    traBmp.reset();
+    for (auto t : traWork) {
+        traBmp.set(t);
+    }
+    
+    itemBmp.reset();
+    for (auto t : itemWork) {
+        itemBmp.set(t);
+    }
+}
+
+//void kgmod::FactTable::toItemBmp(const Ewah& factFilter, const Ewah& traFilter,
+//                                 const Ewah& itemFilter, Ewah& itemBmp) {
+//    set<size_t> work;
+//    for (auto i = factFilter.begin(), ei = factFilter.end(); i != ei; i++) {
+//        if (!itemFilter.get(_addr[*i].second)) continue;
+//        if (!traFilter.get(_addr[*i].first)) continue;
+//        work.insert(_addr[*i].second);
+//    }
+//
+//    itemBmp.reset();
+//    for (auto t : work) {
+//        itemBmp.set(t);
+//    }
+//}
 
 string kgmod::FactTable::valNames(void) {
     string out;
-    for (auto& fld : _flds) {
+    for (auto& fld : _config->traFile.numFields) {
         out += fld + ",";
     }
     out.erase(--out.end());
@@ -314,8 +554,8 @@ void kgmod::FactTable::funcParse(const string& func, vector<string>& f) {
 }
 
 boost::optional<int> kgmod::FactTable::fldPos(const string fld) {
-    auto it = _fldPos.find(fld);
-    if (it == _fldPos.end()) return boost::none;
+    auto it = _numFldPos.find(fld);
+    if (it == _numFldPos.end()) return boost::none;
     else return it->second;
 }
 
@@ -323,7 +563,7 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
                                    vector<pair<AggrFunc, string>>& vals, string& line) {
     size_t skipCount0 = 0, skipCount = 0, hitCount = 0;
     line.clear();
-    vector<vals_t> factVals(_flds.size());
+    vector<vals_t> factVals(_config->traFile.numFields.size());
     for (size_t p = 0; p < factVals.size(); p++) {
         factVals[p].reserve(256);
     }
@@ -400,4 +640,101 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
     }
     cerr << "(" << skipCount0 << "," << skipCount << "," << hitCount << ":" << lineCount << ") " << endl;
     return lineCount;
+}
+
+//void kgmod::FactTable::toTraBitmap(const Ewah& factBmp, Ewah& traBmp) {
+//    unordered_map<size_t, bool> checked_traNo;
+//    for (auto i = factBmp.begin(), ei= factBmp.end(); i != ei; i++) {
+//        if (checked_traNo.find(*i) != checked_traNo.end()) continue;
+//        traBmp.set(*i);
+//        checked_traNo[*i] = true;
+//    }
+//}
+
+//void kgmod::FactTable::fact2traNo(const size_t traNo, Ewah& factBmp) {
+//    set<size_t> traNoSet;
+//    for (auto i = _recNo.lower_bound({traNo, 0}); i != _recNo.end(); i++) {
+//        if (traNo != i->first.first) break;
+//        traNoSet.insert(i->second);
+//    }
+//    
+//    for (auto i = traNoSet.begin(); i != traNoSet.end(); i++) {
+//        factBmp.set(*i);
+//    }
+//}
+//
+//void kgmod::FactTable::itemsInFact(const size_t traNo, const Ewah& factBmp, Ewah& itemBmp) {
+//    Ewah fact4TraNo;
+//    fact2traNo(traNo, fact4TraNo);
+//    Ewah tmpBmp = fact4TraNo & factBmp;
+//
+//    set<size_t> itemNoSet;
+//    for (auto i = tmpBmp.begin(), ei = tmpBmp.end(); i != ei; i++) {
+//        auto buf = _addr[*i];
+//        itemNoSet.insert(buf.second);
+//    }
+//
+//    for (auto i = itemNoSet.begin(); i != itemNoSet.end(); i++) {
+//        itemBmp.set(*i);
+//    }
+//}
+
+//bool kgmod::FactTable::existTra(const Ewah& factBmp, const size_t traNo) {
+//    Ewah bmp4tra;
+//    fact2traNo(traNo, bmp4tra);
+//    Ewah comp = factBmp & bmp4tra;
+//    size_t cnt = comp.numberOfOnes();
+//    return (cnt != 0);
+//}
+
+void kgmod::FactTable::dump(void) {
+    string dmpfile = _config->outDir + "/facttable.dmp";
+    ofstream ofs(dmpfile);
+    
+    ofs << "numField" << endl;
+//    ofs << "_numFldPos,_config->traFile.numFields: ";
+    for (size_t i = 0; i < _config->traFile.numFields.size(); i++) {
+        ofs << _numFldPos[_config->traFile.numFields[i]] << "," << _config->traFile.numFields[i] << " ";
+    }
+    ofs << endl;
+    
+    ofs << "\nstrField" << endl;
+//    ofs << "_numFldPos,_config->traFile.numFields: ";
+    for (size_t i = 0; i < _config->traFile.strFields.size(); i++) {
+        ofs << _config->traFile.strFields[i] << " ";
+    }
+    ofs << endl;
+    
+    ofs << "\n_numFldTbl" << endl;
+    for (size_t i1 = 0; i1 < _numFldTbl.size(); i1++) {
+        string traID = _occ->traAtt->tra[i1];
+        for (auto i2 = _numFldTbl[i1].begin(); i2 != _numFldTbl[i1].end(); i2++) {
+            string itemID = _occ->itemAtt->item[i2->first];
+            ofs << traID << "," << itemID << ": ";
+            for (auto f : i2->second) {
+                ofs << f << " ";
+            }
+            ofs << endl;
+        }
+    }
+    ofs << endl;
+    
+    ofs << "\n_addr" << endl;
+    for (size_t i = 0; i < _addr.size(); i++) {
+        ofs << i << ": " << _addr[i].first << "," << _addr[i].second;
+        ofs << "(" << _occ->traAtt->tra[_addr[i].first] << ",";
+        ofs << _occ->itemAtt->item[_addr[i].second] << ")" << endl;
+    }
+    ofs << endl;
+    
+    ofs << "\n_recNo" << endl;
+    for (auto i = _recNo.begin(), ei = _recNo.end(); i != ei; i++) {
+        ofs << i->first.first << "," << i->first.second;
+        ofs << "(" << _occ->traAtt->tra[i->first.first] << ",";
+        ofs << _occ->itemAtt->item[i->first.second] << "): ";
+        ofs << i->second << endl;
+    }
+    
+    ofs.close();
+//    bmplist.dump(true);
 }

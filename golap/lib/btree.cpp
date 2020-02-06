@@ -276,7 +276,15 @@ void kgmod::BTree::GetVal(const vector<string> Keys, const vector<string> KeyVal
 
 bool kgmod::BTree::GetValMulti(const string& Key, const string& LikeKey, Ewah& Bitmap) {
     if (DataTypeMap[Key] != STR && DataTypeMap[Key] != STR_HC) return false;
-    size_t FirstWild = min(LikeKey.find("*"), LikeKey.find("?"));
+    size_t FirstWild=0;
+    std::string::size_type pos_a = LikeKey.find("*");
+    std::string::size_type pos_b = LikeKey.find("?");
+    if( pos_a != std::string::npos || pos_b != std::string::npos ){
+             if( pos_a == std::string::npos ){ FirstWild = pos_b; }
+        else if( pos_b == std::string::npos ){ FirstWild = pos_a; }
+        else { FirstWild = min(pos_a,pos_b); }
+    }
+    // size_t FirstWild = min(LikeKey.find("*"), LikeKey.find("?"));
     string StartWith = LikeKey.substr(0, FirstWild);
     string EndOfSearch = StartWith;
     if (FirstWild != 0) EndOfSearch[FirstWild - 1]++;
@@ -833,7 +841,25 @@ vector<string> kgmod::BTree::EvalKeyValue(const string& Key, const Ewah* filter)
                 if (tmp.numberOfOnes() != 0) out.push_back(i->first.second);
             }
         }
-    } else {
+    } else if (DataTypeMap[Key] == STR_HC) {
+        bool isFirst = true;
+        string prevSecond = "";
+        for (auto i = str_hc_btree.lower_bound({Key,""}); i != str_hc_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                if (prevSecond == i->first.second) continue;
+            }
+            
+            if (filter == NULL) {
+                out.push_back(i->first.second);
+            } else {
+                if (filter->get(i->second)) out.push_back(i->first.second);
+            }
+            prevSecond = i->first.second;
+        }
+    } else if (DataTypeMap[Key] == NUM) {
         for (auto i = num_btree.lower_bound({Key,-DBL_MAX}); i != num_btree.end(); i++) {
             if (i->first.first != Key) break;
             if (filter == NULL) {
@@ -849,6 +875,30 @@ vector<string> kgmod::BTree::EvalKeyValue(const string& Key, const Ewah* filter)
                     out.push_back(ss.str());
                 }
             }
+        }
+    } else {
+        bool isFirst = true;
+        size_t prevSecond = 0;
+        for (auto i = num_hc_btree.lower_bound({Key,-DBL_MAX}); i != num_hc_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                if (prevSecond == i->first.second) continue;
+            }
+            
+            if (filter == NULL) {
+                stringstream ss;
+                ss << i->first.second;
+                out.push_back(ss.str());
+            } else {
+                if (filter->get(i->second)) {
+                    stringstream ss;
+                    ss << i->first.second;
+                    out.push_back(ss.str());
+                }
+            }
+            prevSecond = i->first.second;
         }
     }
     return out;
@@ -896,7 +946,6 @@ size_t kgmod::BTree::CountKeyValue(const vector<string>& Keys, const Ewah* traFi
 }
 
 size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
-    Ewah zero;
     size_t cnt = 0;
     cerr << "count key value ... ";
     if (DataTypeMap[Key] == STR) {
@@ -906,17 +955,61 @@ size_t kgmod::BTree::CountKeyValue(const string& Key, const Ewah* filter) {
                 cnt++;
             } else {
                 Ewah tmp = i->second & *filter;
-                if (tmp != zero) cnt++;
+                if (tmp.numberOfOnes() != 0) cnt++;
             }
         }
-    } else {
+    } else if (DataTypeMap[Key] == STR_HC) {
+        bool isFirst = true;
+        string prevSecond = "";
+        for (auto i = str_hc_btree.lower_bound({Key,""}); i != str_hc_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (filter == NULL) {
+                cnt++;
+            } else {
+                if (isFirst) {
+                    cnt++;
+                    isFirst = false;
+                    prevSecond = i->first.second;
+                } else {
+                    if (prevSecond != i->first.second) {
+                        if (filter->get(i->second)) {
+                            cnt++;
+                            prevSecond = i->first.second;
+                        }
+                    }
+                }
+            }
+        }
+    } else if (DataTypeMap[Key] == NUM) {
         for (auto i = num_btree.lower_bound({Key,-DBL_MAX}); i != num_btree.end(); i++) {
             if (i->first.first != Key) break;
             if (filter == NULL) {
                 cnt++;
             } else {
                 Ewah tmp = i->second & *filter;
-                if (tmp != zero) cnt++;
+                if (tmp.numberOfOnes() != 0) cnt++;
+            }
+        }
+    } else {
+        bool isFirst = true;
+        size_t prevSecond = 0;
+        for (auto i = num_hc_btree.lower_bound({Key,-DBL_MAX}); i != num_hc_btree.end(); i++) {
+            if (i->first.first != Key) break;
+            if (filter == NULL) {
+                cnt++;
+            } else {
+                if (isFirst) {
+                    cnt++;
+                    isFirst = false;
+                    prevSecond = i->first.second;
+                } else {
+                    if (prevSecond != i->first.second) {
+                        if (filter->get(i->second)) {
+                            cnt++;
+                            prevSecond = i->first.second;
+                        }
+                    }
+                }
             }
         }
     }

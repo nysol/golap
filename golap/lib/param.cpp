@@ -16,6 +16,7 @@
  * for more details.
  
  ////////// LICENSE INFO ////////////////////*/
+#include <iostream>
 #include <chrono>
 #include <unistd.h>
 #include "param.hpp"
@@ -55,9 +56,10 @@ bool kgmod::Param::ReadParam(void) {
             return false;
         }
         originalText = string((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
-	cerr << "config: " << originalText << endl;
-	
-        boost::property_tree::read_json(ParamFile, pt);
+        cerr << "original: " << originalText << endl;
+        stringstream ss;
+        ss << originalText;
+        boost::property_tree::read_json(ss, pt);
     }
     catch (boost::property_tree::json_parser_error& e) {
         cerr << "#ERROR# ; " << e.what() << endl;
@@ -83,8 +85,7 @@ bool kgmod::Param::convJson(string& json) {
     try {
         stringstream ss;
         boost::property_tree::write_json(ss, pt, true);
-//        json = ss.str();
-	json = originalText;
+        json = ss.str();
     }
     catch (boost::property_tree::json_parser_error& e) {
         cerr << "#ERROR# ; " << e.what() << endl;

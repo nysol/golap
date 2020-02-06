@@ -46,6 +46,9 @@ namespace kgmod {
             string name;
             string traFld;
             string itemFld;
+            vector<string> strFields;
+            vector<string> numFields;
+            vector<string> highCardinality;
         } traFile;
         
         struct traAttFile {

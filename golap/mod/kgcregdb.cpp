@@ -74,11 +74,16 @@ int kgmod::kgCreGdb::run() {
         config->dump(opt_debug);
         
         occ = new Occ(config, _env);
+        factTable = new FactTable(config, _env, occ);
         cerr << "creating gdb..." << endl;
         occ->build();
+        factTable->build();
         cerr << "saving gdb..." << endl;
         occ->save(true);
+        factTable->save(true);
         cerr << endl;
+        
+//        factTable->dump();
         
         occ->dump(opt_debug);
         

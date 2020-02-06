@@ -48,6 +48,8 @@ void kgmod::Request::setQueryDefault(void) {
     query.traFilter.inplace_logicalnot();
     query.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
     query.itemFilter.inplace_logicalnot();
+    query.factFilter.padWithZeroes(_factTable->recMax + 1);
+    query.factFilter.inplace_logicalnot();
     query.selCond = {0, 0, 0, 0, -1};
     query.debug_mode = 0;
     query.granularity.first.resize(1);
@@ -64,6 +66,8 @@ void kgmod::Request::setNodestatDefault(void) {
     nodestat.traFilter.inplace_logicalnot();
     nodestat.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
     nodestat.itemFilter.inplace_logicalnot();
+    nodestat.factFilter.padWithZeroes(_factTable->recMax + 1);
+    nodestat.factFilter.inplace_logicalnot();
     nodestat.granularity.first.resize(1);
     nodestat.granularity.first[0] = _config->traFile.traFld;
     nodestat.granularity.second.resize(1);
@@ -75,6 +79,8 @@ void kgmod::Request::setNodeimageDefault(void) {
     nodeimage.traFilter.inplace_logicalnot();
     nodeimage.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
     nodeimage.itemFilter.inplace_logicalnot();
+    nodeimage.factFilter.padWithZeroes(_factTable->recMax + 1);
+    nodeimage.factFilter.inplace_logicalnot();
     nodeimage.granularity.first.resize(1);
     nodeimage.granularity.first[0] = _config->traFile.traFld;
     nodeimage.granularity.second.resize(1);
@@ -121,6 +127,9 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("query.itemFilter")) {
             query.itemFilter = _filter->makeItemBitmap(*val2);
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("query.factFilter")) {
+            query.factFilter = _filter->makeFactBitmap(*val2);
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("query.selCond")) {
             if (boost::optional<double> val3 = pt.get_optional<double>("query.selCond.minSup")) {
@@ -214,6 +223,9 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.itemFilter")) {
             nodestat.itemFilter = _filter->makeItemBitmap(*val2);
         }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.factFilter")) {
+            nodestat.factFilter = _filter->makeFactBitmap(*val2);
+        }
         if (boost::optional<string> val2 = pt.get_optional<string>("nodestat.granularity")) {
             if (boost::optional<string> val3 = pt.get_optional<string>("nodestat.granularity.transaction")) {
                 vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
@@ -286,6 +298,9 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.itemFilter")) {
             nodeimage.itemFilter = _filter->makeItemBitmap(*val2);
         }
+        if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.factFilter")) {
+            nodeimage.factFilter = _filter->makeFactBitmap(*val2);
+        }
         if (boost::optional<string> val2 = pt.get_optional<string>("nodeimage.granularity")) {
             if (boost::optional<string> val3 = pt.get_optional<string>("nodeimage.granularity.transaction")) {
                 vector<string> buf = Cmn::CsvStr::Parse((*val3).c_str());
@@ -344,6 +359,12 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
             worksheet.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
             worksheet.itemFilter.inplace_logicalnot();
         }
+        if (boost::optional<string> val2 = pt.get_optional<string>("worksheet.factFilter")) {
+            worksheet.factFilter = _filter->makeFactBitmap(*val2);
+        } else {
+            worksheet.factFilter.padWithZeroes(_factTable->recMax + 1);
+            worksheet.factFilter.inplace_logicalnot();
+        }
         if (boost::optional<string> val2 = pt.get_optional<string>("worksheet.traAtt")) {
             vector<string> vec = Cmn::CsvStr::Parse(*val2);
             worksheet.traAtt.resize(vec.size());
@@ -393,6 +414,12 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         } else {
             pivot.itemFilter.padWithZeroes(_occ->itemAtt->itemMax + 1);
             pivot.itemFilter.inplace_logicalnot();
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("pivot.factFilter")) {
+            pivot.factFilter = _filter->makeFactBitmap(*val2);
+        } else {
+            pivot.factFilter.padWithZeroes(_factTable->recMax + 1);
+            pivot.factFilter.inplace_logicalnot();
         }
         pivot.axes.resize(2);
         if (boost::optional<string> val2 = pt.get_optional<string>("pivot.colAtt")) {

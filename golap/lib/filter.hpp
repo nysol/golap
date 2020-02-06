@@ -26,9 +26,10 @@
 #include "cmn.hpp"
 #include "lrucache.hpp"
 #include "occ.hpp"
+#include "facttable.hpp"
 
 namespace kgmod {
-    enum tra_item : unsigned int {TRA, ITEM, SLICE};
+    enum tra_item : unsigned int {TRA, ITEM, SLICE, FACT};
     
     typedef typename cache::lru_cache<string, Ewah> cmd_cache_t;
     class cmdCache : public cmd_cache_t {
@@ -64,15 +65,17 @@ namespace kgmod {
         Config* config;
         kgEnv* env;
         Occ* occ;
+        FactTable* fact;
         cmdCache* cache;
         bool debug = false;
         
     public:
-        Filter(Occ* occ, cmdCache* cmdcache, Config* config, kgEnv* env, bool debug)
-            : occ(occ), cache(cmdcache), config(config), env(env), debug(debug) {};
+        Filter(Occ* occ, FactTable* fact ,cmdCache* cmdcache, Config* config, kgEnv* env, bool debug)
+            : occ(occ), fact(fact), cache(cmdcache), config(config), env(env), debug(debug) {};
         
         Ewah makeTraBitmap(string& cmdline);
         Ewah makeItemBitmap(string& cmdline);
+        Ewah makeFactBitmap(string& cmdline);
         
     private:
         bool existsFldName(const string& fldName, const tra_item traitem);

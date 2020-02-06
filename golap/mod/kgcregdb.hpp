@@ -30,6 +30,7 @@
 #include "cmn.hpp"
 #include "config.hpp"
 #include "btree.hpp"
+#include "facttable.hpp"
 
 using namespace std;
 using namespace kglib;
@@ -43,6 +44,8 @@ namespace kgmod {
         
         Config* config = NULL;
         Occ* occ = NULL;
+        
+        FactTable* factTable = NULL;
         
     private:
         void setArgs(void);
