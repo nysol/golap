@@ -83,13 +83,17 @@ namespace kgmod {
 		pair<vector<string>, vector<string>> granularity;   
 		vector<string> itemVal;
 
-		NodeImageParams(size_t traMax,size_t itemMax ,string traFld,string itemFld){
+		NodeImageParams(size_t traMax,size_t itemMax ,size_t recMax ,string traFld,string itemFld){
 
 			traFilter.padWithZeroes( traMax + 1 );
 			traFilter.inplace_logicalnot();
 
 			itemFilter.padWithZeroes(itemMax + 1);
 			itemFilter.inplace_logicalnot();
+
+    	factFilter.padWithZeroes( recMax + 1 );
+			factFilter.inplace_logicalnot();
+
 
 			// 分ける必要ある？ 複数指定可？
   		granularity.first.resize(1);
@@ -120,13 +124,16 @@ namespace kgmod {
 		vector<string> itemVal;
     vector<pair<AggrFunc, string>> vals;
 
-		NodeStatParams(size_t traMax,size_t itemMax ,string traFld,string itemFld){
+		NodeStatParams(size_t traMax,size_t itemMax ,size_t recMax ,string traFld,string itemFld){
 
 			traFilter.padWithZeroes( traMax + 1 );
 			traFilter.inplace_logicalnot();
 
-			itemFilter.padWithZeroes(itemMax + 1);
+			itemFilter.padWithZeroes( itemMax + 1 );
 			itemFilter.inplace_logicalnot();
+
+    	factFilter.padWithZeroes( recMax + 1 );
+			factFilter.inplace_logicalnot();
 
 			// 分ける必要ある？ 複数指定可？
   		granularity.first.resize(1);
