@@ -406,18 +406,21 @@ namespace kgmod {
 
 			vector< vector<string> > nodestat(
 				string traFilter,string itemFilter,
+				string factFilter,
 				string gTransaction,string gnode,
 				string itemVal,string values
 			);
 
 			CsvFormat nodeimage(
 				string traFilter,string itemFilter,
+				string factFilter,
 				string gTransaction,string gnode,
 				string itemVal
 			);
 
 			map<string, Result> runQuery(
 				string traFilter,string itemFilter,
+				string factFilter,
 				string gTransaction,string gNode,
 				string SelMinSup,string SelMinConf,string SelMinLift,
 				string SelMinJac,string SelMinPMI,

@@ -194,6 +194,7 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 		//NodeImage nodeImageParams;
 		string traFilter;
 		string itemFilter;
+		string factFilter;
 		string gTransaction;
 		string gnode;
 		string itemVal;
@@ -209,6 +210,9 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 
 		v = PyDict_GetItemString(ni,"itemFilter");
 		if(v){ itemFilter = strGET(v); }
+
+		v = PyDict_GetItemString(ni,"factFilter");
+		if(v){ factFilter = strGET(v); }
 
 		v = PyDict_GetItemString(ni,"itemVal");
 		if(v){ itemVal = strGET(v); }
@@ -227,7 +231,7 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 				gnode = strGET(gvv);
 			}
 		}
-		CsvFormat rtn = kolap->nodeimage( traFilter,itemFilter,gTransaction,gnode,itemVal);
+		CsvFormat rtn = kolap->nodeimage( traFilter,itemFilter,factFilter,gTransaction,gnode,itemVal);
 
 
 		PyObject *rtnList  = PyList_New(rtn.lineSize());
@@ -285,6 +289,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		//NodeImage nodeImageParams;
 		string traFilter;
 		string itemFilter;
+		string factFilter;
 		string gTransaction;
 		string gNode;
 		string itemVal;
@@ -302,6 +307,10 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 
 		v = PyDict_GetItemString(ni,"itemFilter");
 		if(v){ itemFilter = strGET(v); }
+
+		v = PyDict_GetItemString(ni,"factFilter");
+		if(v){ factFilter = strGET(v); }
+
 
 		v = PyDict_GetItemString(ni,"itemVal");
 		if(v){
@@ -335,7 +344,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 			}
 		}
 		vector< vector<string> > rtn = kolap->nodestat(
-			traFilter,itemFilter,
+			traFilter,itemFilter,factFilter,
 			gTransaction,gNode,
 			itemVal,values
 		);
@@ -401,9 +410,11 @@ PyObject* run(PyObject* self, PyObject* args)
 		PyObject * ni = PyDict_GetItemString(jsonDict,"query");
 		if(!ni){
 			std::cerr << "parameter err" << std::endl;
+	 	 	return Py_BuildValue("");			
 		}
 		string traFilter;
 		string itemFilter;
+		string factFilter;
 		string gTransaction;
 		string gNode;
 
@@ -430,6 +441,10 @@ PyObject* run(PyObject* self, PyObject* args)
 
 		v = PyDict_GetItemString(ni,"itemFilter");
 		if(v){ itemFilter = strGET(v); }
+
+		v = PyDict_GetItemString(ni,"factFilter");
+		if(v){ factFilter = strGET(v); }
+
 
 		v = PyDict_GetItemString(ni,"selCond");
 		if(v){
@@ -502,7 +517,7 @@ PyObject* run(PyObject* self, PyObject* args)
 			}
 		}
 		map<string, Result> vstr = kolap->runQuery(
-			traFilter,itemFilter,gTransaction,gNode,
+			traFilter,itemFilter,factFilter,gTransaction,gNode,
 			SelMinSup,SelMinConf,SelMinLift,SelMinJac,SelMinPMI,
 			sortKey,sendMax,dimension,deadline
 		);

@@ -665,6 +665,7 @@ void kgmod::MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res ,unsi
 }
 map<string, Result> kgmod::kgGolap::runQuery(
 		string traFilter,string itemFilter,
+		string factFilter,
 		string gTransaction,string gNode,
 		string SelMinSup,string SelMinConf,string SelMinLift,
 		string SelMinJac,string SelMinPMI,
@@ -686,6 +687,9 @@ map<string, Result> kgmod::kgGolap::runQuery(
 	if(!itemFilter.empty()){
 		qPara.itemFilter = fil->makeItemBitmap(itemFilter);
 	}
+	if(!factFilter.empty()){
+  	qPara.factFilter = fil->makeFactBitmap(factFilter);
+  }
 
 	if(!gTransaction.empty()){
 		vector<string> buf = Cmn::CsvStr::Parse(gTransaction.c_str());
@@ -764,8 +768,6 @@ map<string, Result> kgmod::kgGolap::runQuery(
 	if(! deadline.empty()){
 		dline = atol(deadline.c_str());
 	}
-	
-
 
 	map<string, Result> res;
 
@@ -811,6 +813,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 
 vector< vector<string> > kgmod::kgGolap::nodestat(
 	string traFilter,string itemFilter,
+	string factFilter,
 	string gTransaction,string gNode,
 	string itemVal,string values
 ) {
@@ -829,6 +832,9 @@ vector< vector<string> > kgmod::kgGolap::nodestat(
 	if(!itemFilter.empty()){
 		nSpara.itemFilter = fil->makeItemBitmap(itemFilter);
 	}
+	if(!factFilter.empty()){
+  	nSpara.factFilter = fil->makeFactBitmap(factFilter);
+  }
 
 	if(!gTransaction.empty()){
 		vector<string> buf = Cmn::CsvStr::Parse(gTransaction.c_str());
@@ -917,6 +923,7 @@ vector< vector<string> > kgmod::kgGolap::nodestat(
 
 CsvFormat kgmod::kgGolap::nodeimage(
 	string traFilter,string itemFilter,
+	string factFilter,
 	string gTransaction,string gNode,
 	string itemVal) 
 {
@@ -935,6 +942,9 @@ CsvFormat kgmod::kgGolap::nodeimage(
 	if(!itemFilter.empty()){
 		nIpara.itemFilter = fil->makeItemBitmap(itemFilter);
 	}
+	if(!factFilter.empty()){
+  	nIpara.factFilter = fil->makeFactBitmap(factFilter);
+  }
 
 	if(!gTransaction.empty()){
 		vector<string> buf = Cmn::CsvStr::Parse(gTransaction.c_str());
