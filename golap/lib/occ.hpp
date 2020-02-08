@@ -53,10 +53,10 @@ namespace kgmod {
         
         typedef vector<Ewah> occ_t; // traNo -> item bitmap
         occ_t occ;
-        BTree ex_occ;
+        //BTree ex_occ;
         
     private:
-        boost::mutex ex_occ_mtx;
+        //boost::mutex ex_occ_mtx;
         
     public:
         Occ(Config* config, kgEnv* env);
@@ -73,18 +73,29 @@ namespace kgmod {
         size_t LiveTraCnt(void) {return liveTra.numberOfOnes();}
         
         void item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp);
-        void expandItemByGranu(const size_t traNo, const vector<string>& key, const Ewah& traFilter,
-                               const Ewah& itemFilter, Ewah& itemBmp,
-                               unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery);
-        size_t itemFreq(const size_t itemNo, const Ewah& traFilter,
-                        const vector<string>* tra2key = NULL);
-        size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL);
+        //void expandItemByGranu(const size_t traNo, const vector<string>& key, const Ewah& traFilter,
+        //                       const Ewah& itemFilter, Ewah& itemBmp,
+        //                       map<string, Ewah>& ex_occ_CacheOnceQeuery);
+
+        void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey, const Ewah& traFilter,
+                               const Ewah& itemFilter, map<size_t, Ewah>& ex_occ,
+                               map<string, map<size_t, Ewah>>& ex_occ_cacheOnceQuery);
+
+
+        //size_t itemFreq(const size_t itemNo, const Ewah& traFilter,
+        //                const vector<string>* tra2key = NULL);
+        //size_t itemFreq(size_t itemNo, vector<string>* tra2key = NULL);
+
+
+
         size_t attFreq(const vector<string>& attKeys, const vector<string> attVal, const Ewah& traFilter,
                        const Ewah& itemFilter, const vector<string>* tra2key = NULL);
         size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter,
                        const Ewah& itemFilter, const vector<string>* tra2key = NULL);
-        size_t attFreq(string attKey, string attVal, const Ewah& itemFilter,
-                       const vector<string>* tra2key = NULL);
+
+
+        //size_t attFreq(string attKey, string attVal, const Ewah& itemFilter,
+        //               const vector<string>* tra2key = NULL);
 
         void occ_dump(const bool debug);
         void dump(const bool debug);
@@ -92,12 +103,21 @@ namespace kgmod {
             return bmpList.EvalKeyValue(key, TraFilter);
         }
         size_t countKeyValue(string& key, Ewah* TraFilter = NULL) {
-            return bmpList.CountKeyValue(key, TraFilter);
+            //return bmpList.CountKeyValue(key, TraFilter);
+            size_t cnt;
+            if (TraFilter->numberOfOnes() == traAtt->traMax + 1) {
+                cnt = bmpList.CountKeyValue(key, NULL);
+            } else {
+                cnt = bmpList.CountKeyValue(key, TraFilter);
+            }
+            return cnt;
         }
+
         size_t countKeyValue(vector<string>& keys, Ewah* TraFilter = NULL) {
             return bmpList.CountKeyValue(keys, TraFilter);
         }
         size_t countKeyValue(const vector<string>& keys, Ewah& traFilter);
+
         void combiValues(const vector<string> flds, vector<string>& csvVals, vector<Ewah>& bmps,
                          const Ewah* traFilter = NULL) {
             return bmpList.combiValues(flds, csvVals, bmps, traFilter);

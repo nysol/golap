@@ -78,6 +78,7 @@ namespace kgmod {
 
 		Ewah traFilter;
 		Ewah itemFilter;
+    Ewah factFilter;
 		// first:transaction granurality, second:node granurality
 		pair<vector<string>, vector<string>> granularity;   
 		vector<string> itemVal;
@@ -114,6 +115,7 @@ namespace kgmod {
 
 		Ewah traFilter;
 		Ewah itemFilter;
+    Ewah factFilter;
 		pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
 		vector<string> itemVal;
     vector<pair<AggrFunc, string>> vals;
@@ -137,7 +139,7 @@ namespace kgmod {
 		void dump(void) {
 			cerr << "traFilter: "; Cmn::CheckEwah(traFilter);
 			cerr << "itemFilter: "; Cmn::CheckEwah(itemFilter);
-			cerr << "granularity(transaction): ";
+			cerr << "granularity(transactzwion): ";
 			for (auto& f : granularity.first) cerr << f << " ";
 				cerr << endl;
 				cerr << "granularity(node): ";
@@ -184,19 +186,24 @@ namespace kgmod {
 
 		Ewah traFilter;
 		Ewah itemFilter;
+    Ewah factFilter;
 		sel_cond selCond;
 		sort_key sortKey;
 		size_t sendMax;
 		pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
 		Dimension dimension;
 
-		QueryParams(size_t traMax,size_t itemMax ,size_t sndMax ,string traFld,string itemFld){
+		QueryParams(size_t traMax,size_t itemMax ,size_t recMax,size_t sndMax ,string traFld,string itemFld){
 
 			traFilter.padWithZeroes( traMax + 1 );
 			traFilter.inplace_logicalnot();
 
 			itemFilter.padWithZeroes(itemMax + 1);
 			itemFilter.inplace_logicalnot();
+
+			factFilter.padWithZeroes(recMax + 1);
+    	factFilter.inplace_logicalnot();
+
 
 			// 分ける必要ある？ 複数指定可？
   		granularity.first.resize(1);
@@ -318,7 +325,7 @@ namespace kgmod {
 	};
 
   Result Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
-  Result Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
+  //Result Enum_NEW(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
 
 	struct timChkT{
 		unsigned int timerInSec;
@@ -412,7 +419,7 @@ namespace kgmod {
 
 			void save(){
 				occ->exBmpList.save(true);
-				occ->ex_occ.save(true);		
+				//occ->ex_occ.save(true);		
 			}
   };
 }

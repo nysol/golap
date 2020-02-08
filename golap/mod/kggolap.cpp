@@ -71,7 +71,7 @@ kgmod::kgGolap::~kgGolap(void) {
 // -----------------------------------------------------------------------------
 // 引数の設定
 // -----------------------------------------------------------------------------
-Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
+Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 
 	// Timer 設置
 	int isTimeOut=0;
@@ -89,6 +89,7 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 	vector<string> csvHeader = splitToken(headstr,',');
 	Result res(csvHeader.size());
 	res.setHeader(csvHeader);
+
     cerr << "enumerating" << endl;
     size_t hit = 0;
     bool notSort = false;
@@ -109,34 +110,66 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 
         return res;
     }
-    
+    //++++++++++
+    Ewah traBmpInFact;
+    Ewah itemBmpInFact;
+    mt_factTable->toTraItemBmp(query.factFilter, query.itemFilter, traBmpInFact, itemBmpInFact);
+    cerr << "tra in fact "; Cmn::CheckEwah(traBmpInFact);
+    tarTraBmp = tarTraBmp & traBmpInFact;
+    cerr << "tarTraBmp "; Cmn::CheckEwah(tarTraBmp);
+    Ewah tarItemBmp = query.itemFilter & itemBmpInFact;
+    cerr << "tarItemBmp "; Cmn::CheckEwah(tarItemBmp);
+    //----------
+
     // granularityのsizeが1で、かつ、[0]がキーであれば、granularityを指定していない(=false)
     bool isTraGranu  = (query.granularity.first.size() != 1) ||
                         (query.granularity.first[0] != mt_config->traFile.traFld);
     bool isNodeGranu = (query.granularity.second.size() != 1) ||
                         (query.granularity.second[0] != mt_config->traFile.itemFld);
+
+    //++++++++++
+    map<vector<string>, size_t> itemNo4node_map;    // [node] -> coitemsをカウントする代表itemNo
+    //----------
+
     vector<string> tra2key;     // [traNo] -> 当該トランザクションが有するTraAttの値リスト(csv)
     // transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書きする
 
     if (isTraGranu) {
         // vector版countKeyValueは処理が比較的重いので、マルチバリューかどうかで処理を分ける
         if (query.granularity.first.size() == 1) {
-            traNum = mt_occ->countKeyValue(query.granularity.first[0], &tarTraBmp);
+            //++++++++++
+            traNum = mt_occ->countKeyValue(query.granularity.first[0], &query.traFilter);
+            //traNum = mt_occ->countKeyValue(query.granularity.first[0], &tarTraBmp);
+            //----------
             mt_occ->getTra2KeyValue(query.granularity.first[0], tra2key);
         } else {
-            traNum = mt_occ->countKeyValue(query.granularity.first, tarTraBmp);
+            //++++++++++
+            traNum = mt_occ->countKeyValue(query.granularity.first, query.traFilter);
+            //traNum = mt_occ->countKeyValue(query.granularity.first, tarTraBmp);
+            //----------
             mt_occ->getTra2KeyValue(query.granularity.first, tra2key);
         }
     }
 
-    unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
-    unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
+    //++++++++++
+    map<string, map<size_t, Ewah>> ex_occ_cacheOnceQuery;      // ["field name"] -> {traNo, occ(itemBmp)}
 
+		map<string, Ewah> ex_occ_cacheOnceQuery0;
+    set<vector<string>> checked_node2;  // [vnodes] -> exists
+
+
+
+		// DEBUG		
 		size_t icnt =query.itemFilter.numberOfOnes();
 		int cnt=1;
-    for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
+
+   // unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
+    //unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
+    //for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
+		cerr << "icnt "<< tarItemBmp.numberOfOnes() << endl; 
+    for (auto i2 = tarItemBmp.begin(), ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
 				// CHECK 用
-		    //if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
+		    if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
 		    cnt++;
 
         if (isTimeOut) {stat = 2; break;}
@@ -152,38 +185,173 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             vnode2[0] = node2;
         }
 
-        if (itemFreq.find(*i2) == itemFreq.end()) {
-            if (isTraGranu) {
-                itemFreq[*i2] = mt_occ->attFreq(query.granularity.second, vnode2,
-                                                tarTraBmp, query.itemFilter, &tra2key);
-            } else {
-                itemFreq[*i2] = mt_occ->attFreq(query.granularity.second, vnode2,
-                                                tarTraBmp, query.itemFilter);
-            }
-        }
-
-        if (itemFreq[*i2] == 0) continue;
-        
-
         // すでに処理済みのキーの場合はcontinueする。
         if (checked_node2.find(vnode2) == checked_node2.end()) {
-            checked_node2[vnode2] = true;
+            //++++++++++
+            checked_node2.insert(vnode2);
+            //checked_node2[vnode2] = true;
+            //----------
         } else {
             continue;
         }
+
+        size_t itemNo4node2;
+        if (isNodeGranu) {
+            // node2における代表itemNoとして拡張前のitemNo(2)を設定する
+            if (itemNo4node_map.find(vnode2) == itemNo4node_map.end()) {
+                itemNo4node_map[vnode2] = *i2;
+                itemNo4node2 = *i2;
+            } else {
+                itemNo4node2 = itemNo4node_map[vnode2];
+            }
+        } else {
+            itemNo4node2 = *i2;
+        }
+
+        if (itemFreq.find(itemNo4node2) == itemFreq.end()) {
+        //----------
+            if (isTraGranu) {
+                //++++++++++
+                itemFreq[itemNo4node2] = mt_occ->attFreq(query.granularity.second, vnode2,
+                                                tarTraBmp, tarItemBmp, &tra2key);
+                //itemFreq[*i2] = mt_occ->attFreq(query.granularity.second, vnode2,
+                //                                tarTraBmp, query.itemFilter, &tra2key);
+                //----------
+            } else {
+                //++++++++++
+                itemFreq[itemNo4node2] = mt_occ->attFreq(query.granularity.second, vnode2,
+                                                tarTraBmp, tarItemBmp);
+                //itemFreq[*i2] = mt_occ->attFreq(query.granularity.second, vnode2,
+                //                                tarTraBmp, query.itemFilter);
+                //----------
+            }
+        }
+
+        //++++++++++
+        if (  ((float)itemFreq[itemNo4node2]/traNum) < query.selCond.minSup ){
+            continue;
+        }
+
+        if (itemFreq[itemNo4node2] == 0) continue;
+        
+
+        // すでに処理済みのキーの場合はcontinueする。
+        //if (checked_node2.find(vnode2) == checked_node2.end()) {
+        //    checked_node2[vnode2] = true;
+        //} else {
+        //    continue;
+        //}
         
 
         map<size_t, size_t> coitems;
-        unordered_map<pair<string, string>, bool, boost::hash<pair<string, string>>> checked_node1;
-                                                            // [vnodes, traAtt(:区切り)] -> exists
-        unordered_map<pair<size_t, string>, bool, boost::hash<pair<size_t, string>>> checked_item1;
-                                                            // [itemNo, traAtt(:区切り)] -> exists
-        unordered_map<vector<string>, size_t, boost::hash<vector<string>>> itemNo4node_map;
-                                                            // [node] -> coitemsをカウントする代表itemNo
+        set<pair<string, string>> checked_node1;    // [vnodes, traAtt(:区切り)] -> exists
+        //unordered_map<pair<string, string>, bool, boost::hash<pair<string, string>>> checked_node1;
+        //                                                    // [vnodes, traAtt(:区切り)] -> exists
+        //unordered_map<pair<size_t, string>, bool, boost::hash<pair<size_t, string>>> checked_item1;
+         //                                                   // [itemNo, traAtt(:区切り)] -> exists
+        //unordered_map<vector<string>, size_t, boost::hash<vector<string>>> itemNo4node_map;
+         //                                                   // [node] -> coitemsをカウントする代表itemNo
         // itemNo(2)の属性(vnode2)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt2)
-        Ewah itemInTheAtt2 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
-        itemInTheAtt2 = itemInTheAtt2 & query.itemFilter;
 
+
+        Ewah itemInTheAtt2 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
+        //++++++++++
+        itemInTheAtt2 = itemInTheAtt2 & tarItemBmp;
+        //itemInTheAtt2 = itemInTheAtt2 & query.itemFilter;
+        //----------
+				//--- sp2 sp2
+	/*
+				cerr << "spx1" <<  endl;
+				Ewah tra_i2_tmp1;
+				for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
+					if (isTimeOut) {stat = 2; break;}
+					Ewah* tra_i2_tmp2; 
+					mt_occ->bmpList.GetVal(mt_occ->occKey, mt_occ->itemAtt->item[*at2], tra_i2_tmp2);
+					tra_i2_tmp1 = tra_i2_tmp1 | *tra_i2_tmp2;
+				}
+				// item2 の持つtra LIST
+				Ewah tra_i2 = tra_i2_tmp1 & tarTraBmp;
+
+				cerr << "spx2" <<  endl;
+
+				// ここおそくなりそうbmpで一気する方法はある？ 
+				unordered_map<vector<string>, bool , boost::hash<vector<string>>> checked_tra1;
+
+        for (auto t2 = tra_i2.begin(), et2 = tra_i2.end(); t2 != et2; t2++) {
+          if (isTimeOut) {stat = 2; break;}
+
+					vector<string> vTraAtt;
+					mt_occ->traAtt->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
+					string traAtt = Cmn::CsvStr::Join(vTraAtt, ":");
+
+					if (checked_tra1.find(vTraAtt) != checked_tra1.end()) { continue; }
+					checked_tra1[vTraAtt] = true;
+
+          //+++++++++
+          // どっかでする方法考える
+          // queryのfactFilterに，traNo(*t2)と拡張済itemNo(*at2)の組み合わせがなければcontinue
+          //if (!mt_factTable->existInFact(*t2, *at2, query.factFilter)) continue;
+          //----------
+          
+          //++++++++++
+          //map<size_t, Ewah> item_i1;      // [traNo] -> occ(itemBmp)
+          map<size_t, pair<size_t, Ewah>> itemNo4node1_itemNo;      // [代表itemNo] -> {itemNo, traBmp}
+          Ewah item_i1;
+          //----------
+
+          //----------
+          if (isTraGranu) {
+          	// t2の属性から、requestで指定された粒度で対象トランザクションを拡張した上で、対象itemNo(1)を拡張する
+						//++++++++++
+						//テスト的に除去 
+						//	mt_occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp,
+            //                        tarItemBmp, item_i1, ex_occ_cacheOnceQuery0);
+						//テスト的に除去 
+            
+                    //mt_occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp,
+                    //                          query.itemFilter, item_i1, ex_occ_cacheOnceQuery);
+                    //----------
+          } else {
+             //++++++++++
+              //item_i1.insert({*t2, mt_occ->occ[*t2] & tarItemBmp});
+              item_i1 = mt_occ->occ[*t2] & query.itemFilter;
+                    //----------
+  	      }
+
+					for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
+		      	if (isTimeOut) {stat = 2; break;}
+	  	      vector<string> vnode1 = mt_occ->itemAtt->key2att(*i1, query.granularity.second);
+	  	      //mt_occ->itemAtt->key2att(*ii1_item, query.granularity.second);
+	  	      
+  	  	    string node1 = Cmn::CsvStr::Join(vnode1, ":");
+
+       		 if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
+	       		 checked_node1.insert({node1, traAtt});
+ 						} else {
+						continue;
+						}
+		 				// itemNo(1)が持つ属性(vnode1)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt1)
+						Ewah itemInTheAtt1 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
+						itemInTheAtt1 = itemInTheAtt1 & tarItemBmp;
+	
+		        if (*(itemInTheAtt1.begin()) >= *(itemInTheAtt2.begin())) continue;
+
+						size_t itemNo4node;
+						if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
+        			itemNo4node_map[vnode1] = *itemInTheAtt1.begin();
+         			 itemNo4node = *itemInTheAtt1.begin();
+	       		 } else {
+  	        		itemNo4node = itemNo4node_map[vnode1];
+				      }	
+							coitems[itemNo4node]++;
+          
+          }
+
+				}
+				*/
+
+
+				// ===== sp2 sp2 org
         for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
             if (isTimeOut) {stat = 2; break;}
             Ewah* tra_i2_tmp;
@@ -192,59 +360,141 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             
             for (auto t2 = tra_i2.begin(), et2 = tra_i2.end(); t2 != et2; t2++) {
                 if (isTimeOut) {stat = 2; break;}
+
+                //++++++++++
+                // queryのfactFilterに，traNo(*t2)と拡張済itemNo(*at2)の組み合わせがなければcontinue
+                if (!mt_factTable->existInFact(*t2, *at2, query.factFilter)) continue;
+                //----------
+
+
                 vector<string> vTraAtt;
                 mt_occ->traAtt->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
                 string traAtt = Cmn::CsvStr::Join(vTraAtt, ":");
                 
-                Ewah item_i1;
+                //++++++++++
+                map<size_t, Ewah> item_i1;      // [traNo] -> occ(itemBmp)
+                map<size_t, pair<size_t, Ewah>> itemNo4node1_itemNo;      // [代表itemNo] -> {itemNo, traBmp}
+                //Ewah item_i1;
+                //----------
+
+                //----------
                 if (isTraGranu) {
                     // t2の属性から、requestで指定された粒度で対象トランザクションを拡張した上で、対象itemNo(1)を拡張する
+                    //++++++++++
                     mt_occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp,
-                                              query.itemFilter, item_i1, ex_occ_cacheOnceQuery);
+                                              tarItemBmp, item_i1, ex_occ_cacheOnceQuery);
+                    //mt_occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp,
+                    //                          query.itemFilter, item_i1, ex_occ_cacheOnceQuery);
+                    //----------
                 } else {
-                    item_i1 = mt_occ->occ[*t2] & query.itemFilter;
+                    //++++++++++
+                    item_i1.insert({*t2, mt_occ->occ[*t2] & tarItemBmp});
+                    //item_i1 = mt_occ->occ[*t2] & query.itemFilter;
+                    //----------
                 }
-                
-                for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
+
+
+                //++++++++++
+                for (auto ii1 = item_i1.begin(); ii1 != item_i1.end(); ii1++) {
+                    // ii1: first=traNo, second=occ(itemBmp)
+                    for (auto ii1_item = ii1->second.begin(), eii1_item1 = ii1->second.end();
+                         ii1_item != eii1_item1; ii1_item++) {
+                        vector<string> vnode1 = mt_occ->itemAtt->key2att(*ii1_item, query.granularity.second);
+                        // itemNo(1)が持つ属性(vnode1)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt1)
+                        Ewah itemInTheAtt1 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
+                        itemInTheAtt1 = itemInTheAtt1 & tarItemBmp;
+                        auto topBit = itemInTheAtt1.begin();
+                        
+                        if (itemNo4node1_itemNo.find(*topBit) == itemNo4node1_itemNo.end()) {
+                            Ewah tmpTraBmp;
+                            tmpTraBmp.set(ii1->first);
+                            itemNo4node1_itemNo[*topBit] = {*ii1_item, tmpTraBmp};
+                        } else {
+                            itemNo4node1_itemNo[*topBit].second.set(ii1->first);
+                        }
+                    }
+                }
+                //----------
+
+                //++++++++++
+                for (auto it = itemNo4node1_itemNo.begin(), eit = itemNo4node1_itemNo.end(); it != eit; it++) {
+                    size_t itemNo4node1 = it->first;
+                    size_t i1 = it->second.first;
+                //for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
+                //----------
                     if (isTimeOut) {stat = 2; break;}
-                    if (*i1 >= *i2) break;
-                    
-                    vector<string> vnode1 = mt_occ->itemAtt->key2att(*i1, query.granularity.second);
+                    //++++++++++
+                    if (itemNo4node1 >= *i2) break;
+                    vector<string> vnode1 = mt_occ->itemAtt->key2att(i1, query.granularity.second);
+                    //if (*i1 >= *i2) break;
+                    //vector<string> vnode1 = mt_occ->itemAtt->key2att(*i1, query.granularity.second);
+                    //----------
                     string node1 = Cmn::CsvStr::Join(vnode1, ":");
+                    if (node1 == node2) continue;
+                    
+                    //++++++++++
                     if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
-                        checked_node1[{node1, traAtt}] = true;
+                        checked_node1.insert({node1, traAtt});
+                    //if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
+                    //    checked_node1[{node1, traAtt}] = true;
+                    //----------
                     } else {
                         continue;
                     }
+                    
+                    //++++++++++
                     // itemNo(1)が持つ属性(vnode1)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt1)
-                    Ewah itemInTheAtt1 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
-                    itemInTheAtt1 = itemInTheAtt1 & query.itemFilter;
+                    Ewah itemInTheAtt1;
+                    if (isNodeGranu) {
+                        itemInTheAtt1 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
+                    } else {
+                        // 拡張は不要
+                        itemInTheAtt1.set(i1);
+                    }
+                    //Ewah itemInTheAtt1 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
+                    //----------
+
+                    //++++++++++
+                    // node1における代表itemNoとして拡張前のitemNo(1)を設定する
+                    if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
+                        itemNo4node_map[vnode1] = itemNo4node1;
+                    } else {
+                        itemNo4node1 = itemNo4node_map[vnode1];
+                    }
+                    //----------
+                    
                     for (auto at1 = itemInTheAtt1.begin(), eat1 = itemInTheAtt1.end(); at1 != eat1; at1++) {
                         if (isTimeOut) {stat = 2; break;}
-                        size_t itemNo4node;
-                        if (isNodeGranu) {
-                            // node1における代表itemNoとして拡張前のitemNo(1)を設定する
-                            if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
-                                itemNo4node_map[vnode1] = *i1;
-                                itemNo4node = *i1;
-                            } else {
-                                itemNo4node = itemNo4node_map[vnode1];
-                            }
-                            //
-                            if (checked_item1.find({itemNo4node, traAtt}) == checked_item1.end()) {
-                                checked_item1[{itemNo4node, traAtt}] = true;
-                            } else {
-                                continue;
-                            }
-                        } else {
-                            itemNo4node = *i1;
-                        }
                         
-                        coitems[itemNo4node]++;
+                        //++++++++++
+                        //size_t itemNo4node1;
+                        //if (isNodeGranu) {
+                        //    // node1における代表itemNoとして拡張前のitemNo(1)を設定する
+                        //    if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
+                        //     itemNo4node_map[vnode1] = *i1;
+                        //     itemNo4node1 = *i1;
+                        //    } else {
+                        //        itemNo4node1 = itemNo4node_map[vnode1];
+                        //    }
+                        //} else {
+                        //    itemNo4node1 = *i1;
+                        //}
+                        //----------
+                        
+                        //++++++++++
+                        // queryのfactFilterに，traNo(*t2)と拡張済itemNo(*at2)の組み合わせがあれば共起としてカウント
+                        if (mt_factTable->existInFact(it->second.second, *at1, query.factFilter)) {
+                            coitems[itemNo4node1]++;
+                            break;
+                        }
+                        // coitems[itemNo4node1]++;
+                        //----------
                     }
                 }
             }
         }
+				// =====
+        
         
         const string delim = ":";
         for (auto i1 = coitems.begin(), ei1 = coitems.end(); i1 != ei1; i1++) {
@@ -275,7 +525,7 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             size_t freq = i1->second;
             float sup = (float)freq / traNum;
             if (sup < query.selCond.minSup) continue;
-            
+            /*
             if (query.granularity.second.size() == 1 &&
                 query.granularity.second[0] == mt_config->traFile.itemFld) {
                 if (query.granularity.first.size() == 1 &&
@@ -326,7 +576,7 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
                                                         tarTraBmp, query.itemFilter, &tra2key);
                     }
                 }
-            }
+            }*/
             float conf1 = (float)freq / itemFreq[i1->first];
             if (conf1 < query.selCond.minConf) continue;
             
@@ -384,6 +634,7 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
         }
 
     }
+
 		if (tlimit){ 
       if (!isTimeOut) {
 				pthread_cancel(pt);
@@ -397,7 +648,8 @@ Result kgmod::Enum_OLD(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 }
 
 // Grannu test NewVERISOM
-Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
+/*
+Result kgmod::Enum_NEW(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 
 	// Timer 設置
 	int isTimeOut=0;
@@ -600,14 +852,14 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 			float sup = (float)freq / traNum;
 			if (sup < query.selCond.minSup) continue;
 			
-			/*なかったらおかしい
-			if (itemFreq.find(i1->first) == itemFreq.end()) {
-				itemFreq[i1->first] = mt_occ->itemFreq(i1->first, tarTraBmp);
-			}
-			if (itemFreq.find(*i2) == itemFreq.end()) {
-				itemFreq[*i2] = mt_occ->itemFreq(*i2, tarTraBmp);
-			}
-			*/
+			///なかったらおかしい
+			//if (itemFreq.find(i1->first) == itemFreq.end()) {
+			//	itemFreq[i1->first] = mt_occ->itemFreq(i1->first, tarTraBmp);
+			//}
+			//if (itemFreq.find(*i2) == itemFreq.end()) {
+			//	itemFreq[*i2] = mt_occ->itemFreq(*i2, tarTraBmp);
+			//}
+
 			float conf1 = (float)freq / itemFreq[i1->first];
 			if (conf1 < query.selCond.minConf) continue;
             
@@ -842,31 +1094,30 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 
 
 				//cerr << "runi1x " << itemInTheAtt1.numberOfOnes() << endl;
-				/*
-				for (auto at1 = itemInTheAtt1.begin(), eat1 = itemInTheAtt1.end(); at1 != eat1; at1++) {
-					if (isTimeOut) {stat = 2; break;}
-					size_t itemNo4node;
-          if (isNodeGranu) {
-            // node1における代表itemNoとして拡張前のitemNo(1)を設定する
-          	if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
-             	itemNo4node_map[vnode1] = *i1;
-                itemNo4node = *i1;
-            } else {
-                itemNo4node = itemNo4node_map[vnode1];
-	          }
-  	          //
-    	      if (checked_item1.find({itemNo4node, traAtt}) == checked_item1.end()) {
-      	       checked_item1[{itemNo4node, traAtt}] = true;
-        	   } else {
-          	 	continue;
-						}
-          } else {
-             itemNo4node = *i1;
-          }
-          //cerr << "add pair " << traAtt << " " << node2 << " " << node1 << " " << itemNo4node << endl;
-					coitems[itemNo4node]++;
-     	 	}
-     	 	*/
+				///
+				//for (auto at1 = itemInTheAtt1.begin(), eat1 = itemInTheAtt1.end(); at1 != eat1; at1++) {
+				//	if (isTimeOut) {stat = 2; break;}
+				//	size_t itemNo4node;
+        //  if (isNodeGranu) {
+        //    // node1における代表itemNoとして拡張前のitemNo(1)を設定する
+         // 	if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
+         //    	itemNo4node_map[vnode1] = *i1;
+         //       itemNo4node = *i1;
+         //   } else {
+        //        itemNo4node = itemNo4node_map[vnode1];
+	      //    }
+  	    //      //
+    	  //    if (checked_item1.find({itemNo4node, traAtt}) == checked_item1.end()) {
+      	//       checked_item1[{itemNo4node, traAtt}] = true;
+        //	   } else {
+        //  	 	continue;
+				//		}
+         // } else {
+        //     itemNo4node = *i1;
+        //  }
+        //  //cerr << "add pair " << traAtt << " " << node2 << " " << node1 << " " << itemNo4node << endl;
+				//	coitems[itemNo4node]++;
+     	 	//}
      }
 		}
 		const string delim = ":";
@@ -901,14 +1152,14 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 			float sup = (float)freq / traNum;
 			if (sup < query.selCond.minSup) continue;
 			
-			/*なかったらおかしい
-			if (itemFreq.find(i1->first) == itemFreq.end()) {
-				itemFreq[i1->first] = mt_occ->itemFreq(i1->first, tarTraBmp);
-			}
-			if (itemFreq.find(*i2) == itemFreq.end()) {
-				itemFreq[*i2] = mt_occ->itemFreq(*i2, tarTraBmp);
-			}
-			*/
+			///なかったらおかしい
+			//if (itemFreq.find(i1->first) == itemFreq.end()) {
+		//		itemFreq[i1->first] = mt_occ->itemFreq(i1->first, tarTraBmp);
+			//}
+			//if (itemFreq.find(*i2) == itemFreq.end()) {
+		//		itemFreq[*i2] = mt_occ->itemFreq(*i2, tarTraBmp);
+	//		}
+			///
 			float conf1 = (float)freq / itemFreq[i1->first];
 			if (conf1 < query.selCond.minConf) continue;
             
@@ -967,37 +1218,37 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 
 
 	}
-/*	else{
-
-		cerr << "tcnt2 "  << traNum << endl;
-		
-    unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
-
+	//else{
+//
+//		cerr << "tcnt2 "  << traNum << endl;
+//		
+//    unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
+//
     //unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
-    unordered_map<vector<string>, size_t, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
+//    unordered_map<vector<string>, size_t, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
 
 		// CHECK 用
-		cerr << "icnt "  << query.itemFilter.numberOfOnes() << endl;
-		size_t icnt =query.itemFilter.numberOfOnes();
-		int cnt=1;
+//		cerr << "icnt "  << query.itemFilter.numberOfOnes() << endl;
+//		size_t icnt =query.itemFilter.numberOfOnes();
+//		int cnt=1;
 
-    for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
-				// CHECK 用
-		    if ( cnt%100==0 ){ cerr << cnt << "/" << icnt << endl;}
-		    cnt++;
+//    for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
+//				// CHECK 用
+//		    if ( cnt%100==0 ){ cerr << cnt << "/" << icnt << endl;}
+//		    cnt++;
 
-        if (isTimeOut) {stat = 2; break;}
-        vector<string> vnode2;
-        string node2;
-        if (isNodeGranu) {
-            // itemNo(2)から指定した粒度のキー(node2)を作成する。
-            vnode2 = mt_occ->itemAtt->key2att(*i2, query.granularity.second);
-            node2 = Cmn::CsvStr::Join(vnode2, ":");
-        } else {
-            node2 = mt_occ->itemAtt->item[(*i2)];
-            vnode2.resize(1);
-            vnode2[0] = node2;
-        }
+//        if (isTimeOut) {stat = 2; break;}
+  //      vector<string> vnode2;
+ //       string node2;
+//        if (isNodeGranu) {
+//            // itemNo(2)から指定した粒度のキー(node2)を作成する。
+//            vnode2 = mt_occ->itemAtt->key2att(*i2, query.granularity.second);
+//            node2 = Cmn::CsvStr::Join(vnode2, ":");
+//        } else {
+//            node2 = mt_occ->itemAtt->item[(*i2)];
+//            vnode2.resize(1);
+//            vnode2[0] = node2;
+//        }
 
 				//ここ変更
         if (itemFreq.find(*i2) == itemFreq.end()) {
@@ -1364,11 +1615,10 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
               if (notSort) break;
             }
             hit++;
-        }
-
-    }
-		}
-*/
+//        }
+//
+//    }
+//		}
 
 	if (tlimit){ 
 		if (!isTimeOut) {
@@ -1381,6 +1631,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 	res.showSTS();
 	return res;
 }
+*/
 
 
 void kgmod::MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res ,unsigned int *dl) {
@@ -1405,6 +1656,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 	QueryParams qPara(
 		occ->traAtt->traMax , 
 		occ->itemAtt->itemMax ,
+		factTable->recMax,
 		config->sendMax,
 		config->traFile.traFld ,
 		config->traFile.itemFld
@@ -1731,6 +1983,19 @@ void kgmod::kgGolap::saveFilters(QueryParams& query) {
         itemFile << mt_occ->itemAtt->item[*i] << "\n";
     }
     itemFile.close();
+    ofstream factFile(mt_config->outDir + "/factfilter.csv", ios::out);
+    factFile << "recNo,";
+    factFile << mt_config->traFile.traFld << ",";
+    factFile << mt_config->traFile.itemFld << "\n";
+    for (auto i = query.factFilter.begin(), ei = query.factFilter.end(); i != ei; i++) {
+        size_t traNo, itemNo;
+        mt_factTable->recNo2keys(*i, traNo, itemNo);
+        factFile << *i << ",";
+        factFile << mt_occ->traAtt->tra[traNo] << ",";
+        factFile << mt_occ->itemAtt->item[itemNo] << "\n";
+    }
+    factFile.close();
+
 }
 int kgmod::kgGolap::prerun() {
 
@@ -1755,7 +2020,7 @@ int kgmod::kgGolap::prerun() {
 	cmdcache = new cmdCache(config, _env, false);
 	cmdcache->dump(opt_debug);
 
-	fil = new Filter(occ, cmdcache, config, _env, opt_debug);
+	fil = new Filter(occ,factTable, cmdcache, config, _env, opt_debug);
 
 	return 0;
 }

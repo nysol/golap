@@ -45,9 +45,9 @@ kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
     string occDb2 = config->dbDir + "/occ2.dat";
     exBmpList.PutDbName(dtmDb2, occDb2);
     
-    string ex_dtmDb = config->dbDir + "/exocc.dtm";
-    string ex_occDb = config->dbDir + "/exocc.dat";
-    ex_occ.PutDbName(ex_dtmDb, ex_occDb);
+    //string ex_dtmDb = config->dbDir + "/exocc.dtm";
+    //string ex_occDb = config->dbDir + "/exocc.dat";
+    //ex_occ.PutDbName(ex_dtmDb, ex_occDb);
     
     traAtt = new class TraAtt(config, env);
     itemAtt = new class ItemAtt(config, env);
@@ -90,7 +90,7 @@ void kgmod::Occ::buildExBmpList(void) {
 void kgmod::Occ::build(void) {
     traAtt->build(bmpList);
     itemAtt->build();
-    
+/*    
     cerr << "building transaction index" << endl;
     kgCSVfld tra;
     tra.open(_config->traFile.name, _env, false);
@@ -177,6 +177,7 @@ void kgmod::Occ::build(void) {
     
     //
 //    buildExBmpList();
+*/
 }
 
 void kgmod::Occ::saveLiveTra(void) {
@@ -244,7 +245,7 @@ void kgmod::Occ::save(const bool clean) {
     itemAtt->save(clean);
     bmpList.save(clean);
     exBmpList.save(clean);
-    ex_occ.save(clean);
+    //ex_occ.save(clean);
     saveCooccur(clean);
     saveLiveTra();
 }
@@ -323,7 +324,7 @@ void kgmod::Occ::load(void) {
     itemAtt->load();
     bmpList.load();
     exBmpList.load();
-    ex_occ.load();
+    //ex_occ.load();
     loadCooccur();
     itemAtt->buildKey2attMap();
     loadActTra();
@@ -349,6 +350,7 @@ void kgmod::Occ::item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp) {
 // トランザクションを抽出し、それらのトランザクションに含まれるitemNoのビットマップを生成して。
 // ex_occにキャッシュさせる。
 //　更に、traFilterに含まれるitemだけを抽出して返す。（ex_occ_CacheOnceQueryにキャッシュ）
+/*
 void kgmod::Occ::expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
                                    const Ewah& traFilter, const Ewah& itemFilter, Ewah& itemBmp,
                                    unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery) {
@@ -403,7 +405,39 @@ void kgmod::Occ::expandItemByGranu(const size_t traNo, const vector<string>& tra
     }
     ex_occ_CacheOnceQeuery[joinedTraAttVal] = itemBmp;
 }
+*/
+void kgmod::Occ::expandItemByGranu(const size_t traNo, const vector<string>& traAttKey, const Ewah& traFilter,
+                                   const Ewah& itemFilter, map<size_t, Ewah>& ex_occ,
+                                   map<string, map<size_t, Ewah>>& ex_occ_cacheOnceQuery) {
+    
+    string joinedTraAttKey = Cmn::CsvStr::Join(traAttKey, ":");
+    vector<string> traAttVal;
+    traAtt->traNo2traAtt(traNo, traAttKey, traAttVal);
+    string joinedTraAttVal = Cmn::CsvStr::Join(traAttVal, ":");
+    auto it = ex_occ_cacheOnceQuery.find(joinedTraAttVal);
+    if (it != ex_occ_cacheOnceQuery.end()) {
+        ex_occ = it->second;
+        return;
+    }
+    
+    Ewah traBmp;
+    traBmp.padWithZeroes(traAtt->traMax + 1);
+    traBmp.inplace_logicalnot();
+    bmpList.GetVal(traAttKey, traAttVal, traBmp);
+    traBmp = traBmp & traFilter;
+    
+    for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+        Ewah tmp = occ[*t] & itemFilter;
+        ex_occ.insert({*t, tmp});
+    }
+    
+    ex_occ_cacheOnceQuery.insert({joinedTraAttVal, ex_occ});
+}
 
+
+
+
+/*
 size_t kgmod::Occ::itemFreq(const size_t itemNo, const Ewah& traFilter, const vector<string>* tra2key) {
     size_t cnt = 0;
     unordered_map<string, int> checkedAttVal;
@@ -427,6 +461,7 @@ size_t kgmod::Occ::itemFreq(const size_t itemNo, const Ewah& traFilter, const ve
 size_t kgmod::Occ::itemFreq(size_t itemNo, vector<string>* tra2key) {
     return bmpList[{_config->traFile.itemFld, itemAtt->item[itemNo]}].numberOfOnes();
 }
+*/
 
 size_t kgmod::Occ::attFreq(const vector<string>& attKeys, const vector<string>attVals,
                            const Ewah& traFilter, const Ewah& itemFilter, const vector<string>* tra2key) {
@@ -446,17 +481,27 @@ size_t kgmod::Occ::attFreq(const vector<string>& attKeys, const vector<string>at
         if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*it], tmpTraBmp)) continue;
         traBmp = traBmp | *tmpTraBmp;
     }
-    traBmp = traBmp & traFilter;
+    // traBmp = traBmp & traFilter;なせいらなくなった？
     
     if (tra2key == NULL) {
         cnt = traBmp.numberOfOnes();
     } else {
+    		/*
         unordered_map<string, int> checkedAttVal;
         for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
             string val = (*tra2key)[*t];
             if (checkedAttVal.find(val) == checkedAttVal.end()) {
                 cnt++;
                 checkedAttVal[val] = 1;
+            }
+        }*/
+        
+        set<string> checkedAttVal;
+        for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+            string val = (*tra2key)[*t];
+            if (checkedAttVal.find(val) == checkedAttVal.end()) {
+                cnt++;
+                checkedAttVal.insert(val);
             }
         }
     }
@@ -465,9 +510,9 @@ size_t kgmod::Occ::attFreq(const vector<string>& attKeys, const vector<string>at
 
 size_t kgmod::Occ::attFreq(string& attKey, string& attVal, const Ewah& traFilter,
                            const Ewah& itemFilter, const vector<string>* tra2key) {
-    if (attKey == "0011023580813") {
-        cerr << endl;
-    }
+    //if (attKey == "0011023580813") {
+    //    cerr << endl;
+    //}
     Ewah *itemBmp;
     if (!itemAtt->bmpList.GetVal(attKey, attVal, itemBmp)) return 0;
     Ewah itemVals = *itemBmp & itemFilter;
@@ -498,7 +543,7 @@ size_t kgmod::Occ::attFreq(string& attKey, string& attVal, const Ewah& traFilter
     }
     return cnt;
 }
-
+/*
 size_t kgmod::Occ::attFreq(string attKey, string attVal, const Ewah& itemFilter,
                            const vector<string>* tra2key) {
     if (attKey == "0011023580813") {
@@ -515,13 +560,13 @@ size_t kgmod::Occ::attFreq(string attKey, string attVal, const Ewah& itemFilter,
     }
     return out;
 }
-
+*/
 
 void kgmod::Occ::dump(const bool debug) {
     if (! debug) return;
     
-//    traAtt->dump(debug);
-//    itemAtt->dump(debug);
+    traAtt->dump(debug);
+    itemAtt->dump(debug);
     
     cerr << "<<< dump occ >>>" << endl;
     bmpList.dump(debug);
