@@ -88,8 +88,11 @@ void kgmod::Occ::buildExBmpList(void) {
 }
 
 void kgmod::Occ::build(void) {
+		cerr << "b1" << endl;
     traAtt->build(bmpList);
+		cerr << "b2" << endl;
     itemAtt->build();
+		cerr << "b3" << endl;
 /*    
     cerr << "building transaction index" << endl;
     kgCSVfld tra;

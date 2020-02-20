@@ -139,7 +139,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
     if(!isTraGranu && !isNodeGranu){
 
 
-		// [vnodes] -> exists // set unorder map どっちがはやい？
+		// [vnodes] -> exists // set or unorder map どっちがはやい？
     set<vector<string>> checked_node2;  
 
 		// DEBUG		
@@ -335,7 +335,7 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
    // unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
     //unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
     //for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
-		cerr << "icnt "<< tarItemBmp.numberOfOnes() << endl; 
+		cerr << "icnt "<< tarItemBmp.numberOfOnes() << endl;
     for (auto i2 = tarItemBmp.begin(), ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
 				// CHECK 用
 		    if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
@@ -402,9 +402,6 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
         }
 
         if (itemFreq[itemNo4node2] == 0) continue;
-        
-
-
 
         // すでに処理済みのキーの場合はcontinueする。
         //if (checked_node2.find(vnode2) == checked_node2.end()) {
@@ -412,7 +409,6 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
         //} else {
         //    continue;
         //}
-        
 
         map<size_t, size_t> coitems;
         set<pair<string, string>> checked_node1;    // [vnodes, traAtt(:区切り)] -> exists
@@ -427,9 +423,6 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
         Ewah itemInTheAtt2 = mt_occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
         //++++++++++
         itemInTheAtt2 = itemInTheAtt2 & tarItemBmp;
-
-
-
 
         //itemInTheAtt2 = itemInTheAtt2 & query.itemFilter;
         //----------
@@ -524,7 +517,6 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
 				}
 				*/
 
-
 				// ===== sp2 sp2 org
         for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
             if (isTimeOut) {stat = 2; break;}
@@ -532,9 +524,6 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
             mt_occ->bmpList.GetVal(mt_occ->occKey, mt_occ->itemAtt->item[*at2], tra_i2_tmp);
             Ewah tra_i2 = *tra_i2_tmp & tarTraBmp;
 
-
-
-            
             for (auto t2 = tra_i2.begin(), et2 = tra_i2.end(); t2 != et2; t2++) {
                 if (isTimeOut) {stat = 2; break;}
 
@@ -569,7 +558,6 @@ Result kgmod::Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) {
                     //item_i1 = mt_occ->occ[*t2] & query.itemFilter;
                     //----------
                 }
-
 
                 //++++++++++
                 for (auto ii1 = item_i1.begin(); ii1 != item_i1.end(); ii1++) {
