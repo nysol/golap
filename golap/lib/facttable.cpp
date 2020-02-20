@@ -313,7 +313,7 @@ void kgmod::FactTable::build(void) {
         throw kgError(ss.str());
     }
     
-    if (factCnt == 0) return;
+    //if (factCnt == 0) return;
     
     //
     map<string, bool> checkedTra;
