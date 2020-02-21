@@ -34,8 +34,7 @@ using namespace std;
 
 namespace kgmod {
     class BTree {
-        Config* config;
-        kgEnv* env;
+
         string dbName;
         string dataTypeMapDb;
         map<string, DataType> DataTypeMap;

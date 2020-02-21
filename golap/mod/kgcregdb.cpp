@@ -86,7 +86,7 @@ int kgmod::kgCreGdb::run() {
         
         occ->dump(opt_debug);
         
-        cmdCache cmdcache(config, _env, true);
+        cmdCache cmdcache(config,  true);
         cmdcache.dump(opt_debug);
         cmdcache.save();
         

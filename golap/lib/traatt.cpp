@@ -27,10 +27,6 @@
 #include <kgConfig.h>
 #include <kgMessage.h>
 #include <kgCSV.h>
-#include "btree_map.h"
-#include "btree.hpp"
-#include "bidx-ewah.hpp"
-#include "cmn.hpp"
 #include "traatt.hpp"
 
 using namespace std;

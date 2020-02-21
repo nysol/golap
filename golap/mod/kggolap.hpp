@@ -35,8 +35,6 @@
 #include "config.hpp"
 #include "btree.hpp"
 #include "filter.hpp"
-//#include "http.hpp"
-//#include "request.hpp"
 #include "thread.hpp"
 #include "facttable.hpp"
 #include "csvformat.hpp"
@@ -394,6 +392,10 @@ namespace kgmod {
 			}
   };
 }
+
+
+//#include "http.hpp"
+//#include "request.hpp"
 
 	//この3つ必要か確認
 	//static Config* mt_config;

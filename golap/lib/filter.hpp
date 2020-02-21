@@ -32,14 +32,16 @@ namespace kgmod {
     enum tra_item : unsigned int {TRA, ITEM, SLICE , FACT};
     
     typedef typename cache::lru_cache<string, Ewah> cmd_cache_t;
+
     class cmdCache : public cmd_cache_t {
         Config* config;
-        kgEnv* env;
+        //kgEnv* env;
         string fileName;
         size_t modCount;
         
-    public:
-        cmdCache(Config* config, kgEnv* env, const bool init);
+	    public:
+        //cmdCache(Config* config, kgEnv* env, const bool init);
+        cmdCache(Config* config,const bool init);
         
         string makeKey(const string& func, const vector<string>& arg, const tra_item traitem);
         void put(const string& key, const Ewah& bmp, const bool reverse=false);
@@ -55,7 +57,7 @@ namespace kgmod {
         void clear(void);
         void dump(bool debug);
         
-    private:
+  	  private:
         void checkPoint(void);
     };
     

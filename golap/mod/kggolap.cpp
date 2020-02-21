@@ -37,7 +37,6 @@
 #include "cmn.hpp"
 #include "config.hpp"
 #include "param.hpp"
-#include "cmdcache.hpp"
 #include "filter.hpp"
 #include "kggolap.hpp"
 
@@ -1136,7 +1135,7 @@ int kgmod::kgGolap::prerun()
 	_factTable = new FactTable(_config, &_lenv, _occ);
 	_factTable->load();
 
-	cmdcache = new cmdCache(_config, _env, false);
+	cmdcache = new cmdCache(_config, false);
 	cmdcache->dump(opt_debug);
 
 	_fil = new Filter(_occ,_factTable, cmdcache, _config, _env, opt_debug);
@@ -1144,8 +1143,8 @@ int kgmod::kgGolap::prerun()
 	return 0;
 }
 
-
+//#include "cmdcache.hpp"
 	///mt_config = config; 
-	// マルチスレッド用反則技、いみわからん
+	// マルチスレッド用反則技
 	//mt_occ = occ; 
-	//mt_factTable = factTable;   // マルチスレッド用反則技いみわからん
+	//mt_factTable = factTable;   // マルチスレッド用反則技
