@@ -67,6 +67,7 @@ void kgmod::kgCreGdb::setArgs(void) {
 }
 
 int kgmod::kgCreGdb::run() {
+
     try {
         setArgs();
         cerr << "reading config..." << endl;

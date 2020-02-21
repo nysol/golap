@@ -47,32 +47,6 @@ using namespace kglib;
 
 namespace kgmod {
 
-	// 時間計測するなら
-	//{
-	//chrono::system_clock::time_point timeStart;
-	//chrono::system_clock::time_point timeEnd;
-	//double elapsedTime;
-	//timeStart = chrono::system_clock::now();
-		
-	//timeEnd = chrono::system_clock::now();
-	//elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
-	//cerr << "filter eval time: " << elapsedTime / 1000 << " sec" << endl;
-  //}
-  // エラー処理
-  //	catch(string& msg) {
-	//	cerr << msg << endl;
-	//	return string(msg);
-	//}
-	//catch(kgError& err){
-	//	auto msg = err.message();
-	//	string body = "status:-1\n";
-	//	for (auto i = msg.begin(); i != msg.end(); i++) {
-	//		body += *i + "\n";
-	//	}
-	//	return body;
-	//}
-	//	return "status:-1\n";
-
 	// PARAMS STRUCT
 	struct NodeImageParams {
 
@@ -249,8 +223,6 @@ namespace kgmod {
 		}
   };
 
-
-//  typedef btree::btree_multimap< float, vector<string> > Result;  
 	class Result{
 
 		size_t _fldCnt;
@@ -331,46 +303,30 @@ namespace kgmod {
 
 	};
 
-  Result Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
-  //Result Enum_NEW(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
-
 	struct timChkT{
 		unsigned int timerInSec;
 		int* isTimeOut;
 	};
 
-	static void* timerLHandle(void* timer) {
-		timChkT *tt = (timChkT*)timer;
-		sleep(tt->timerInSec);
-		*(tt->isTimeOut) = 1;
-		cerr << "time out" << endl;
-		return (void*)NULL;
-	}
-
-	//この3つ必要か確認
-	static Config* mt_config;
-	static Occ* mt_occ;
-  static FactTable* mt_factTable;
-
 	typedef MtQueue<pair<string, Ewah*>> mq_t;
-	void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res, unsigned int *lim);
 
 	// kgGolap 定義
 	class kgGolap {
+
 		private:
 			string opt_inf;
-
-		public:
 			bool opt_debug = false;
-			Config* config = NULL;
-			Occ* occ = NULL;
-			FactTable* factTable = NULL;
-			Filter* fil = NULL;
+			Config* _config = NULL;
+			Occ* _occ = NULL;
+			FactTable* _factTable = NULL;
+			Filter* _fil = NULL;
 			cmdCache* cmdcache;
-			bool closing_ = false;
 
-		private:
 			void setArgs(void);
+
+		  Result Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
+			void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res, unsigned int *lim);
+
 
     public:
 
@@ -381,7 +337,12 @@ namespace kgmod {
 				kgGolap(char *fn){
 				opt_inf = string(fn);
 			}
-			~kgGolap(void);
+
+			~kgGolap(void){
+				if (_occ != NULL) delete _occ;
+				if (_config != NULL) delete _config;
+				if (cmdcache!= NULL) delete cmdcache;
+			}
         
 			Dimension makeDimBitmap(string& cmdline);
 
@@ -395,12 +356,12 @@ namespace kgmod {
     	void saveFilters(QueryParams& query);
 
   		vector<string> getTraAtt(string fldname){
-  		  return occ->evalKeyValue(fldname);
+  		  return _occ->evalKeyValue(fldname);
   		}
 
   		vector<string> getItmAtt(string fldname,string ifil=""){
-				Ewah itemFilter = fil->makeItemBitmap(ifil);
-				return occ->evalKeyValueItem(fldname,&itemFilter);
+				Ewah itemFilter = _fil->makeItemBitmap(ifil);
+				return _occ->evalKeyValueItem(fldname,&itemFilter);
 			}
 
 
@@ -428,10 +389,50 @@ namespace kgmod {
 			);
 
 			void save(){
-				occ->exBmpList.save(true);
+				_occ->exBmpList.save(true);
 				//occ->ex_occ.save(true);		
 			}
   };
 }
+
+	//この3つ必要か確認
+	//static Config* mt_config;
+	//static Occ* mt_occ;
+  //static FactTable* mt_factTable;
+
+	//Result Enum_NEW(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
+	//Config* config = NULL;
+	//Occ* occ = NULL;
+	//FactTable* factTable = NULL;
+	//Filter* fil = NULL;
+
+	// 時間計測するなら
+	//{
+	//chrono::system_clock::time_point timeStart;
+	//chrono::system_clock::time_point timeEnd;
+	//double elapsedTime;
+	//timeStart = chrono::system_clock::now();
+		
+	//timeEnd = chrono::system_clock::now();
+	//elapsedTime = chrono::duration_cast<chrono::milliseconds>(timeEnd - timeStart).count();
+	//cerr << "filter eval time: " << elapsedTime / 1000 << " sec" << endl;
+  //}
+  // エラー処理
+  //	catch(string& msg) {
+	//	cerr << msg << endl;
+	//	return string(msg);
+	//}
+	//catch(kgError& err){
+	//	auto msg = err.message();
+	//	string body = "status:-1\n";
+	//	for (auto i = msg.begin(); i != msg.end(); i++) {
+	//		body += *i + "\n";
+	//	}
+	//	return body;
+	//}
+	//	return "status:-1\n";
+
+
+
 
 #endif /* kggolap_h */

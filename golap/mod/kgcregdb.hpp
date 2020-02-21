@@ -36,6 +36,7 @@ using namespace std;
 using namespace kglib;
 
 namespace kgmod {
+
     class kgCreGdb : public kgMod {
     private:
         string opt_inf;
@@ -45,8 +46,7 @@ namespace kgmod {
         Config* config = NULL;
         Occ* occ = NULL;
 				FactTable* factTable = NULL; 
-       
-    private:
+
         void setArgs(void);
         
     public:

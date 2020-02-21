@@ -1,13 +1,18 @@
-// helloWrapper.c
 #include "Python.h"
+#include <kggolap.hpp>
+#include <kgcregdb.hpp>
+#include <iostream>
+
+
+
 //#include <kgEnv.h>
 //#include <kgMethod.h>
 //#include <kgCSV.h>
-#include <kggolap.hpp>
-#include <kgcregdb.hpp>
 //using namespace kgmod;
 //using namespace kglib;
-#include <iostream>
+
+
+
 #if PY_MAJOR_VERSION >= 3
 extern "C" {
 	PyMODINIT_FUNC PyInit__nysolshell_core(void);

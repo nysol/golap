@@ -62,11 +62,11 @@ namespace kgmod {
     //
     //
     class Filter {
-        Config* config;
-        kgEnv* env;
         Occ* occ;
         FactTable* fact;
         cmdCache* cache;
+        Config* config;
+        kgEnv* env;
         bool debug = false;
         
     public:

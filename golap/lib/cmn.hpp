@@ -35,7 +35,6 @@ namespace kgmod {
         class Exception : public exception {
         public:
             Exception(string msg) : msg(msg) {};
-            string what(void) {return msg;}
         private:
             string msg;
         };
@@ -117,4 +116,8 @@ namespace kgmod {
         }
     }
 }
+
+
+//string what(void) {return msg;}
+
 #endif /* cmn_hpp */

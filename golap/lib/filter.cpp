@@ -528,7 +528,6 @@ Ewah kgmod::Filter::makeItemBitmap(string& cmdline) {
     }
     return bmp;
 }
-
 Ewah kgmod::Filter::makeFactBitmap(string& cmdline) {
     boost::trim(cmdline);
     Ewah bmp;
