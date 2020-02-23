@@ -489,9 +489,6 @@ PyObject* run(PyObject* self, PyObject* args)
 				else if(PyFloat_Check(vv)){ SelMinConf = to_string(PyFloat_AsDouble(vv));}
 			}
 		}
-		else{
-			std::cerr << "parameter err" << std::endl;		
-		}
 
 		v = PyDict_GetItemString(ni,"sortKey");
 		if(v){ sortKey = strGET(v); 	}
