@@ -115,6 +115,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 		}
 		return res;
   }
+  cerr << "tcnt0 "<< tarTraBmp.numberOfOnes() << endl; 
 
 	//++++++++++
 	Ewah traBmpInFact;
@@ -129,11 +130,16 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	Ewah tarItemBmp = query.itemFilter & itemBmpInFact;
 	cerr << "tarItemBmp "; Cmn::CheckEwah(tarItemBmp);
 
+
+	traNum = tarTraBmp.numberOfOnes();
+
+  cerr << "tcnt1 "<< tarTraBmp.numberOfOnes() << endl; 
 	// granularityのsizeが1で、かつ、[0]がキーであれば、granularityを指定していない(=false)
 	bool isTraGranu  = (query.granularity.first.size() != 1) ||
                         (query.granularity.first[0] != _config->traFile.traFld);
 	bool isNodeGranu = (query.granularity.second.size() != 1) ||
                         (query.granularity.second[0] != _config->traFile.itemFld);
+
 
 	//++++++++++
 	map<vector<string>, size_t> itemNo4node_map;    // [node] -> coitemsをカウントする代表itemNo
@@ -170,13 +176,32 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 			if (itemFreq.find(itemNo4node2) == itemFreq.end()) {
 				// node=> nodecnt
-				itemFreq[itemNo4node2] =  
-					_occ->attFreq(
-							query.granularity.second, vnode2,
-							tarTraBmp, tarItemBmp
-					);
-			}
+				// attFreq をここで改良方法考える
+				//itemFreq[itemNo4node2] =  
+				//	_occ->attFreq(
+				//			query.granularity.second, vnode2,
+				//			tarTraBmp, tarItemBmp,query.factFilter
+				//	);
 
+				// if (!itemAtt->bmpList.GetVal(attKey, attVal, itemBmp)) return 0;
+
+				Ewah *itemBmp=NULL;
+				if(! _occ->ibmpList_GetVal(query.granularity.second,vnode2,itemBmp)){
+					itemFreq[itemNo4node2]  = 0;
+				}
+				else{
+					//itemAtt->item[*i],
+					Ewah traBmp;
+					_occ->bmpList.GetVal(_config->traFile.itemFld, _occ->itemAtt_item(itemNo4node2), traBmp);
+					traBmp = traBmp & tarTraBmp;
+					size_t cnt = 0;
+					for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+						if (!_factTable->existInFact(*t, itemNo4node2, query.factFilter)) continue;
+						cnt++;    	
+					}
+					itemFreq[itemNo4node2]  = cnt;
+				}
+			}
 			if ( ((float)itemFreq[itemNo4node2]/traNum) < query.selCond.minSup ){ continue; }
 			if (itemFreq[itemNo4node2] == 0) continue;
 

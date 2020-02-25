@@ -130,6 +130,13 @@ namespace kgmod {
         vector<string> evalKeyValueItem(string& key,Ewah* ItmFilter = NULL) {
             return itemAtt->evalKeyValue(key, ItmFilter);
         }
+
+        size_t ibmpList_GetVal(const vector<string>& attKey,const vector<string> attVal,Ewah *itemBmp){
+					return itemAtt->bmpList.GetVal(attKey[0], attVal[0], itemBmp);
+				}	
+				string itemAtt_item(size_t i){
+					return itemAtt->item[i];
+				}
 				// Itmlistを持つtra
 				/*
         Ewah* makexxx(Ewah* Itmlist,Ewah& Tra) {
