@@ -169,7 +169,8 @@ namespace kgmod {
 		sel_cond selCond;
 		sort_key sortKey;
 		size_t sendMax;
-		pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
+		// first:transaction granurality, second:node granurality
+		pair<vector<string>, vector<string>> granularity;   
 		Dimension dimension;
 
 		QueryParams(size_t traMax,size_t itemMax ,size_t recMax,size_t sndMax ,string traFld,string itemFld){
@@ -182,7 +183,6 @@ namespace kgmod {
 
 			factFilter.padWithZeroes(recMax + 1);
     	factFilter.inplace_logicalnot();
-
 
 			// 分ける必要ある？ 複数指定可？
   		granularity.first.resize(1);
@@ -239,6 +239,16 @@ namespace kgmod {
 			_fldCnt(size),_status(0),_hit(0){
 			_header.resize(_fldCnt);
 		}
+
+		Result(size_t size,const char **av ):
+			_fldCnt(size),_status(0),_hit(0){
+			_header.resize(_fldCnt);
+			for (size_t i=0 ; i< _fldCnt ;i++ ){
+				_header[i] = av[i]; 
+			}
+			
+		}
+
 
 		//accessor
 		int status(){ return _status;}
@@ -342,14 +352,8 @@ namespace kgmod {
 				if (cmdcache!= NULL) delete cmdcache;
 			}
         
-			Dimension makeDimBitmap(string& cmdline);
-
-
       void Output(Result& res);
 			int prerun(void);
-
-
-	    void setQueryDefault(QueryParams& query);        
 
     	void saveFilters(QueryParams& query);
 

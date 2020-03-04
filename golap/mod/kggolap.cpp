@@ -90,10 +90,15 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 		pthread_create(&pt, NULL, timerLHandle, &timerST);			
 	}
 
-	string headstr = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
-	vector<string> csvHeader = splitToken(headstr,',');
-	Result res(csvHeader.size());
-	res.setHeader(csvHeader);
+	//string headstr = "node1,node2,frequency,frequency1,frequency2,total,support,confidence,lift,jaccard,PMI,node1n,node2n";
+	//vector<string> csvHeader = splitToken(headstr,',');
+	//Result res(csvHeader.size());
+	//res.setHeader(csvHeader);
+	const char *headstr[] = {
+		"node1","node2","frequency","frequency1","frequency2","total",
+		"support","confidence","lift","jaccard","PMI","node1n","node2n",""
+	};
+	Result res(13,headstr);
 
 	cerr << "enumerating" << endl;
 	size_t hit = 0;
@@ -712,7 +717,6 @@ map<string, Result> kgmod::kgGolap::runQuery(
 			qPara.dimension.DimBmpList[param[i]] = _occ->bmpList.GetVal(qPara.dimension.key, param[i]);
 		}
 	}
-
 	if (  boost::iequals(sortKey , "SUP")){
 		qPara.sortKey = SORT_SUP;
 	}else if(  boost::iequals(sortKey ,"CONF")){
@@ -754,6 +758,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 	map<string, Result> res;
 
 	if (qPara.dimension.DimBmpList.size() == 0) {	
+		// ダミーで_occ->liveTraをセットしてる？
 		res[""] = Enum(qPara, _occ->liveTra,dline); 
 	}
 	else{
