@@ -138,7 +138,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 	traNum = tarTraBmp.numberOfOnes();
 
-  cerr << "tcnt1 "<< tarTraBmp.numberOfOnes() << endl; 
 	// granularityのsizeが1で、かつ、[0]がキーであれば、granularityを指定していない(=false)
 	bool isTraGranu  = (query.granularity.first.size() != 1) ||
                         (query.granularity.first[0] != _config->traFile.traFld);
@@ -155,13 +154,11 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 	//  粒度なし
 	if(!isTraGranu && !isNodeGranu){
-		// [vnodes] -> exists // set or unorder map どっちがはやい？
-		set<vector<string>> checked_node2;  
+
 		// DEBUG
 		size_t icnt = tarItemBmp.numberOfOnes();
-		int cnt=1;
-		cerr << "icnt "<< tarItemBmp.numberOfOnes() << endl; 
 
+		int cnt=1;
 		for (auto i2 = tarItemBmp.begin(), ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
 			// CHECK 用
 			if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
@@ -173,60 +170,37 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			vector<string> vnode2; vnode2.resize(1);
 			vnode2[0] = node2;
 
-			// すでに処理済みのキーの場合はcontinueする。
-			if( checked_node2.find(vnode2) != checked_node2.end() ) { continue; }
 
-			checked_node2.insert(vnode2);
-			size_t itemNo4node2 = *i2;
+			// *i2の持つtransaction
+			Ewah traBmp;
+			_occ->bmpList.GetVal(_config->traFile.itemFld, _occ->itemAtt_item(*i2), traBmp);
+			traBmp = traBmp & tarTraBmp;
 
-			if (itemFreq.find(itemNo4node2) == itemFreq.end()) {
-				// node=> nodecnt
-				// attFreq をここで改良方法考える
-				// (fact tableを考慮したカウントの作成する？)
-				//itemFreq[itemNo4node2] =  
-				//	_occ->attFreq(
-				//			query.granularity.second, vnode2,
-				//			tarTraBmp, tarItemBmp,query.factFilter
-				//	);
-
-				// if (!itemAtt->bmpList.GetVal(attKey, attVal, itemBmp)) return 0;
-				
-				Ewah *itemBmp=NULL;
-				if(! _occ->ibmpList_GetVal(query.granularity.second,vnode2,itemBmp)){
-					itemFreq[itemNo4node2]  = 0;
-				}
-				else{
-					//itemAtt->item[*i],
-					Ewah traBmp;
-					_occ->bmpList.GetVal(_config->traFile.itemFld, _occ->itemAtt_item(itemNo4node2), traBmp);
-					traBmp = traBmp & tarTraBmp;
-					size_t cnt = 0;
-					for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
-						if (!_factTable->existInFact(*t, itemNo4node2, query.factFilter)) continue;
-						cnt++;    	
-					}
-					itemFreq[itemNo4node2]  = cnt;
-				}
+			// これいる？
+			Ewah *itemBmp=NULL;
+			if(! _occ->ibmpList_GetVal(query.granularity.second,vnode2,itemBmp)){
+					itemFreq[*i2]  = 0;
 			}
-			if ( ((float)itemFreq[itemNo4node2]/traNum) < query.selCond.minSup ){ continue; }
-			if (itemFreq[itemNo4node2] == 0) continue;
+			else{
+				size_t cnt = 0;
+				for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+					if (!_factTable->existInFact(*t, *i2, query.factFilter)) continue;
+					cnt++;
+				}
+				itemFreq[*i2]  = cnt;
+			}
+			if ( ((float)itemFreq[*i2]/traNum) < query.selCond.minSup ){ continue; }
+			if (itemFreq[*i2] == 0) continue;
 
 			// i2 が繋がってる nodeid ごとの件数(頻度)	 
 			map<size_t, size_t> coitems;
-			// [vnodes, traAtt(:区切り)] -> exists
-			set<pair<string, string>> checked_node1;
 
-			// itemNo(2)を持つtra 
-			Ewah* tra_i2_tmp;
-			_occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[itemNo4node2], tra_i2_tmp);
-			Ewah tra_i2 = *tra_i2_tmp & tarTraBmp;
-
-			for (auto t2 = tra_i2.begin(), et2 = tra_i2.end(); t2 != et2; t2++) {
+			// sup条件を満たしている場合、もう一回loopしてpairカウント
+			for (auto t2 = traBmp.begin(), et2 = traBmp.end(); t2 != et2; t2++) {
 
 				if (isTimeOut) {stat = 2; break;}
 				
-				// ここが本当にいいかチェック？
-				if (!_factTable->existInFact(*t2, itemNo4node2, query.factFilter)) continue;
+				if (!_factTable->existInFact(*t2, *i2, query.factFilter)) continue;
 				
 				Ewah item_i1 = _occ->occ[*t2] & tarItemBmp;
 
@@ -236,7 +210,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
           if (!_factTable->existInFact(*t2, *i1, query.factFilter)) { 
           	continue;
           }
-					
 					coitems[*i1]++;
 				}
 			}
