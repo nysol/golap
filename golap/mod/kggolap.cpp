@@ -177,6 +177,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			if (itemFreq.find(itemNo4node2) == itemFreq.end()) {
 				// node=> nodecnt
 				// attFreq をここで改良方法考える
+				// (fact tableを考慮したカウントの作成する？)
 				//itemFreq[itemNo4node2] =  
 				//	_occ->attFreq(
 				//			query.granularity.second, vnode2,
@@ -184,7 +185,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				//	);
 
 				// if (!itemAtt->bmpList.GetVal(attKey, attVal, itemBmp)) return 0;
-
+				
 				Ewah *itemBmp=NULL;
 				if(! _occ->ibmpList_GetVal(query.granularity.second,vnode2,itemBmp)){
 					itemFreq[itemNo4node2]  = 0;
@@ -209,91 +210,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			map<size_t, size_t> coitems;
 			// [vnodes, traAtt(:区切り)] -> exists
 			set<pair<string, string>> checked_node1;
-
-/*org version
-			Ewah itemInTheAtt2 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
-      //++++++++++
-			itemInTheAtt2 = itemInTheAtt2 & tarItemBmp;
-
-			for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
-				
-				if (isTimeOut) {stat = 2; break;}
-        Ewah* tra_i2_tmp;
-				_occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*at2], tra_i2_tmp);
-				Ewah tra_i2 = *tra_i2_tmp & tarTraBmp;
-				
-				for (auto t2 = tra_i2.begin(), et2 = tra_i2.end(); t2 != et2; t2++) {
-					if (isTimeOut) {stat = 2; break;}
-
-					if (!_factTable->existInFact(*t2, *at2, query.factFilter)) continue;
-
-					vector<string> vTraAtt;
-					_occ->traAtt->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
-					string traAtt = Cmn::CsvStr::Join(vTraAtt, ":");
-					map<size_t, Ewah> item_i1;      // [traNo] -> occ(itemBmp)
-					map<size_t, pair<size_t, Ewah>> itemNo4node1_itemNo;      // [代表itemNo] -> {itemNo, traBmp}
-
-					item_i1.insert({*t2, _occ->occ[*t2] & tarItemBmp});
-					for (auto ii1 = item_i1.begin(); ii1 != item_i1.end(); ii1++) {
-						// ii1: first=traNo, second=occ(itemBmp)
-						for (auto ii1_item = ii1->second.begin(), eii1_item1 = ii1->second.end();
-									ii1_item != eii1_item1; ii1_item++) {
-							
-							vector<string> vnode1 = _occ->itemAtt->key2att(*ii1_item, query.granularity.second);
-							// itemNo(1)が持つ属性(vnode1)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt1)
-							Ewah itemInTheAtt1 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
-							itemInTheAtt1 = itemInTheAtt1 & tarItemBmp;
-							auto topBit = itemInTheAtt1.begin();
-							if (itemNo4node1_itemNo.find(*topBit) == itemNo4node1_itemNo.end()) {
-								Ewah tmpTraBmp;
-								tmpTraBmp.set(ii1->first);
-								itemNo4node1_itemNo[*topBit] = {*ii1_item, tmpTraBmp};
-							} else {
-								itemNo4node1_itemNo[*topBit].second.set(ii1->first);
-							}
-						}
-					}
-					
-					for (auto it = itemNo4node1_itemNo.begin(), eit = itemNo4node1_itemNo.end(); it != eit; it++) {
-						size_t itemNo4node1 = it->first;
-						size_t i1 = it->second.first;
-						
-						if (isTimeOut) {stat = 2; break;}
-						
-						if (itemNo4node1 >= *i2) break;
-						
-						vector<string> vnode1 = _occ->itemAtt->key2att(i1, query.granularity.second);
-
-						string node1 = Cmn::CsvStr::Join(vnode1, ":");
-						if (node1 == node2) continue;
-
-						if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
-							checked_node1.insert({node1, traAtt});
-						} else {
-							continue;
-						}
-
-						Ewah itemInTheAtt1;
-						itemInTheAtt1.set(i1);
-						//++++++++++
-						// node1における代表itemNoとして拡張前のitemNo(1)を設定する
-						if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
-							itemNo4node_map[vnode1] = itemNo4node1;
-						} else {
-							itemNo4node1 = itemNo4node_map[vnode1];
-						}
-						//----------
-						for (auto at1 = itemInTheAtt1.begin(), eat1 = itemInTheAtt1.end(); at1 != eat1; at1++) {
-							if (isTimeOut) {stat = 2; break;}
-							if (_factTable->existInFact(it->second.second, *at1, query.factFilter)) {
-								coitems[itemNo4node1]++;
-								break;
-							}
-						}
-					}
-				}
-			}
-org version*/
 
 			// itemNo(2)を持つtra 
 			Ewah* tra_i2_tmp;
