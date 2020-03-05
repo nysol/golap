@@ -240,9 +240,6 @@ Ewah& kgmod::BTree::GetVal(const string& Key, const string& KeyValue) {
         return resBmp;
     } else {
         stringstream msg;
-//        msg << "invalid DataTypeMap: " << DataTypeMap[Key];
-//        cerr << msg.str() << endl;
-//        msg.clear();
         msg << Key << " is not found";
         throw kgError(msg.str());
     }
