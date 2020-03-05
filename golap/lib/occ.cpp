@@ -489,16 +489,7 @@ size_t kgmod::Occ::attFreq(const vector<string>& attKeys, const vector<string>at
     if (tra2key == NULL) {
         cnt = traBmp.numberOfOnes();
     } else {
-    		/*
-        unordered_map<string, int> checkedAttVal;
-        for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
-            string val = (*tra2key)[*t];
-            if (checkedAttVal.find(val) == checkedAttVal.end()) {
-                cnt++;
-                checkedAttVal[val] = 1;
-            }
-        }*/
-        
+
         set<string> checkedAttVal;
         for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
             string val = (*tra2key)[*t];
@@ -513,24 +504,20 @@ size_t kgmod::Occ::attFreq(const vector<string>& attKeys, const vector<string>at
 
 size_t kgmod::Occ::attFreq(string& attKey, string& attVal, const Ewah& traFilter,
                            const Ewah& itemFilter, const vector<string>* tra2key) {
-    //if (attKey == "0011023580813") {
-    //    cerr << endl;
-    //}
+
     Ewah *itemBmp;
     if (!itemAtt->bmpList.GetVal(attKey, attVal, itemBmp)) return 0;
     Ewah itemVals = *itemBmp & itemFilter;
-//    Cmn::CheckEwah(itemVals);
-    
+
     Ewah traBmp;
     for (auto i = itemVals.begin(); i != itemVals.end(); i++) {
         Ewah tmp;
         if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*i], tmp)) continue;
         traBmp = traBmp | tmp;
     }
-//    Cmn::CheckEwah(traBmp);
+
     traBmp = traBmp & traFilter;
-//    Cmn::CheckEwah(traBmp);
-    
+
     size_t cnt = 0;
     unordered_map<string, int> checkedAttVal;
     if (tra2key == NULL) {

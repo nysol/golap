@@ -189,6 +189,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				}
 				itemFreq[*i2]  = cnt;
 			}
+
 			if ( ((float)itemFreq[*i2]/traNum) < query.selCond.minSup ){ continue; }
 			if (itemFreq[*i2] == 0) continue;
 
@@ -301,6 +302,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	}
 	//以下粒度あり
 	else{
+
 		if (isTraGranu) {
         // vector版countKeyValueは処理が比較的重いので、マルチバリューかどうかで処理を分ける
         if (query.granularity.first.size() == 1) {
@@ -332,9 +334,10 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
    // unordered_map<string, Ewah> ex_occ_cacheOnceQuery;      // ["field name"] -> item bitmap
     //unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2;  // [vnodes] -> exists
     //for (auto i2 = query.itemFilter.begin(), ei2 = query.itemFilter.end(); i2 != ei2; i2++) {
+
 		cerr << "icnt "<< tarItemBmp.numberOfOnes() << endl;
 		
-		// 件数のみカウント　たぶんいらん
+		// 件数のみカウント なくてもできる？
     for (auto i2 = tarItemBmp.begin(), ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
 
 			if (isTimeOut) {stat = 2; break;}
@@ -361,6 +364,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				itemFreq[*i2] = _occ->attFreq(query.granularity.second, vnode2,
                                           tarTraBmp,tarItemBmp);
 			}
+
 			checked_node2.insert(vnode2);
 			itemInTheAtt2 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
 			itemInTheAtt2 = itemInTheAtt2  & tarItemBmp;
@@ -383,6 +387,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 	    vector<string> vnode2;
   	  string node2;
+
     	if (isNodeGranu) {
     		// itemNo(2)から指定した粒度のキー(node2)を作成する。
       	vnode2 = _occ->itemAtt->key2att(*i2, query.granularity.second);
@@ -410,13 +415,15 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 			map<size_t, size_t> coitems;
 
-			set<pair<string, string>> checked_node1;    // [vnodes, traAtt(:区切り)] -> exists
+			set<pair<string, string>> checked_node1;    
+			// [vnodes, traAtt(:区切り)] -> exists
       //unordered_map<pair<string, string>, bool, boost::hash<pair<string, string>>> checked_node1;
-                                                            // [vnodes, traAtt(:区切り)] -> exists
-        //unordered_map<pair<size_t, string>, bool, boost::hash<pair<size_t, string>>> checked_item1;
-         //                                                   // [itemNo, traAtt(:区切り)] -> exists
+			// [vnodes, traAtt(:区切り)] -> exists
+			//unordered_map<pair<size_t, string>, bool, boost::hash<pair<size_t, string>>> checked_item1;
+			// [itemNo, traAtt(:区切り)] -> exists
+	    
 	    unordered_map<vector<string>, size_t, boost::hash<vector<string>>> itemNo4node_map;
-         //                                                   // [node] -> coitemsをカウントする代表itemNo
+			// [node] -> coitemsをカウントする代表itemNo
 			// いらない？
 			unordered_map<pair<size_t, string>, bool, boost::hash<pair<size_t, string>>> checked_item1;
 
@@ -452,7 +459,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
         //  checked_node1[{node1, traAtt}] = true;
 
 				checked_tra1[vTraAtt] = true;
-
 
        // map<size_t, pair<size_t, Ewah>> itemNo4node1_itemNo;      // [代表itemNo] -> {itemNo, traBmp}
 				// [node] -> coitemsをカウントする代表itemNo
@@ -590,9 +596,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
             }
             hit++;
         }
-
-
-
 		}
 	}
 

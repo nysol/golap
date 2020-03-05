@@ -90,6 +90,7 @@ namespace kgmod {
 
         size_t attFreq(const vector<string>& attKeys, const vector<string> attVal, const Ewah& traFilter,
                        const Ewah& itemFilter, const vector<string>* tra2key = NULL);
+
         size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter,
                        const Ewah& itemFilter, const vector<string>* tra2key = NULL);
 
