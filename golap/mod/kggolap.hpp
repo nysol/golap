@@ -79,7 +79,7 @@ namespace kgmod {
     static Config* mt_config;
     static Occ* mt_occ;
     static FactTable* mt_factTable;
-    Result Enum(Query& query, Ewah& dimBmp);
+    Result Enum(Query& query, Ewah& dimBmp, map<string, pair<string, size_t>>& isolatedNodes);
     typedef MtQueue<pair<string, Ewah*>> mq_t;
     void MT_Enum(mq_t* mq, Query* query, map<string, Result>* res);
 

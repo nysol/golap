@@ -50,6 +50,7 @@ namespace kgmod {
         sel_cond selCond;
         sort_key sortKey;
         size_t sendMax;
+        bool isolatedNodes;
         pair<vector<string>, vector<string>> granularity;   // first:transaction granurality, second:node granurality
         Dimension dimension;
         size_t debug_mode;
@@ -65,6 +66,7 @@ namespace kgmod {
             else if (sortKey == SORT_JAC)  cerr << "sortKey: JAC"  << endl;
             else if (sortKey == SORT_PMI)  cerr << "sortKey: PMI"  << endl;
             cerr << "sendMax: " << sendMax << endl;
+            if (isolatedNodes) cerr << "isolatedNodes: true" << endl;
             cerr << "granularity(transaction): ";
             for (auto& f : granularity.first) cerr << f << " ";
             cerr << endl;

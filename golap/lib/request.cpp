@@ -52,6 +52,7 @@ void kgmod::Request::setQueryDefault(void) {
     query.factFilter.inplace_logicalnot();
     query.selCond = {0, 0, 0, 0, -1};
     query.debug_mode = 0;
+    query.isolatedNodes = false;
     query.granularity.first.resize(1);
     query.granularity.first[0] = _config->traFile.traFld;
     query.granularity.second.resize(1);
@@ -166,6 +167,9 @@ void kgmod::Request::evalRequestJson(string& req_msg) {
         }
         if (boost::optional<size_t> val2 = pt.get_optional<size_t>("query.sendMax")) {
             query.sendMax = *val2;
+        }
+        if (boost::optional<string> val2 = pt.get_optional<string>("query.isolatedNodes")) {
+            if (boost::iequals(*val2, "true")) query.isolatedNodes = true;
         }
         if (boost::optional<string> val2 = pt.get_optional<string>("query.granularity")) {
             if (boost::optional<string> val3 = pt.get_optional<string>("query.granularity.transaction")) {
