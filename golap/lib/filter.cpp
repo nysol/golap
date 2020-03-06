@@ -327,6 +327,7 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
     int argn = 0;
     char inQuote = '\0';
     bool isEscape = false;
+    vector<bool> isQuoted = {false};
     (*cmdPtr)++;    // 先頭は必ず'('なので、kakkoDepth = 1から始まる
     for (int kakkoDepth = 1; kakkoDepth > 0; (*cmdPtr)++) {
         if (inQuote) {
@@ -351,14 +352,20 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
                 if (kakkoDepth == 0) continue;
             } else if (**cmdPtr == '"' || **cmdPtr == '\'') {
                 if (kakkoDepth == 1) {
+                    isQuoted[argn] = true;
                     inQuote = **cmdPtr;
                     arg.push_back("");
                     continue;
                 }
             } else if (**cmdPtr == ',') {
-                if (kakkoDepth == 1) {argn++; continue;}
+                if (kakkoDepth == 1) {
+                    argn++;
+                    isQuoted.resize(argn + 1); isQuoted[argn] = false;
+                    continue;
+                }
             } else if (isspace(**cmdPtr)) {
-                if (arg[argn].size() == 0) continue;
+                if (arg.size() == argn) continue;
+                if (isQuoted[argn]) continue;
             }
         }
         
@@ -372,6 +379,9 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
     
     if (arg.size() == argn) arg.push_back("");
     if (*(*cmdPtr - 1) != ')') throw 0;
+    for (size_t i = 0; i < arg.size(); i++) {
+        if (!isQuoted[i]) Cmn::chomp(arg[i]);
+    }
     return arg;
 }
 
