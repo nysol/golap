@@ -65,7 +65,7 @@ private:
     void parse_request(void) {
         stringstream ss;
         ss << boost::asio::buffer_cast<const char*>(receive_buff_.data());
-        receive_buff_.consume(receive_buff_.size());
+        //receive_buff_.consume(receive_buff_.size());
         string line;
         while (getline(ss, line)) {
             if (line.size() == 1) break;

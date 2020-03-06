@@ -357,8 +357,8 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
                 }
             } else if (**cmdPtr == ',') {
                 if (kakkoDepth == 1) {argn++; continue;}
-            } else if (isspace(**cmdPtr)) {
-                continue;
+//            } else if (isspace(**cmdPtr)) {
+//                continue;
             }
         }
         
