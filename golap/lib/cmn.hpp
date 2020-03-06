@@ -68,6 +68,12 @@ namespace kgmod {
                 return (! isspace(ch));
             }).base(), str.end());
         }
+        static inline void trim(string &str) { // 前後の余白（スペースや改行）を削除する
+            chomp(str);
+            str.erase(find_if(str.rbegin(), str.rend(), [](int ch) {
+                return (! isspace(ch));
+            }).base(), str.end());
+        }
         bool isDigit(char* str);
         bool ReplaceString(string& str, string fm, string to);
         static inline void EraseLastChar(string& str) {if (! str.empty()) str.erase(--str.end());}
