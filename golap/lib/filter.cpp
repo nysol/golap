@@ -242,9 +242,9 @@ bool kgmod::Filter::existsFldName(const string& fldName, const tra_item traitem)
 Ewah& kgmod::Filter::logicalnot(Ewah& bmp, const tra_item traitem) {
     size_t bmpCnt;
     if (traitem == TRA) {
-        bmpCnt = occ->traAtt->traMax + 1;
+        bmpCnt = occ->traMax() + 1;
     } else if (traitem == ITEM) {
-        bmpCnt = occ->itemAtt->itemMax + 1;
+        bmpCnt = occ->itemMax() + 1;
     } else if (traitem == FACT) {
         bmpCnt = fact->recMax + 1;
     } else {
@@ -266,9 +266,9 @@ Ewah kgmod::Filter::allone(const tra_item traitem) {
 BTree* kgmod::Filter::setModeTraItem(const tra_item traitem) {
     BTree* bmpList;
     if (traitem == TRA) {
-        bmpList = &(occ->bmpList);
+        bmpList = occ->getTraBtree();
     } else if (traitem == ITEM) {
-        bmpList = &(occ->itemAtt->bmpList);
+        bmpList = occ->getItemBtree(); 
     } else if (traitem == FACT) {
         bmpList = &(fact->bmplist);
     } else {
@@ -278,15 +278,15 @@ BTree* kgmod::Filter::setModeTraItem(const tra_item traitem) {
     }
     return bmpList;
 }
-
+/*
 pair<BTree*, string> kgmod::Filter::setModeTraItem2(const tra_item traitem) {
     BTree* bmpList;
     string key;
     if (traitem == TRA) {
-        bmpList = &(occ->bmpList);
-        key = config->traFile.traFld;
+      	bmpList = occ->getTraBtree();
+       key = config->traFile.traFld;
     } else if (traitem == ITEM) {
-        bmpList = &(occ->itemAtt->bmpList);
+      	bmpList = occ->getItemBtree();
         key = config->traFile.itemFld;
     } else if (traitem == FACT) {
         bmpList = &(fact->bmplist);
@@ -300,15 +300,15 @@ pair<BTree*, string> kgmod::Filter::setModeTraItem2(const tra_item traitem) {
     pair<BTree*, string> out = {bmpList, key};
     return out;
 }
-
+*/
 Ewah kgmod::Filter::sel(const values_t& values, const tra_item traitem) {
     Ewah out;
     for (auto val = values.begin(); val != values.end(); val++) {
         size_t num;
         if (traitem == TRA) {
-            num = occ->traAtt->traNo[*val];
+            num = occ->getTraID(*val);
         } else if (traitem == ITEM) {
-            num = occ->itemAtt->itemNo[*val];
+            num = occ->getItemID(*val);
         } else if (traitem == FACT) {
             stringstream msg;
             msg << "cannot use sel for fact filter" << traitem;
@@ -387,7 +387,7 @@ Ewah kgmod::Filter::search(const string& method, const string& key, const values
         }
         
         Ewah tmp;
-        bool stat = occ->bmpList.GetValMulti(key, kv, tmp);
+        bool stat = occ->getTraBmpM(key, kv, tmp);
         if (! stat) throw kgError("error occures in search");
         out = out | tmp;
     }
@@ -398,13 +398,10 @@ Ewah kgmod::Filter::range(const string& key, const pair<string, string>& values,
     if (! existsFldName(key, traitem)) throw kgError(key + " does not exist");
     Ewah out;
     BTree* bmpList;
-    //string k;
     if (traitem == TRA) {
-        bmpList = &(occ->bmpList);
-        //k = config->traFile.traFld;
+        bmpList = occ->getTraBtree();
     } else if (traitem == ITEM) {
-        bmpList = &(occ->itemAtt->bmpList);
-        //k = config->traFile.itemFld;
+        bmpList = occ->getItemBtree();
     } else if (traitem == FACT) {
         bmpList = &(fact->bmplist);
     } else {
@@ -414,7 +411,6 @@ Ewah kgmod::Filter::range(const string& key, const pair<string, string>& values,
     }
     
     bool stat = bmpList->GetValMulti(key, "[", values.first, "]", values.second, out);
-//    out.printout();
     if (! stat) throw kgError("error occures in search");
     return out;
 }
@@ -425,9 +421,10 @@ Ewah kgmod::Filter::sel_item(string& itemFilter, const tra_item traitem) {
     Ewah itemBmp = makeItemBitmap(itemFilter);
     Ewah out;
     for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
-        string tar = occ->itemAtt->item[*i];
-        Ewah tmp = occ->bmpList.GetVal(occ->occKey, tar);
-        out = out | tmp;
+        //string tar = occ->itemAtt->item[*i];
+        //Ewah tmp = occ->bmpList.GetVal(occ->occKey, tar);
+        // out = out | tmp;
+        out = out | occ->getTraBmpFromItem(*i);
     }
     return out;
 }
@@ -448,7 +445,12 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     
     if (boost::iequals(andor, "AND")) traBmp = logicalnot(traBmp, TRA);
     for (auto i = itemBmp.begin(); i != itemBmp.end(); i++) {
-        Ewah tmp = occ->bmpList.GetVal(occ->occKey, occ->itemAtt->item[*i]);
+
+        //Ewah tmp = occ->bmpList.GetVal(occ->occKey, occ->itemAtt->item[*i]);
+        
+        Ewah tmp = occ->getTraBmpFromItem(*i);
+
+
         if (boost::iequals(andor, "AND")) {
             traBmp = traBmp & tmp;
         } else if (boost::iequals(andor, "OR")) {
@@ -462,7 +464,7 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     btree::btree_map<string, bool> uniqCheck;
     BTree::kvHandle* kvh = NULL;
     pair<string, Ewah> ret;
-    occ->bmpList.GetAllKeyValue(key, ret, kvh);
+    occ->GetAllKeyValue(key, ret, kvh);
     while (kvh != NULL) {
         Ewah tmp = traBmp & ret.second;
         if (tmp.numberOfOnes() != 0) {
@@ -471,7 +473,7 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
                 uniqCheck[ret.first] = true;
             }
         }
-        occ->bmpList.GetAllKeyValue(key, ret, kvh);
+        occ->GetAllKeyValue(key, ret, kvh);
     }
     
     if (debug) {
@@ -518,6 +520,7 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
     char inQuote = '\0';
     bool isEscape = false;
     (*cmdPtr)++;    // 先頭は必ず'('なので、kakkoDepth = 1から始まる
+    vector<bool> isQuoted = {false};
     for (int kakkoDepth = 1; kakkoDepth > 0; (*cmdPtr)++) {
         if (inQuote) {
             if (! isEscape) {
@@ -541,17 +544,21 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
                 if (kakkoDepth == 0) continue;
             } else if (**cmdPtr == '"' || **cmdPtr == '\'') {
                 if (kakkoDepth == 1) {
+		                isQuoted[argn] = true;
                     inQuote = **cmdPtr;
                     arg.push_back("");
                     continue;
                 }
             } else if (**cmdPtr == ',') {
-                if (kakkoDepth == 1) {argn++; continue;}
+                if (kakkoDepth == 1) {
+                	argn++;
+                	isQuoted.resize(argn + 1); isQuoted[argn] = false;
+                	continue;
+                }
             }
             else if (isspace(**cmdPtr)) {
-            	if (kakkoDepth == 1) {
-	              continue;
-	            }
+              if (arg.size() == argn) continue;
+              if (isQuoted[argn]) continue;
             }
         }
         
@@ -565,6 +572,9 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
     
     if (arg.size() == argn) arg.push_back("");
     if (*(*cmdPtr - 1) != ')') throw 0;
+    for (size_t i = 0; i < arg.size(); i++) {
+        if (!isQuoted[i]) Cmn::chomp(arg[i]);
+    }
     return arg;
 }
 

@@ -85,7 +85,7 @@ namespace kgmod {
         Ewah allone(const tra_item traitem);
 
         BTree* setModeTraItem(const tra_item traitem);
-        pair<BTree*, string> setModeTraItem2(const tra_item traitem);
+        //pair<BTree*, string> setModeTraItem2(const tra_item traitem);
         
         typedef vector<string> values_t;
         Ewah sel(const values_t& values, const tra_item traitem);                 // configのtra名、item名を用いてsel

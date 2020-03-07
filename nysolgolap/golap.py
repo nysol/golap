@@ -91,9 +91,7 @@ class mgolap(object):
 
 
 	def query(self,q):
-
 		rtnobj = ng.run(self.golapOBJ,q)		
-
 		# エラー		
 		if isinstance(rtnobj,list) :
 			for vv in rtnobj:

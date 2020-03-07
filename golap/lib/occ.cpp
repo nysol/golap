@@ -34,6 +34,7 @@ using namespace kgmod;
 using namespace kglib;
 
 kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
+
     _dbName = config->dbDir + "/coitem.dat";
     _liveTraFile = config->dbDir + "/livetra.dat";
     
@@ -41,14 +42,11 @@ kgmod::Occ::Occ(Config* config, kgEnv* env) : _config(config), _env(env) {
     string occDb = config->dbDir + "/occ.dat";
     bmpList.PutDbName(dtmDb, occDb);
     
-    string dtmDb2 = config->dbDir + "/occ2.dtm";
-    string occDb2 = config->dbDir + "/occ2.dat";
-    exBmpList.PutDbName(dtmDb2, occDb2);
+    //string dtmDb2 = config->dbDir + "/occ2.dtm";
+    //string occDb2 = config->dbDir + "/occ2.dat";
+    //exBmpList.PutDbName(dtmDb2, occDb2);
     
-    //string ex_dtmDb = config->dbDir + "/exocc.dtm";
-    //string ex_occDb = config->dbDir + "/exocc.dat";
-    //ex_occ.PutDbName(ex_dtmDb, ex_occDb);
-    
+
     traAtt = new class TraAtt(config, env);
     itemAtt = new class ItemAtt(config, env);
     occKey = config->traFile.itemFld;
@@ -60,127 +58,13 @@ kgmod::Occ::~Occ(void) {
     delete itemAtt;
 }
 
-void kgmod::Occ::buildExBmpList(void) {
-    cerr << "building extra transaction index" << endl;
-    vector<vector<string>*> AllItemAtt(2);
-    AllItemAtt[0] = &(_config->itemAttFile.strFields);
-//    AllItemAtt[1] = &(_config->itemAttFile.catFields);
-    
-    for (size_t i = 0; i < 1; i++) {
-        for (auto& key : *AllItemAtt[i]) {
-            exBmpList.InitKey(key, STR);
-            vector<string> allVals = itemAtt->bmpList.EvalKeyValue(key);
-            for (auto& val : allVals) {
-                Ewah itemBmp;
-                itemAtt->bmpList.GetVal(key, val, itemBmp);
-                Ewah traBmp;
-                cerr << key << "," << val << ": ";
-                for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
-                    string tar = itemAtt->item[*i];
-                    Ewah tmp = bmpList.GetVal(occKey, tar);
-                    traBmp = traBmp | tmp;
-                }
-                exBmpList.SetVal(key, val, traBmp);
-//                Cmn::CheckEwah(exBmpList[{key, val}]);
-            }
-        }
-    }
-}
 
 void kgmod::Occ::build(void) {
-		cerr << "b1" << endl;
-    traAtt->build(bmpList);
-		cerr << "b2" << endl;
-    itemAtt->build();
-		cerr << "b3" << endl;
-/*    
-    cerr << "building transaction index" << endl;
-    kgCSVfld tra;
-    tra.open(_config->traFile.name, _env, false);
-    tra.read_header();
-    vector<string> fldName = tra.fldName();
-    string traNameFld;
-    int traNameFldPos = -1;
-    string itemNameFld;
-    int itemNameFldPos = -1;
-    for (int i = 0; i < fldName.size(); i++) {
-        if (fldName[i] == _config->traFile.traFld) {
-            traNameFld = _config->traFile.traFld;
-            traNameFldPos = i;
-        } else if (fldName[i] == _config->traFile.itemFld) {
-            itemNameFld = _config->traFile.itemFld;
-            itemNameFldPos = i;
-        }
-    }
-    
-    if (traNameFldPos == -1) {
-        stringstream ss;
-        ss << traNameFld << " is not found on " << _config->traFile.name;
-        throw kgError(ss.str());
-    }
-    if (itemNameFldPos == -1) {
-        stringstream ss;
-        ss << itemNameFld << " is not found on " << _config->traFile.name;
-        throw kgError(ss.str());
-    }
-    
-    map<string, bool> checkedTra;
-    for (auto i = traAtt->traNo.begin(), ie = traAtt->traNo.end(); i != ie; i++) {
-        checkedTra[i->first] = false;
-    }
-    
-    bool isError = false;
-    set<string> errKeyList;
-    while (tra.read() != EOF) {
-        string traName = tra.getVal(traNameFldPos);
-        string itemName = tra.getVal(itemNameFldPos);
-        
-        bool errThisTime = false;
-        if (traAtt->traNo.find(traName) == traAtt->traNo.end()) {
-            isError = true;
-            string buf = traNameFld + ":" + traName;
-            if (errKeyList.find(buf) == errKeyList.end()) {
-                stringstream ss;
-                ss << "#ERROR# " << buf << " is not found on " << _config->traAttFile.name;
-                cerr << ss.str() << endl;
-                errKeyList.insert(buf);
-            }
-            errThisTime = true;
-        }
-        if (itemAtt->itemNo.find(itemName) == itemAtt->itemNo.end()) {
-            isError = true;
-            string buf = itemNameFld + ":" + itemName;
-            if (errKeyList.find(buf) == errKeyList.end()) {
-                stringstream ss;
-                ss << "#ERROR# " << buf << " is not found on " << _config->itemAttFile.name;
-                cerr << ss.str() << endl;
-                errKeyList.insert(buf);
-            }
-            errThisTime = true;
-        }
-        if (errThisTime) continue;
-        
-        bmpList.SetBit(occKey, itemName, traAtt->traNo[traName]);
-        if (traAtt->traNo[traName] >= occ.size()) occ.resize(traAtt->traNo[traName] + 1);
-        occ[traAtt->traNo[traName]].set(itemAtt->itemNo[itemName]);
-        checkedTra[traName] = true;
-    }
-    tra.close();
-    
-    liveTra.padWithZeroes(traAtt->traMax + 1); liveTra.inplace_logicalnot();
-    for (auto i = checkedTra.begin(), ie = checkedTra.end(); i != ie; i++) {
-        if (i->second) continue;
-        cerr << "#WARNING# " << traNameFld << ":" << i->first << " does not exist on " << _config->traFile.name << endl;
-        
-        Ewah tmp; tmp.set(traAtt->traNo[i->first]);
-        liveTra = liveTra - tmp;
-    }
-    
-    if (isError) throw kgError("error occurred in building transaction index");
-    
-    //
-//    buildExBmpList();
-*/
+
+	traAtt->build(bmpList);
+
+	itemAtt->build();
+
 }
 
 void kgmod::Occ::saveLiveTra(void) {
@@ -210,7 +94,7 @@ void kgmod::Occ::saveLiveTra(void) {
 }
 
 void kgmod::Occ::saveCooccur(const bool clean) {
-//    cerr << occ.size() << endl;
+
     if (clean) {
         FILE* fp = fopen(_dbName.c_str(), "wb");
         fclose(fp);
@@ -247,8 +131,7 @@ void kgmod::Occ::save(const bool clean) {
     traAtt->save(clean);
     itemAtt->save(clean);
     bmpList.save(clean);
-    exBmpList.save(clean);
-    //ex_occ.save(clean);
+    //exBmpList.save(clean);
     saveCooccur(clean);
     saveLiveTra();
 }
@@ -326,13 +209,12 @@ void kgmod::Occ::load(void) {
     traAtt->load();
     itemAtt->load();
     bmpList.load();
-    exBmpList.load();
-    //ex_occ.load();
+    //exBmpList.load();
     loadCooccur();
     itemAtt->buildKey2attMap();
     loadActTra();
 }
-
+/*つかってない
 void kgmod::Occ::item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp) {
     if (exBmpList.GetVal(itemKey, itemVal, traBmp)) return;
     
@@ -347,7 +229,7 @@ void kgmod::Occ::item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp) {
         traBmp = traBmp | tmp;
     }
     exBmpList.SetVal(itemKey, itemVal, traBmp);
-}
+}*/
 
 // 指定したトランザクション(traNo)から指定したトランザクション属性(traAttKey)と同じ値を持つ
 // トランザクションを抽出し、それらのトランザクションに含まれるitemNoのビットマップを生成して。

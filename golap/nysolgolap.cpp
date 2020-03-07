@@ -433,6 +433,7 @@ PyObject* run(PyObject* self, PyObject* args)
 		string sendMax;
 		string dimension;
 		string deadline;
+		string isolatedNodes;
 
 		PyObject * v;
 		v = PyDict_GetItemString(jsonDict,"deadlineTimer");
@@ -506,6 +507,11 @@ PyObject* run(PyObject* self, PyObject* args)
 		v = PyDict_GetItemString(ni,"dimension");
 		if(v){ dimension = strGET(v); 	}
 
+
+		v = PyDict_GetItemString(ni,"isolatedNodes");
+		if(v){ isolatedNodes = strGET(v); 	}
+
+
 		PyObject *gv = PyDict_GetItemString(ni,"granularity");
 		if(gv){
 			PyObject * gvv;
@@ -521,7 +527,7 @@ PyObject* run(PyObject* self, PyObject* args)
 		map<string, Result> vstr = kolap->runQuery(
 			traFilter,itemFilter,factFilter,gTransaction,gNode,
 			SelMinSup,SelMinConf,SelMinLift,SelMinJac,SelMinPMI,
-			sortKey,sendMax,dimension,deadline
+			sortKey,sendMax,dimension,deadline,isolatedNodes
 		);
 
 		if ( dimension.empty() ){
@@ -567,9 +573,41 @@ PyObject* run(PyObject* self, PyObject* args)
 
 				PyList_SetItem(rblist,i,rbblist);
 
-			}
+			}			
 			PyDict_SetItemString(rlist,"data", rblist);
 			Py_DECREF(rblist);
+
+			if ( vstr[""].isIso() ){
+
+				PyObject* head = PyList_New(vstr[""].isofldCnt());
+				for(size_t i=0 ; i < vstr[""].isofldCnt() ; i++){
+					string hname = vstr[""].isofldName(i);
+					PyList_SetItem(head,i,PyUnicode_FromString(hname.c_str()));
+				}
+				PyDict_SetItemString(rlist,"isoheader", head);
+				Py_DECREF(head);
+
+				// ----
+				vector< vector<string> > rtnisod = vstr[""].getisodata();
+				PyObject* rblist_iso = PyList_New(rtnisod.size());
+
+
+				for(size_t i=0 ;i<rtnisod.size();i++){
+
+					PyObject* rbblist_iso = PyList_New(rtnisod[i].size());
+
+					for(size_t j=0 ;j<rtnisod[i].size();j++){
+						const char* dname = rtnisod[i][j].c_str();
+						PyList_SetItem(rbblist_iso,j,PyUnicode_FromStringAndSize(dname ,strlen(dname)));
+					}
+
+					PyList_SetItem(rblist_iso,i,rbblist_iso);
+				}
+				PyDict_SetItemString(rlist,"isodata", rblist_iso);
+				Py_DECREF(rblist_iso);
+
+
+			}
 
 			return rlist;			
 
@@ -633,7 +671,36 @@ PyObject* run(PyObject* self, PyObject* args)
 				}
 				PyDict_SetItemString(rlist,"data", rblist);
 				Py_DECREF(rblist);
-				
+
+				if ( vstr[dstr[ai]].isIso() ){
+					PyObject* head = PyList_New(vstr[dstr[ai]].isofldCnt());
+					for(size_t i=0 ; i < vstr[dstr[ai]].isofldCnt() ; i++){
+						string hname = vstr[dstr[ai]].isofldName(i);
+						PyList_SetItem(head,i,PyUnicode_FromString(hname.c_str()));
+					}
+					PyDict_SetItemString(rlist,"isoheader", head);
+					Py_DECREF(head);
+
+					// ----
+					vector< vector<string> > rtnisod = vstr[dstr[ai]].getisodata();
+					PyObject* rblist_iso = PyList_New(rtnisod.size());
+
+
+					for(size_t i=0 ;i<rtnisod.size();i++){
+
+						PyObject* rbblist_iso = PyList_New(rtnisod[i].size());
+
+						for(size_t j=0 ;j<rtnisod[i].size();j++){
+							const char* dname = rtnisod[i][j].c_str();
+							PyList_SetItem(rbblist_iso,j,PyUnicode_FromStringAndSize(dname ,strlen(dname)));
+						}
+
+						PyList_SetItem(rblist_iso,i,rbblist_iso);
+					}
+					PyDict_SetItemString(rlist,"isodata", rblist_iso);
+					Py_DECREF(rblist_iso);
+				}
+
 				PyList_SetItem(rblists,ai-1,rlist);
 			}
 		

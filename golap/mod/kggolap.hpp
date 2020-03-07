@@ -168,6 +168,7 @@ namespace kgmod {
     Ewah factFilter;
 		sel_cond selCond;
 		sort_key sortKey;
+		bool isolatedNodes;
 		size_t sendMax;
 		// first:transaction granurality, second:node granurality
 		pair<vector<string>, vector<string>> granularity;   
@@ -190,6 +191,8 @@ namespace kgmod {
 
 			granularity.second.resize(1);
 			granularity.second[0] = itemFld;
+			
+			isolatedNodes = false;
 			
 			sendMax = sndMax;
 		
@@ -221,6 +224,8 @@ namespace kgmod {
 		}
   };
 
+
+
 	class Result{
 
 		size_t _fldCnt;
@@ -229,15 +234,17 @@ namespace kgmod {
 		size_t _hit;
 		vector<string> _header;
     typedef btree::btree_multimap< float, vector<string> > Result_t;
-
 		Result_t _body;
-		
-		
+		bool isoFLG;
+		vector<string> _isohead;
+		vector< vector<string> > _isobody;
+
 		public:
 
 		Result(size_t size=0):
 			_fldCnt(size),_status(0),_hit(0){
 			_header.resize(_fldCnt);
+			isoFLG = false;
 		}
 
 		Result(size_t size,const char **av ):
@@ -246,9 +253,8 @@ namespace kgmod {
 			for (size_t i=0 ; i< _fldCnt ;i++ ){
 				_header[i] = av[i]; 
 			}
-			
+			isoFLG = false;
 		}
-
 
 		//accessor
 		int status(){ return _status;}
@@ -300,14 +306,31 @@ namespace kgmod {
 		void insert( pair<float, vector<string> > pval ){
 			_body.insert(pval);
 		}
-
 		size_t size(){ return _body.size();}
-
 		void pop(){	
 			auto pos = _body.end();
       pos--;
       _body.erase(pos);
     }
+
+		// 孤立ノード用
+		void isoHeadSet(vector<string>& hed){
+			_isohead = hed;
+			isoFLG = true;
+		}
+
+		void isoDataSet(vector<string>& data){
+			_isobody.push_back(data);
+		}
+		
+		bool isIso(void){ return isoFLG ;}
+		size_t isofldCnt(void){ return _isohead.size();}
+		string isofldName(size_t i){ return _isohead[i]; }
+		vector < vector<string> > getisodata(){
+			return _isobody;		
+		}
+			
+
 
 	};
 
@@ -387,12 +410,12 @@ namespace kgmod {
 				string gTransaction,string gNode,
 				string SelMinSup,string SelMinConf,string SelMinLift,
 				string SelMinJac,string SelMinPMI,
-				string sortKey,string sendMax,string dimension,string deadline
+				string sortKey,string sendMax,string dimension,string deadline,
+				string isolatedNodes
 			);
 
 			void save(){
-				_occ->exBmpList.save(true);
-				//occ->ex_occ.save(true);		
+				_occ->save(true); // もとはexBmpList.のみsave
 			}
   };
 }

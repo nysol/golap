@@ -77,6 +77,7 @@ kgmod::kgGolap::kgGolap(void)
 Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) 
 {
 
+	map<string, pair<string, size_t>> isolatedNodes;
 	// Timer 設置
 	int isTimeOut=0;
 
@@ -106,7 +107,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	signed int stat = 0;
 	unordered_map<size_t, size_t> itemFreq;
     
-	Ewah tarTraBmp = query.traFilter & dimBmp & _occ->liveTra;
+	Ewah tarTraBmp = query.traFilter & dimBmp & _occ->getliveTra();
 	size_t traNum = tarTraBmp.numberOfOnes();
 
 	if (traNum == 0) {
@@ -120,8 +121,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 		}
 		return res;
   }
-  cerr << "tcnt0 "<< tarTraBmp.numberOfOnes() << endl; 
-
 	//++++++++++
 	Ewah traBmpInFact;
 	Ewah itemBmpInFact;
@@ -149,8 +148,13 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	map<vector<string>, size_t> itemNo4node_map;    // [node] -> coitemsをカウントする代表itemNo
 	//----------
 
+
+	// すでにresにリストされたノードのセット
+	set<string> listedNodes;
+
 	vector<string> tra2key;     // [traNo] -> 当該トランザクションが有するTraAttの値リスト(csv)
 	// transaction granularityを指定していた場合は、traNumを指定したtraAttの集計値で上書きする
+
 
 	//  粒度なし
 	if(!isTraGranu && !isNodeGranu){
@@ -166,14 +170,15 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 			if (isTimeOut) {stat = 2; break;}
 
-			string node2 = _occ->itemAtt->item[(*i2)];
+			string node2 = _occ->getItemCD(*i2);
 			vector<string> vnode2; vnode2.resize(1);
 			vnode2[0] = node2;
 
 
 			// *i2の持つtransaction
 			Ewah traBmp;
-			_occ->bmpList.GetVal(_config->traFile.itemFld, _occ->itemAtt_item(*i2), traBmp);
+			// _occ->bmpList.GetVal(_config->traFile.itemFld, _occ->itemAtt_item(*i2), traBmp);
+			_occ->getTraBmpFromItem(*i2,traBmp);
 			traBmp = traBmp & tarTraBmp;
 
 			// これいる？
@@ -203,7 +208,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				
 				if (!_factTable->existInFact(*t2, *i2, query.factFilter)) continue;
 				
-				Ewah item_i1 = _occ->occ[*t2] & tarItemBmp;
+				Ewah item_i1 = _occ->getItmBmpFromTra(*t2) & tarItemBmp;
 
 				for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
 					if (isTimeOut) {stat = 2; break;}
@@ -215,33 +220,49 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				}
 			}
 
+			//++++++++++++++
 			const string delim = ":";
+			string item2;
+			string itemName2;
+			for (auto& f : query.granularity.second) {
+				if (f == _config->traFile.itemFld) {
+					item2 += _occ->getItemCD(*i2) + delim;
+					itemName2 += _occ->getItemName(*i2) + delim;
+				} else {
+					item2 += _occ->getItemCD(*i2, f) + delim;
+					itemName2 += _occ->getItemName(*i2, f) + delim;
+				}
+			}
+			Cmn::EraseLastChar(item2);
+			Cmn::EraseLastChar(itemName2);
+			isolatedNodes[item2] = make_pair(itemName2, itemFreq[*i2]);
+        
+
+
+
 			for (auto i1 = coitems.begin(), ei1 = coitems.end(); i1 != ei1; i1++) {
 				if (isTimeOut) {stat = 2; break;}
-				string item1, item2;
-				string itemName1, itemName2;
+				string item1 ;
+				string itemName1;
 				for (auto& f : query.granularity.second) {
 
 					if (f == _config->traFile.itemFld) {
-						item1 += _occ->itemAtt->item[i1->first] + delim;
-						item2 += _occ->itemAtt->item[*i2] + delim;
-						itemName1 += _occ->itemAtt->itemName[i1->first] + delim;
-						itemName2 += _occ->itemAtt->itemName[*i2] + delim;
+						item1 += _occ->getItemCD(i1->first) + delim;
+						itemName1 += _occ->getItemName(i1->first) + delim;
+						//item2 += _occ->getItemCD(*i2) + delim;
+						//itemName2 += _occ->getItemName(*i2) + delim;
 					}
 					else {
-						item1 += _occ->itemAtt->key2att(i1->first, f) + delim;
-						item2 += _occ->itemAtt->key2att(*i2, f) + delim;
-						string tmp1, tmp2;
-						_occ->itemAtt->code2name(f, _occ->itemAtt->key2att(i1->first, f), tmp1);
-						_occ->itemAtt->code2name(f, _occ->itemAtt->key2att(*i2, f), tmp2);
-						itemName1 += tmp1 + delim;
-						itemName2 += tmp2 + delim;
+						item1 += _occ->getItemCD(i1->first, f) + delim;
+						itemName1 += _occ->getItemName(i1->first, f) + delim;
+						//item2 += _occ->getItemCD(*i2, f) + delim;
+						//itemName2 += _occ->getItemName(*i2, f) + delim;
 					}
 				}
 				Cmn::EraseLastChar(item1);
-				Cmn::EraseLastChar(item2);
 				Cmn::EraseLastChar(itemName1);
-				Cmn::EraseLastChar(itemName2);
+				//Cmn::EraseLastChar(item2);
+				//Cmn::EraseLastChar(itemName2);
 
 				size_t freq = i1->second;
 				float sup = (float)freq / traNum;
@@ -290,15 +311,44 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 					notSort = true;
 					skey = -10;
 				}
+				/*
 				res.insert(make_pair(skey,dt));
 				if (res.size() > query.sendMax) {
 					res.pop();
 					stat = 1;
 					if (notSort) break;
 				}
+				*/
+				if (res.size() >= query.sendMax) {
+					stat = 1;
+					if (notSort) break;
+				}
+				else {
+					res.insert(make_pair(skey,dt));
+					listedNodes.insert(item1);
+					listedNodes.insert(item2);
+					auto it1 = isolatedNodes.find(item1);
+					if (it1 != isolatedNodes.end()) isolatedNodes.erase(it1);
+					auto it2 = isolatedNodes.find(item2);
+					if (it2 != isolatedNodes.end()) isolatedNodes.erase(it2);
+				}
 				hit++;
 			}
 		}
+		if (query.isolatedNodes) {
+			vector<string> dt(3);
+			dt[0] = "node";
+			dt[1] = "noden";
+			dt[2] = "frequency";
+			res.isoHeadSet(dt);
+			for (auto& n : isolatedNodes) {
+				dt[0] = n.first;               // node
+				dt[1] = n.second.first;              // nodeName
+				dt[2] = to_string(n.second.second);  // frequency
+				res.isoDataSet(dt);
+			}
+		}
+
 	}
 	//以下粒度あり
 	else{
@@ -345,10 +395,12 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			string node2;
 			if (isNodeGranu) {
 				// itemNo(2)から指定した粒度のキー(node2)を作成する。
-				vnode2 = _occ->itemAtt->key2att(*i2, query.granularity.second);
+				//vnode2 = _occ->itemAtt->key2att(*i2, query.granularity.second);
+				vnode2 = _occ->getItemCD(*i2, query.granularity.second);
 				node2 = Cmn::CsvStr::Join(vnode2, ":");
 			} else {
-				node2 = _occ->itemAtt->item[(*i2)];
+				//node2 = _occ->itemAtt->item[(*i2)];
+				node2 = _occ->getItemCD(*i2);
 				vnode2.resize(1);
 				vnode2[0] = node2;
 			}
@@ -366,7 +418,9 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			}
 
 			checked_node2.insert(vnode2);
-			itemInTheAtt2 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
+
+			//itemInTheAtt2 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
+			itemInTheAtt2 = _occ->getItmBmpFromGranu(query.granularity.second, vnode2);
 			itemInTheAtt2 = itemInTheAtt2  & tarItemBmp;
 
 			if (isNodeGranu) {
@@ -390,10 +444,10 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
     	if (isNodeGranu) {
     		// itemNo(2)から指定した粒度のキー(node2)を作成する。
-      	vnode2 = _occ->itemAtt->key2att(*i2, query.granularity.second);
+      	vnode2 = _occ->getItemCD(*i2, query.granularity.second);
 				node2 = Cmn::CsvStr::Join(vnode2, ":");
 			} else {
-				node2 = _occ->itemAtt->item[(*i2)];
+				node2 = _occ->getItemCD(*i2);
 				vnode2.resize(1);
 				vnode2[0] = node2;
 			}
@@ -402,9 +456,11 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			if (checked_node2_b.find(vnode2) != checked_node2_b.end()) {
 				continue;
 			}
-			itemInTheAtt2 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
+			itemInTheAtt2 = _occ->getItmBmpFromGranu(query.granularity.second, vnode2);
 			itemInTheAtt2 = itemInTheAtt2 & tarItemBmp;
 			checked_node2_b[vnode2]= true;
+
+
 
 			//++++++++++
 			// 個数でした方がいい？
@@ -430,9 +486,11 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			Ewah tra_i2_tmp1;
 			for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
 				if (isTimeOut) {stat = 2; break;}
-				Ewah* tra_i2_tmp2; 
-				_occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*at2], tra_i2_tmp2);
-				tra_i2_tmp1 = tra_i2_tmp1 | *tra_i2_tmp2;
+				Ewah tra_i2_tmp2; 
+				_occ->getTraBmpFromItem(*at2,tra_i2_tmp2);
+				//_occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*at2], tra_i2_tmp2);
+
+				tra_i2_tmp1 = tra_i2_tmp1 | tra_i2_tmp2;
 			}
 			// item2 の持つtra LIST
 			Ewah tra_i2 = tra_i2_tmp1 & tarTraBmp;
@@ -452,7 +510,9 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				//----------
 
 				vector<string> vTraAtt;
-				_occ->traAtt->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
+				//_occ->traAtt->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
+				_occ->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
+
 				string traAtt = Cmn::CsvStr::Join(vTraAtt, ":");
 
 				if (checked_tra1.find(vTraAtt) != checked_tra1.end()) { continue; }
@@ -480,13 +540,14 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				}
 				else{
 					// t2の持つitem LIST
-					item_i1 = _occ->occ[*t2] & tarItemBmp;
+					item_i1 = _occ->getItmBmpFromTra(*t2) & tarItemBmp;
 
 	  	  }
         
 				for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
         							
-						vector<string> vnode1 = _occ->itemAtt->key2att(*i1, query.granularity.second);
+						//vector<string> vnode1 = _occ->itemAtt->key2att(*i1, query.granularity.second);
+						vector<string> vnode1 = _occ->getItemCD(*i1, query.granularity.second);
 		        string node1 = Cmn::CsvStr::Join(vnode1, ":");
     		    if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
         		  checked_node1.insert({node1, traAtt});
@@ -495,7 +556,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 						}
 
 						// itemNo(1)が持つ属性(vnode1)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt1)
-						Ewah itemInTheAtt1 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode1);
+						Ewah itemInTheAtt1 = _occ->getItmBmpFromGranu(query.granularity.second, vnode1);
 						itemInTheAtt1 = itemInTheAtt1 & tarItemBmp;
 						// auto topBit = itemInTheAtt1.begin();
 		        if (*(itemInTheAtt1.begin()) >= *(itemInTheAtt2.begin())) continue;
@@ -511,31 +572,43 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				}
 			}
 			
-        const string delim = ":";
+			const string delim = ":";
+			string item2;
+			string itemName2;
+			for (auto& f : query.granularity.second) {
+				if (f == _config->traFile.itemFld) {
+					item2 += _occ->getItemCD(*i2) + delim;
+					itemName2 += _occ->getItemName(*i2) + delim;
+				} else {
+					item2 += _occ->getItemCD(*i2, f) + delim;
+					itemName2 += _occ->getItemName(*i2, f) + delim;
+				}
+			}
+			Cmn::EraseLastChar(item2);
+			Cmn::EraseLastChar(itemName2);
+			isolatedNodes[item2] = make_pair(itemName2, itemFreq[*i2]);
+
         for (auto i1 = coitems.begin(), ei1 = coitems.end(); i1 != ei1; i1++) {
             if (isTimeOut) {stat = 2; break;}
-            string item1, item2;
-            string itemName1, itemName2;
+            string item1;
+            string itemName1;
             for (auto& f : query.granularity.second) {
                 if (f == _config->traFile.itemFld) {
-                    item1 += _occ->itemAtt->item[i1->first] + delim;
-                    item2 += _occ->itemAtt->item[*i2] + delim;
-                    itemName1 += _occ->itemAtt->itemName[i1->first] + delim;
-                    itemName2 += _occ->itemAtt->itemName[*i2] + delim;
+                    item1 += _occ->getItemCD(i1->first) + delim;
+                    itemName1 += _occ->getItemName(i1->first) + delim;
+                    //item2 += _occ->getItemCD(*i2) + delim;
+                    //itemName2 += _occ->getItemName(*i2) + delim;
                 } else {
-                    item1 += _occ->itemAtt->key2att(i1->first, f) + delim;
-                    item2 += _occ->itemAtt->key2att(*i2, f) + delim;
-                    string tmp1, tmp2;
-                    _occ->itemAtt->code2name(f, _occ->itemAtt->key2att(i1->first, f), tmp1);
-                    _occ->itemAtt->code2name(f, _occ->itemAtt->key2att(*i2, f), tmp2);
-                    itemName1 += tmp1 + delim;
-                    itemName2 += tmp2 + delim;
+                    item1 += _occ->getItemCD(i1->first, f) + delim;
+                    itemName1 += _occ->getItemName(i1->first ,f) + delim;
+                    //item2 += _occ->getItemCD(*i2, f) + delim;
+                    //itemName2 += _occ->getItemName(*i2, f) + delim;
                 }
             }
             Cmn::EraseLastChar(item1);
-            Cmn::EraseLastChar(item2);
             Cmn::EraseLastChar(itemName1);
-            Cmn::EraseLastChar(itemName2);
+            //Cmn::EraseLastChar(item2);
+            //Cmn::EraseLastChar(itemName2);
             
             size_t freq = i1->second;
             float sup = (float)freq / traNum;
@@ -588,14 +661,44 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
                 notSort = true;
                 skey = -10;
             }
+
+            if (res.size() >= query.sendMax) {
+                stat = 1;
+                if (notSort) break;
+            }
+            else {
+                res.insert(make_pair(skey, dt));
+                
+                listedNodes.insert(item1);
+                listedNodes.insert(item2);
+                auto it1 = isolatedNodes.find(item1);
+                if (it1 != isolatedNodes.end()) isolatedNodes.erase(it1);
+                auto it2 = isolatedNodes.find(item2);
+                if (it2 != isolatedNodes.end()) isolatedNodes.erase(it2);
+            }
+						/*
             res.insert(make_pair(skey,dt));
             if (res.size() > query.sendMax) {
             	res.pop();
               stat = 1;
               if (notSort) break;
             }
+            */
             hit++;
         }
+		}
+		if (query.isolatedNodes) {
+			vector<string> dt(3);
+			dt[0] = "node";
+			dt[1] = "noden";
+			dt[2] = "frequency";
+			res.isoHeadSet(dt);
+			for (auto& n : isolatedNodes) {
+				dt[0] = n.first;               // node
+				dt[1] = n.second.first;              // nodeName
+				dt[2] = to_string(n.second.second);  // frequency
+				res.isoDataSet(dt);
+			}
 		}
 	}
 
@@ -631,13 +734,14 @@ map<string, Result> kgmod::kgGolap::runQuery(
 		string gTransaction,string gNode,
 		string SelMinSup,string SelMinConf,string SelMinLift,
 		string SelMinJac,string SelMinPMI,
-		string sortKey,string sendMax,string dimension,string deadline
+		string sortKey,string sendMax,string dimension,string deadline,
+		string isolatedNodes
 ) 
 {
 
 	QueryParams qPara(
-		_occ->traAtt->traMax , 
-		_occ->itemAtt->itemMax ,
+		_occ->traMax() , 
+		_occ->itemMax() ,
 		_factTable->recMax,
 		_config->sendMax,
 		_config->traFile.traFld ,
@@ -676,7 +780,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 			qPara.granularity.second.clear();
 			qPara.granularity.second.reserve(buf.size());
 			for (auto& f : buf) {
-				if (! _occ->itemAtt->isItemAtt(f)) {
+				if (! _occ->isItemAtt(f)) {
 					string msg = f;
 					msg += " is not item attribute\n";
 					throw kgError(msg);
@@ -690,7 +794,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 		vector<string> param = Cmn::CsvStr::Parse(dimension);
 		qPara.dimension.key = param[0];
 		for (size_t i = 1; i < param.size(); i++) {
-			qPara.dimension.DimBmpList[param[i]] = _occ->bmpList.GetVal(qPara.dimension.key, param[i]);
+			qPara.dimension.DimBmpList[param[i]] = _occ->getTraBmp(qPara.dimension.key, param[i]);
 		}
 	}
 	if (  boost::iequals(sortKey , "SUP")){
@@ -730,12 +834,19 @@ map<string, Result> kgmod::kgGolap::runQuery(
 	if(! deadline.empty()){
 		dline = atol(deadline.c_str());
 	}
+	if(! isolatedNodes.empty()){
+		if ( boost::iequals(isolatedNodes , "true")){
+			qPara.isolatedNodes= true;
+			cerr << "iso" << endl;
+		}
+	}
 
 	map<string, Result> res;
 
 	if (qPara.dimension.DimBmpList.size() == 0) {	
 		// ダミーで_occ->liveTraをセットしてる？
-		res[""] = Enum(qPara, _occ->liveTra,dline); 
+		Ewah dmy = _occ->getliveTra();
+		res[""] = Enum(qPara, dmy,dline); 
 	}
 	else{
 		if (_config->mt_enable) {
@@ -779,8 +890,8 @@ vector< vector<string> > kgmod::kgGolap::nodestat(
 {
 
 	NodeStatParams nSpara(
-		_occ->traAtt->traMax , 
-		_occ->itemAtt->itemMax ,
+		_occ->traMax() , 
+		_occ->itemMax() ,
 		_factTable->recMax,
 		_config->traFile.traFld ,
 		_config->traFile.itemFld
@@ -818,7 +929,7 @@ vector< vector<string> > kgmod::kgGolap::nodestat(
 			nSpara.granularity.second.clear();
 			nSpara.granularity.second.reserve(buf.size());
 			for (auto& f : buf) {
-				if (! _occ->itemAtt->isItemAtt(f)) {
+				if (! _occ->isItemAtt(f)) {
 					string msg = f;
 					msg += " is not item attribute\n";
 					throw kgError(msg);
@@ -861,9 +972,14 @@ vector< vector<string> > kgmod::kgGolap::nodestat(
 	}
 	rnb.push_back(header);
 	string traHeader = "";
-	Ewah itemBmp;
-	_occ->itemAtt->bmpList.GetVal(nSpara.granularity.second, nSpara.itemVal, itemBmp);
+
+	//Ewah itemBmp;
+	//_occ->itemAtt->bmpList.GetVal(nSpara.granularity.second, nSpara.itemVal, itemBmp);
+
+	Ewah itemBmp =  _occ->getItmBmpFromGranu(nSpara.granularity.second,nSpara.itemVal);
 	itemBmp = itemBmp & nSpara.itemFilter;
+
+
 	string itemValj = Cmn::CsvStr::Join(nSpara.itemVal, ":");
 	_factTable->aggregate(
 		{traHeader, nSpara.traFilter}, 
@@ -881,8 +997,8 @@ CsvFormat kgmod::kgGolap::nodeimage(
 {
 
 	NodeImageParams nIpara(
-		_occ->traAtt->traMax , 
-		_occ->itemAtt->itemMax ,
+		_occ->traMax() , 
+		_occ->itemMax() ,
 		_factTable->recMax,
 		_config->traFile.traFld ,
 		_config->traFile.itemFld
@@ -921,7 +1037,7 @@ CsvFormat kgmod::kgGolap::nodeimage(
 			nIpara.granularity.second.clear();
 			nIpara.granularity.second.reserve(buf.size());
 			for (auto& f : buf) {
-				if (! _occ->itemAtt->isItemAtt(f)) {
+				if (! _occ->isItemAtt(f)) {
 					string msg = f;
 					msg += " is not item attribute\n";
 					throw kgError(msg);
@@ -939,14 +1055,15 @@ CsvFormat kgmod::kgGolap::nodeimage(
 		throw kgError(msg);
 	}
 
-	Ewah tmpItemBmp;
 	Ewah itemBmp;
-	_occ->itemAtt->bmpList.GetVal(nIpara.granularity.second, nIpara.itemVal, tmpItemBmp);
+	//_occ->itemAtt->bmpList.GetVal(nIpara.granularity.second, nIpara.itemVal, tmpItemBmp);
+	Ewah tmpItemBmp = _occ-> getItmBmpFromGranu(nIpara.granularity.second, nIpara.itemVal);
+
 	tmpItemBmp = tmpItemBmp & nIpara.itemFilter;
 	_occ->filterItemBmpByTraBmp(tmpItemBmp, nIpara.traFilter, itemBmp);
 
 	CsvFormat imageList(1);
-	_occ->itemAtt->getImageList(itemBmp, imageList);
+	_occ->getImageList(itemBmp, imageList);
 
 	return imageList;
 
@@ -958,14 +1075,14 @@ void kgmod::kgGolap::saveFilters(QueryParams& query)
 	ofstream traFile(_config->outDir + "/trafilter.csv", ios::out);
 	traFile << _config->traFile.traFld << "\n";
 	for (auto i = query.traFilter.begin(), ei = query.traFilter.end(); i != ei; i++) {
-		traFile << _occ->traAtt->tra[*i] << "\n";
+		traFile << _occ->getTraCD(*i) << "\n";
 	}
 	traFile.close();
 
 	ofstream itemFile(_config->outDir + "/itemfilter.csv", ios::out);
 	itemFile << _config->traFile.itemFld << "\n";
 	for (auto i = query.itemFilter.begin(), ei = query.itemFilter.end(); i != ei; i++) {
-		itemFile << _occ->itemAtt->item[*i] << "\n";
+		itemFile << _occ->getItemCD(*i) << "\n";
 	}
 	itemFile.close();
 
@@ -977,8 +1094,8 @@ void kgmod::kgGolap::saveFilters(QueryParams& query)
 		size_t traNo, itemNo;
 		_factTable->recNo2keys(*i, traNo, itemNo);
 		factFile << *i << ",";
-		factFile << _occ->traAtt->tra[traNo] << ",";
-		factFile << _occ->itemAtt->item[itemNo] << "\n";
+		factFile << _occ->getTraCD(traNo) << ",";
+		factFile << _occ->getItemCD(itemNo) << "\n";
 	}
 	factFile.close();
 }

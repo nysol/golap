@@ -87,22 +87,12 @@ namespace kgmod {
         vector<addr_t> _addr;                   // [factTable recNo] -> {traNo, itemNo}
         multimap<addr_t, size_t> _recNo; // [{traNo, itemNo}] -> factTable recNo
         
-        //vector<itemMap_t> _factTable;       // [traNo][itemNo]
-        //vector<string> _flds;
-        //unordered_map<string, int> _fldPos;
-        // どこで実装すべきか？？？
-        //typedef btree::btree_multimap<string, size_t> valsIndex_t;
-        //vector<valsIndex_t> _valsIndex;     // [_fldPos][value] -> index in _factTable
-        
     public:
         size_t recMax;
         BTree bmplist;                          // [{key, value}] -> bitmap of facttable recNo
 
         FactTable(Config* config, kgEnv* env, Occ* occ);
 
-        //FactTable(Config* config, kgEnv* env, Occ* occ)
-        //: _config(config), _env(env), _occ(occ) {};
-        
     private:
         boost::optional<int> fldPos(const string fld);
         void item2traBmp(const Ewah& itemBmp, Ewah& traBmp);
@@ -140,8 +130,7 @@ namespace kgmod {
         }
         
         void toTraItemBmp(const Ewah& factFilter, const Ewah& itemFilter, Ewah& traBmp, Ewah& itemBmp);
-//        void toItemBmp(const Ewah& factFilter, const Ewah& traFilter,
-//                       const Ewah& itemFilter, Ewah& itemBmp);
+
         size_t valCount(void) {return _numFldPos.size();}
         unordered_map<string, int>* valPosMap(void) {return &_numFldPos;};
         string valNames(void);
@@ -160,22 +149,6 @@ namespace kgmod {
         );
 
 
-/*
-        size_t valCount(void) {return _fldPos.size();}
-        unordered_map<string, int>* valPosMap(void) {return &_fldPos;};
-        string valNames(void);
-        void funcParse(const string& func, vector<string>& f);
-        void setFlds(const vector<string>& flds) {
-            for (int i = 0; i < flds.size(); i++) _fldPos[flds[i]] = i;
-        }
-        size_t aggregate(const pair<string&, Ewah&>& traBmp, const pair<string&, Ewah&>& itemBmp,
-                         vector<pair<AggrFunc, string>>& vals, string& line);
-
-
-
-				size_t fldsSize(){ return _flds.size();}
-
-*/
     };
 }
 

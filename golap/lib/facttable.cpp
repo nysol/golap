@@ -229,8 +229,6 @@ void kgmod::AggrFunc::dump(void) {
         }
     }
 }
-
-
 // class FactTable
 kgmod::FactTable::FactTable(Config* config, kgEnv* env, Occ* occ)
 : _config(config), _env(env), _occ(occ) {
@@ -243,15 +241,15 @@ kgmod::FactTable::FactTable(Config* config, kgEnv* env, Occ* occ)
 void kgmod::FactTable::item2traBmp(const Ewah& itemBmp, Ewah& traBmp) {
     traBmp.reset();
     for (auto i = itemBmp.begin(), ie = itemBmp.end(); i != ie; i++) {
-        string tar = _occ->itemAtt->item[*i];
-        Ewah tmp = _occ->bmpList.GetVal(_occ->occKey, tar);
-        traBmp = traBmp | tmp;
+        //string tar = _occ->itemAtt->item[*i];
+        //Ewah tmp = _occ->bmpList.GetVal(_occ->occKey, tar);
+        traBmp = traBmp | _occ->getTraBmpFromItem(*i);
     }
 }
 
 bool kgmod::FactTable::getVals(const size_t trano, const size_t itmno, vals_t*& vals) {
 
-    if (_occ->traAtt->traMax + 1 < trano) return false;
+    if (_occ->traMax() + 1 < trano) return false;
     auto it = _numFldTbl[trano].find(itmno);
     if (it == _numFldTbl[trano].end()) return false;
     vals = &(it->second);
@@ -320,25 +318,27 @@ void kgmod::FactTable::build(void) {
     
     //
     map<string, bool> checkedTra;
-    for (auto i = _occ->traAtt->traNo.begin(), ie = _occ->traAtt->traNo.end(); i != ie; i++) {
+    for (auto i = _occ->traNoBegin(), ie = _occ->traNoEnd(); i != ie; i++) {
         checkedTra[i->first] = false;
     }
     
-    _numFldTbl.resize(_occ->traAtt->traMax + 1);
+    _numFldTbl.resize(_occ->traMax() + 1);
     bool isError = false;
     set<string> errKeyList;
     while (ft.read() != EOF) {
+
         string traID = ft.getVal(traIDPos);
-        size_t traNo = _occ->traAtt->traNo[traID];
+        size_t traNo = _occ->getTraID(traID);
         string itemID = ft.getVal(itemIDPos);
-        size_t itemNo = _occ->itemAtt->itemNo[itemID];
+        size_t itemNo = _occ->getItemID(itemID);
+
         _numFldTbl[traNo][itemNo].resize(_numFldPos.size());
         
         bool errThisTime = false;
         for (int i = 0; i < fldName.size(); i++) {
             if (i == traIDPos) {
                 // traNoがtraAttに登録されていなければエラーとするが，処理は全て実施する
-                if (_occ->traAtt->traNo.find(traID) == _occ->traAtt->traNo.end()) {
+                if (_occ->traNoFind(traID) == _occ->traNoEnd()) {
                     isError = true;
                     string buf = traIDFld + ":" + traID;
                     if (errKeyList.find(buf) == errKeyList.end()) {
@@ -353,7 +353,7 @@ void kgmod::FactTable::build(void) {
             }
             if (i == itemIDPos) {
                 // itemNoがitemAttに登録されていなければエラーとするが，処理は全て実施する
-                if (_occ->itemAtt->itemNo.find(itemID) == _occ->itemAtt->itemNo.end()) {
+                if (_occ->itemNoFind(itemID) == _occ->itemNoEnd()) {
                     isError = true;
                     string buf = itemIDFld + ":" + itemID;
                     if (errKeyList.find(buf) == errKeyList.end()) {
@@ -377,11 +377,21 @@ void kgmod::FactTable::build(void) {
             }
             bmplist.SetBit(fld, val, ft.recNo() - 1);
         }
-        _occ->bmpList.SetBit(_occ->occKey, itemID, _occ->traAtt->traNo[traID]);
-        if (_occ->traAtt->traNo[traID] >= _occ->occ.size()) _occ->occ.resize(_occ->traAtt->traNo[traID] + 1);
-        Ewah tmp;
-        tmp.set(_occ->itemAtt->itemNo[itemID]);
-        _occ->occ[_occ->traAtt->traNo[traID]] = _occ->occ[_occ->traAtt->traNo[traID]] | tmp;
+        
+
+        //_occ->bmpList.SetBit(_occ->occKey, itemID, _occ->traAtt->traNo[traID]);
+				_occ->setTraBmpFromItem(itemID, traID);
+
+				_occ->resizeFromTraID( traID );
+
+       //  if (_occ->traAtt->traNo[traID] >= _occ->occ.size()) _occ->occ.resize(_occ->traAtt->traNo[traID] + 1);
+       // Ewah tmp;
+       // tmp.set(_occ->itemAtt->itemNo[itemID]);
+       // _occ->occ[_occ->traAtt->traNo[traID]] = _occ->occ[_occ->traAtt->traNo[traID]] | tmp;
+
+				_occ->setItemTraBMP(itemID,traID);
+
+
         checkedTra[traID] = true;
         
         _addr.push_back({traNo, itemNo});               // it means {traNo, itemNo} set to [ft.recNo() - 1]
@@ -391,13 +401,18 @@ void kgmod::FactTable::build(void) {
     recMax = ft.recNo() - 1;
     ft.close();
     
-    _occ->liveTra.padWithZeroes(_occ->traAtt->traMax + 1); _occ->liveTra.inplace_logicalnot();
+    _occ->liveTraSet();
+    //_occ->liveTra.padWithZeroes(_occ->traAtt->traMax + 1); 
+    //_occ->liveTra.inplace_logicalnot();
+
+
     for (auto i = checkedTra.begin(), ie = checkedTra.end(); i != ie; i++) {
         if (i->second) continue;
         cerr << "#WARNING# " << traIDFld << ":" << i->first << " does not exist on " << _config->traFile.name << endl;
+		    _occ->liveTraSet(i->first);
         
-        Ewah tmp; tmp.set(_occ->traAtt->traNo[i->first]);
-        _occ->liveTra = _occ->liveTra - tmp;
+        //Ewah tmp; tmp.set(_occ->traAtt->traNo[i->first]);
+        //_occ->liveTra = _occ->liveTra - tmp;
     }
     
     if (isError) throw kgError("error occurred in building transaction index");
@@ -455,7 +470,7 @@ void kgmod::FactTable::load(void) {
     }
     
     cerr << "reading " << _key2recFile << "..." << endl;
-    _numFldTbl.resize(_occ->traAtt->traMax + 1);
+    _numFldTbl.resize(_occ->traMax() + 1);
     FILE* fp = fopen(_key2recFile.c_str(), "rb");
     if (fp == NULL) {
         stringstream msg;
@@ -596,12 +611,13 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
         factVals[p].reserve(256);
     }
     for (auto i = itemBmp.second.begin(), ei = itemBmp.second.end(); i != ei; i++) {
-        Ewah* tmpBmp;
-        if (! _occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*i], tmpBmp)) {
+        Ewah tmpBmp;
+        if (! _occ->getTraBmpFromItem(*i , tmpBmp)){
+        //if (! _occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*i], tmpBmp)) {
             skipCount0++;
             continue;
         }
-        Ewah tarTraBmp = *tmpBmp & traBmp.second;
+        Ewah tarTraBmp = tmpBmp & traBmp.second;
         for (auto t = tarTraBmp.begin(), et = tarTraBmp.end(); t != et; t++) {
             vals_t* fvals;
             if (! getVals(*t, *i, fvals)) {
@@ -690,9 +706,9 @@ void kgmod::FactTable::dump(void) {
     
     ofs << "\n_numFldTbl" << endl;
     for (size_t i1 = 0; i1 < _numFldTbl.size(); i1++) {
-        string traID = _occ->traAtt->tra[i1];
+        string traID = _occ->getTraCD(i1);
         for (auto i2 = _numFldTbl[i1].begin(); i2 != _numFldTbl[i1].end(); i2++) {
-            string itemID = _occ->itemAtt->item[i2->first];
+            string itemID = _occ->getItemCD(i2->first);
             ofs << traID << "," << itemID << ": ";
             for (auto f : i2->second) {
                 ofs << f << " ";
@@ -705,16 +721,16 @@ void kgmod::FactTable::dump(void) {
     ofs << "\n_addr" << endl;
     for (size_t i = 0; i < _addr.size(); i++) {
         ofs << i << ": " << _addr[i].first << "," << _addr[i].second;
-        ofs << "(" << _occ->traAtt->tra[_addr[i].first] << ",";
-        ofs << _occ->itemAtt->item[_addr[i].second] << ")" << endl;
+        ofs << "(" << _occ->getTraCD(_addr[i].first) << ",";
+        ofs << _occ->getItemCD(_addr[i].second) << ")" << endl;
     }
     ofs << endl;
     
     ofs << "\n_recNo" << endl;
     for (auto i = _recNo.begin(), ei = _recNo.end(); i != ei; i++) {
         ofs << i->first.first << "," << i->first.second;
-        ofs << "(" << _occ->traAtt->tra[i->first.first] << ",";
-        ofs << _occ->itemAtt->item[i->first.second] << "): ";
+        ofs << "(" << _occ->getTraCD(i->first.first) << ",";
+        ofs << _occ->getItemCD(i->first.second) << "): ";
         ofs << i->second << endl;
     }
     
@@ -735,12 +751,13 @@ void kgmod::FactTable::aggregate(
     }
 		// extract
     for (auto i = itemBmp.second.begin(), ei = itemBmp.second.end(); i != ei; i++) {
-        Ewah* tmpBmp;
-        if (! _occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*i], tmpBmp)) {
+        Ewah tmpBmp;
+        if (!_occ->getTraBmpFromItem(*i,tmpBmp)){
+        //if (! _occ->bmpList.GetVal(_occ->occKey, _occ->itemAtt->item[*i], tmpBmp)) {
             skipCount0++;
             continue;
         }
-        Ewah tarTraBmp = *tmpBmp & traBmp.second;
+        Ewah tarTraBmp = tmpBmp & traBmp.second;
         for (auto t = tarTraBmp.begin(), et = tarTraBmp.end(); t != et; t++) {
             vals_t* fvals;
             if (! getVals(*t, *i, fvals)) {
