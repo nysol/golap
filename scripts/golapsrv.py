@@ -170,7 +170,6 @@ def reqpost():
 			rtn += "{}\n".format( ','.join(rtnobj["header"]) )
 			for v in rtnobj["data"]:
 				rtn += "{}\n".format(','.join(v))
-			rtn += "\n"
 				
 			if "isoheader" in rtnobj:
 				rtn += "\n## isolated nodes ##\n"

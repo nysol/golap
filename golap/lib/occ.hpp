@@ -50,7 +50,7 @@ namespace kgmod {
 		string occKey;
 		BTree bmpList;
 		Ewah liveTra;
-        
+		boost::mutex ex_occ_mtx;        
     typedef vector<Ewah> occ_t; // traNo -> item bitmap
     occ_t occ;
 
@@ -140,6 +140,11 @@ namespace kgmod {
 		Ewah getItmBmpFromGranu(const vector<string> Keys, const vector<string> KeyValues){
 			return itemAtt->bmpList.GetVal( Keys, KeyValues );
 		}
+		bool getItmBmp(const string& Key, const string& KeyValue ,Ewah*& Bitmap){
+			return itemAtt->bmpList.GetVal( Key, KeyValue , Bitmap);
+		}
+
+
 		Ewah getItmBmpFromTra(size_t i ){ return occ[i]; }
 
 		void traNo2traAtt(const size_t traNo_, const string& traAttKey, string& traAttVal){
@@ -173,10 +178,17 @@ namespace kgmod {
         
         //void item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp);
 
-        void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey, const Ewah& traFilter,
-                               const Ewah& itemFilter, map<size_t, Ewah>& ex_occ,
+				// New
+        void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
+        											 const Ewah& traFilter, const Ewah& itemFilter, 
+        											 map<size_t, Ewah>& ex_occ,
                                map<string, map<size_t, Ewah>>& ex_occ_cacheOnceQuery);
 
+				// old
+				void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
+                                   const Ewah& traFilter, const Ewah& itemFilter, 
+                                   Ewah& itemBmp,
+                                   unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery) ;
 
 
         size_t attFreq(const vector<string>& attKeys, const vector<string> attVal, const Ewah& traFilter,
@@ -188,9 +200,11 @@ namespace kgmod {
 
         void occ_dump(const bool debug);
         void dump(const bool debug);
+
         vector<string> evalKeyValue(string& key, Ewah* TraFilter = NULL) {
             return bmpList.EvalKeyValue(key, TraFilter);
         }
+
         size_t countKeyValue(string& key, Ewah* TraFilter = NULL) {
             size_t cnt;
             if (TraFilter->numberOfOnes() == traAtt->traMax + 1) {
@@ -204,7 +218,43 @@ namespace kgmod {
         size_t countKeyValue(vector<string>& keys, Ewah* TraFilter = NULL) {
             return bmpList.CountKeyValue(keys, TraFilter);
         }
-        size_t countKeyValue(const vector<string>& keys, Ewah& traFilter);
+
+
+				size_t countKeyValue(const vector<string>& keys, Ewah& traFilter) {
+
+					vector<size_t> traAttKeyPos(keys.size());
+					for (size_t i = 0; i < keys.size(); i++) {
+							
+							boost::optional<size_t> pos = Cmn::posInVector(_config->traAttFile.granuFields, keys[i]);
+			        if (! pos) {
+      		      string msg = keys[i] + " is not set in config file (traAttFile.granuFields)\n";
+          		  throw kgError(msg);
+							}
+							traAttKeyPos[i] = *pos;
+					}
+    
+			    size_t cnt = 0;
+					unordered_map<string, bool> checked_vals;
+					for (auto tra = traFilter.begin(), etra = traFilter.end(); tra != etra; tra++) {
+					string valList;
+					for (const auto pos : traAttKeyPos) {
+						string val(traAtt->traAttMap[*tra][pos]);
+						valList += val;
+					}
+					if (checked_vals.find(valList) == checked_vals.end()) {
+						checked_vals[valList] = true;
+						cnt++;
+					}
+				}
+				return cnt;
+			}
+
+
+
+
+
+
+
 
         void combiValues(const vector<string> flds, vector<string>& csvVals, vector<Ewah>& bmps,
                          const Ewah* traFilter = NULL) {

@@ -128,7 +128,116 @@ namespace kgmod {
             }
             return stat;
         }
+        bool existInFact(const size_t traNo, const Ewah& itemNo, const Ewah& factBmp) {
+            bool stat = false;
+            for (auto i = itemNo.begin(), ei = itemNo.end(); i != ei; i++) {
+                stat = existInFact(traNo, *i, factBmp);
+                if (stat) break;
+            }
+            return stat;
+        }
+
+
+
+
+        size_t attFreq(
+        	const vector<string>& attKeys, 
+        	const vector<string> attVal, 
+        	const Ewah& traFilter,
+          const Ewah& itemFilter,
+          const Ewah& factFilter
+        ){
+			    size_t cnt = 0;
+   				Ewah itemBmp;
+					itemBmp.padWithZeroes(_occ->itemMax() + 1);
+					itemBmp.inplace_logicalnot();
+					//粒度で拡張
+			    for (size_t i = 0; i < attKeys.size(); i++) {
+						Ewah *tmpItemBmp;
+						if (! _occ->getItmBmp(attKeys[i], attVal[i], tmpItemBmp)) continue;
+		        itemBmp = itemBmp & *tmpItemBmp;
+    			}
+			   // アイテム一覧 ::
+					itemBmp = itemBmp & itemFilter;
+					
+					//  Ewahで直接できそうな気も・。
+					set<size_t> sumiTra;
+			    for (auto it = itemBmp.begin(), eit = itemBmp.end(); it != eit; it++) {
+						Ewah tmpTraBmp;
+        		if (!_occ->getTraBmpFromItem(*it ,tmpTraBmp)) continue;
+        		tmpTraBmp = tmpTraBmp & traFilter;
+		
+		        for (auto t = tmpTraBmp.begin(), et = tmpTraBmp.end(); t != et; t++) {
+		        	if( sumiTra.find(*t) != sumiTra.end()){ continue; }
+		        	if(!existInFact(*t, *it, factFilter)) { continue; }
+		        	sumiTra.insert(*t);
+		        	cnt++;
+		        }
+			    }
+					return cnt;
+				}
+
+
         
+/*
+        size_t attFreq(
+        	const vector<string>& attKeys, 
+        	const vector<string> attVal, 
+        	const Ewah& traFilter,
+          const Ewah& itemFilter, 
+          const vector<string>* tra2key = NULL){
+
+			    size_t cnt = 0;
+   				Ewah itemBmp;
+					itemBmp.padWithZeroes(_occ->itemMax() + 1);
+					itemBmp.inplace_logicalnot();
+
+					//粒度で拡張
+			    for (size_t i = 0; i < attKeys.size(); i++) {
+						Ewah *tmpItemBmp;
+						if (! _occ->getItmBmp(attKeys[i], attVals[i], tmpItemBmp)) continue;
+		        itemBmp = itemBmp & *tmpItemBmp;
+    			}
+			   // アイテム一覧 ::
+			    itemBmp = itemBmp & itemFilter;
+			    
+					Ewah traBmp;
+			    for (auto it = itemBmp.begin(), eit = itemBmp.end(); it != eit; it++) {
+			    
+						Ewah* tmpTraBmp;
+        		if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*it], tmpTraBmp)) continue;
+        		traBmp = traBmp | *tmpTraBmp;
+        	}
+        	( itemBmp vs traBmp )
+        	
+	    }
+    // traBmp = traBmp & traFilter;なせいらなくなった？
+    
+    if (tra2key == NULL) {
+        cnt = traBmp.numberOfOnes();
+    } else {
+
+        set<string> checkedAttVal;
+        for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+            string val = (*tra2key)[*t];
+            if (checkedAttVal.find(val) == checkedAttVal.end()) {
+                cnt++;
+                checkedAttVal.insert(val);
+            }
+        }
+    }
+    return cnt;
+}
+          
+          
+        }
+*/
+
+
+
+
+
+
         void toTraItemBmp(const Ewah& factFilter, const Ewah& itemFilter, Ewah& traBmp, Ewah& itemBmp);
 
         size_t valCount(void) {return _numFldPos.size();}
