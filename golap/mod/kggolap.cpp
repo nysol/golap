@@ -297,26 +297,19 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 					notSort = true;
 					skey = -10;
 				}
-				/*
-				res.insert(make_pair(skey,dt));
+
+				res.insert(make_pair(skey, dt));
+				listedNodes.insert(item1);
+				listedNodes.insert(item2);
+				auto it1 = isolatedNodes.find(item1);
+				if (it1 != isolatedNodes.end()) isolatedNodes.erase(it1);
+				auto it2 = isolatedNodes.find(item2);
+				if (it2 != isolatedNodes.end()) isolatedNodes.erase(it2);
+
 				if (res.size() > query.sendMax) {
 					res.pop();
 					stat = 1;
 					if (notSort) break;
-				}
-				*/
-				if (res.size() >= query.sendMax) {
-					stat = 1;
-					if (notSort) break;
-				}
-				else {
-					res.insert(make_pair(skey,dt));
-					listedNodes.insert(item1);
-					listedNodes.insert(item2);
-					auto it1 = isolatedNodes.find(item1);
-					if (it1 != isolatedNodes.end()) isolatedNodes.erase(it1);
-					auto it2 = isolatedNodes.find(item2);
-					if (it2 != isolatedNodes.end()) isolatedNodes.erase(it2);
 				}
 				hit++;
 			}
@@ -364,7 +357,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 		size_t icnt =query.itemFilter.numberOfOnes();
 		int cnt=1;
 		
-
 		cerr << "icnt "<< tarItemBmp.numberOfOnes() << endl;
 		
 		// 件数のみカウント なくてもできる？
@@ -387,23 +379,18 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 					
 			if (checked_node2.find(vnode2) != checked_node2.end()) { continue; }
 
-			//for(size_t x=0 ;x<tra2key.size();x++){
-			//	cerr << tra2key[x] << endl;
-			//}
-			// fact tableとのチェック必要
 			if (isTraGranu) {
-				itemFreq[*i2] = _occ->attFreq(query.granularity.second, vnode2,
-                                        tarTraBmp,tarItemBmp, &tra2key);
+					itemFreq[*i2] = _factTable->attFreq(query.granularity.second, vnode2,
+                                        tarTraBmp,tarItemBmp,query.factFilter, tra2key);        
+        
       }else{
-				//itemFreq[*i2] = _occ->attFreq(query.granularity.second, vnode2,
-        //                                  tarTraBmp,tarItemBmp);
+      
 				itemFreq[*i2]   = _factTable->attFreq(query.granularity.second, vnode2,
                                           tarTraBmp,tarItemBmp,query.factFilter);
 			}
 
 			checked_node2.insert(vnode2);
 
-			//itemInTheAtt2 = _occ->itemAtt->bmpList.GetVal(query.granularity.second, vnode2);
 			Ewah itemInTheAtt2 = _occ->getItmBmpFromGranu(query.granularity.second, vnode2);
 			itemInTheAtt2 = itemInTheAtt2  & tarItemBmp;
 
@@ -416,7 +403,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 		}
 
 		unordered_map<vector<string>, bool, boost::hash<vector<string>>> checked_node2_b;
-		cerr << "cnt fin" << endl;
 		for (auto i2 = tarItemBmp.begin(), ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
 			// CHECK 用
 			if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
@@ -458,9 +444,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 
 			set<pair<string, string>> checked_node1;    
-
-			//unordered_set<pair<string, string>, boost::hash<pair<string, string>>> checked_node1;
-
 			unordered_map<pair<size_t, string>, bool, boost::hash<pair<size_t, string>>> checked_item1;
 	    unordered_map<vector<string>, size_t, boost::hash<vector<string>>> itemNo4node_map;
 
@@ -471,7 +454,8 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				_occ->getTraBmpFromItem(*at2,tra_i2_tmp2);
 				tra_i2_tmp1 = tra_i2_tmp1 | tra_i2_tmp2;
 			}
-			// item2 の持つtra LIST
+
+			// item2 の持つtra LIST //多分この辺でfactfilterとのチェックした方がいいはず
 			Ewah tra_i2 = tra_i2_tmp1 & tarTraBmp;
 
 			// ここおそくなりそうbmpで一気する方法はある？ 
@@ -487,19 +471,21 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 				if (checked_tra1.find(vTraAtt) != checked_tra1.end()) { continue; }
 
-				// ここだけでいける？
-				// queryのfactFilterに，traNo(*t2)と拡張済itemNo(*at2)の組み合わせがなければcontinue
-				//if (!_factTable->existInFact(*t2, *i2, query.factFilter)) continue; 
-				if (!_factTable->existInFact(*t2, itemInTheAtt2 , query.factFilter)) continue;
-				
 				checked_tra1[vTraAtt] = true;
 
+				// queryのfactFilterに，traNo(*t2)と拡張済itemNo(*at2)の組み合わせがなければcontinue
+				if(isTraGranu){
+					if (!_factTable->existInFact(*t2, itemInTheAtt2 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
+				}
+				else{
+					if (!_factTable->existInFact(*t2, itemInTheAtt2 , query.factFilter)) continue;
+				}
 
 	  	  Ewah item_i1;
-
 				// tra拡張
 				if (isTraGranu) {
 					// t2の属性から、requestで指定された粒度で対象トランザクションを拡張した上で、対象itemNo(1)を拡張する
+					// 拡張する際にfact table適応させる？
           _occ->expandItemByGranu(*t2, query.granularity.first, tarTraBmp,
                                     tarItemBmp, item_i1, ex_occ_cacheOnceQuery);
 				}
@@ -512,7 +498,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
   	    	if (isTimeOut) {stat = 2; break;}
 
 					if(isNodeGranu){
-
 		        vector<string> vnode1 = _occ->getItemCD(*i1, query.granularity.second);
   		      string node1 = Cmn::CsvStr::Join(vnode1, ":");
   	  	    if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
@@ -523,6 +508,13 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 						Ewah itemInTheAtt1 = _occ->getItmBmpFromGranu(query.granularity.second, vnode1);
 						itemInTheAtt1 = itemInTheAtt1  & tarItemBmp;
 		        if (*(itemInTheAtt1.begin()) >= *(itemInTheAtt2.begin())) continue;
+						if(isTraGranu){
+							if (!_factTable->existInFact(*t2, itemInTheAtt1 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
+						}
+						else{
+							if (!_factTable->existInFact(*t2, itemInTheAtt1 , query.factFilter)) continue;
+						}
+
 						size_t itemNo4node;
 						if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
         			itemNo4node_map[vnode1] = *itemInTheAtt1.begin();
@@ -533,40 +525,14 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 						coitems[itemNo4node]++;
 
 					}
-					else{
+					else{//istraGranu
 	    	  	if (*i1 >= *i2) break;
+						if (!_factTable->existInFact(*t2, *i1 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
 						coitems[*i1]++;
 	    	  }
 				}
 
-        /*
-				for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
-        							
-						vector<string> vnode1 = _occ->getItemCD(*i1, query.granularity.second);
-		        string node1 = Cmn::CsvStr::Join(vnode1, ":");
-    		    if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
-        		  checked_node1.insert({node1, traAtt});
-						} else {
-							continue;
-						}
-
-						// itemNo(1)が持つ属性(vnode1)から、requestで指定された粒度で対象itemNoを拡張する(itemInTheAtt1)
-						Ewah itemInTheAtt1 = _occ->getItmBmpFromGranu(query.granularity.second, vnode1);
-						itemInTheAtt1 = itemInTheAtt1 & tarItemBmp;
-		        if (*(itemInTheAtt1.begin()) >= *(itemInTheAtt2.begin())) continue;
-
-						size_t itemNo4node;
-						if (itemNo4node_map.find(vnode1) == itemNo4node_map.end()) {
-        			itemNo4node_map[vnode1] = *itemInTheAtt1.begin();
-         			itemNo4node = *itemInTheAtt1.begin();
-		        } else {
-    		      itemNo4node = itemNo4node_map[vnode1];
-	     		 }	
-						coitems[itemNo4node]++;
-				}
-				*/
 			}
-			
 			const string delim = ":";
 			string item2;
 			string itemName2;
@@ -645,29 +611,21 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
                 notSort = true;
                 skey = -10;
             }
+						
+						res.insert(make_pair(skey, dt));
+            listedNodes.insert(item1);
+            listedNodes.insert(item2);
+            auto it1 = isolatedNodes.find(item1);
+            if (it1 != isolatedNodes.end()) isolatedNodes.erase(it1);
+            auto it2 = isolatedNodes.find(item2);
+            if (it2 != isolatedNodes.end()) isolatedNodes.erase(it2);
 
-            if (res.size() >= query.sendMax) { //これOK?
-                stat = 1;
-                if (notSort) break;
-            }
-            else {
-                res.insert(make_pair(skey, dt));
-                
-                listedNodes.insert(item1);
-                listedNodes.insert(item2);
-                auto it1 = isolatedNodes.find(item1);
-                if (it1 != isolatedNodes.end()) isolatedNodes.erase(it1);
-                auto it2 = isolatedNodes.find(item2);
-                if (it2 != isolatedNodes.end()) isolatedNodes.erase(it2);
-            }
-						/*
-            res.insert(make_pair(skey,dt));
             if (res.size() > query.sendMax) {
             	res.pop();
               stat = 1;
               if (notSort) break;
             }
-            */
+
             hit++;
         }
 		}
@@ -821,7 +779,6 @@ map<string, Result> kgmod::kgGolap::runQuery(
 	if(! isolatedNodes.empty()){
 		if ( boost::iequals(isolatedNodes , "true")){
 			qPara.isolatedNodes= true;
-			cerr << "iso" << endl;
 		}
 	}
 

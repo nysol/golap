@@ -137,6 +137,9 @@ namespace kgmod {
 		Ewah& getTraBmp(const string& Key, const string& KeyValue){
 			return bmpList.GetVal( Key, KeyValue);
 		}
+		Ewah getTraBmpFromGranu(const vector<string> Keys, const vector<string> KeyValues){
+			return bmpList.GetVal( Keys, KeyValues );
+		}
 		Ewah getItmBmpFromGranu(const vector<string> Keys, const vector<string> KeyValues){
 			return itemAtt->bmpList.GetVal( Keys, KeyValues );
 		}

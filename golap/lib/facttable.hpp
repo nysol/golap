@@ -137,7 +137,53 @@ namespace kgmod {
             return stat;
         }
 
+        bool existInFact(
+        	const size_t traNob, Ewah& itemNos,
+        	vector<string>& keys , vector<string>& KeyValue ,
+        	const Ewah& traBmp,const Ewah& factBmp,
+        	const vector<string>& attKeys2
+        	) 
+        {//たぶんおそい
+					bool stat = false;
+					Ewah checktra = _occ->getTraBmpFromGranu(keys ,  KeyValue) & traBmp; //tra拡張
+					for (auto t2 = checktra.begin(), et2 = checktra.end(); t2 != et2; t2++) { 
+						for (auto i2 = itemNos.begin(), ei2 = itemNos.end(); i2 != ei2; i2++) { 
+							size_t traNo = *t2;
+							size_t itemNo = *i2;
+							for (auto r = _recNo.lower_bound({traNo, itemNo}), er = _recNo.end(); r != er; r++) {
+								if (r->first.first != traNo || r->first.second !=itemNo) break;
+								size_t rn = r->second;
+								stat = factBmp.get(rn);
+								if (stat) break;
+							}
+							if (stat) break;
+						}
+						if (stat) break;
+					}
+					return stat;
+				}
 
+        bool existInFact(
+        	const size_t traNob,const size_t itemNo,
+        	vector<string>& keys , vector<string>& KeyValue ,
+        	const Ewah& traBmp,const Ewah& factBmp,
+        	const vector<string>& attKeys2
+        	) 
+        {//たぶんおそい
+					bool stat = false;
+					Ewah checktra = _occ->getTraBmpFromGranu(keys ,  KeyValue) & traBmp; //tra拡張
+					for (auto t2 = checktra.begin(), et2 = checktra.end(); t2 != et2; t2++) { 
+						size_t traNo = *t2;
+						for (auto r = _recNo.lower_bound({traNo, itemNo}), er = _recNo.end(); r != er; r++) {
+								if (r->first.first != traNo || r->first.second !=itemNo) break;
+								size_t rn = r->second;
+								stat = factBmp.get(rn);
+								if (stat) break;
+							}
+						if (stat) break;
+					}
+					return stat;
+				}
 
 
         size_t attFreq(
@@ -172,6 +218,46 @@ namespace kgmod {
 		        	if(!existInFact(*t, *it, factFilter)) { continue; }
 		        	sumiTra.insert(*t);
 		        	cnt++;
+		        }
+			    }
+					return cnt;
+				}
+
+        size_t attFreq(
+        	const vector<string>& attKeys, 
+        	const vector<string> attVal, 
+        	const Ewah& traFilter,
+          const Ewah& itemFilter,
+          const Ewah& factFilter,
+           const vector<string>& tra2key
+        ){
+			    size_t cnt = 0;
+   				Ewah itemBmp;
+					itemBmp.padWithZeroes(_occ->itemMax() + 1);
+					itemBmp.inplace_logicalnot();
+					//粒度で拡張
+			    for (size_t i = 0; i < attKeys.size(); i++) {
+						Ewah *tmpItemBmp;
+						if (! _occ->getItmBmp(attKeys[i], attVal[i], tmpItemBmp)) continue;
+		        itemBmp = itemBmp & *tmpItemBmp;
+    			}
+			   // アイテム一覧 ::
+					itemBmp = itemBmp & itemFilter;
+					
+					//  Ewahで直接できそうな気も・。
+					set<size_t> sumiTra;
+					set<string> checkedAttVal;
+			    for (auto it = itemBmp.begin(), eit = itemBmp.end(); it != eit; it++) {
+						Ewah tmpTraBmp;
+        		if (!_occ->getTraBmpFromItem(*it ,tmpTraBmp)) continue;
+        		tmpTraBmp = tmpTraBmp & traFilter;
+		        for (auto t = tmpTraBmp.begin(), et = tmpTraBmp.end(); t != et; t++) {
+							string val = tra2key[*t];
+	            if (checkedAttVal.find(val) == checkedAttVal.end()) {
+			        	if(!existInFact(*t, *it, factFilter)) { continue; }
+                cnt++;
+                checkedAttVal.insert(val);
+  	          }
 		        }
 			    }
 					return cnt;
