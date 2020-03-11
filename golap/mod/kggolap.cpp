@@ -102,11 +102,18 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	bool notSort = false;
 	signed int stat = 0;
 	unordered_map<size_t, size_t> itemFreq;
+
     
 	Ewah tarTraBmp = query.traFilter & dimBmp & _occ->getliveTra();
-	size_t traNum = tarTraBmp.numberOfOnes();
 
-	if (traNum == 0) {
+	cerr << "qt : " << query.traFilter.numberOfOnes() ;
+	cerr << " dimBmp : " << dimBmp.numberOfOnes() ;
+	cerr << " liveTra : " << _occ->getliveTra().numberOfOnes() ;
+	cerr << " tarTraBmp : " << tarTraBmp.numberOfOnes() ;
+
+	cerr << endl;
+
+	if (tarTraBmp.numberOfOnes() == 0) {
 		cerr << "trabitmap is empty" << endl;
 		res.setSTS(0,0,0);
 		if (tlimit){ 
@@ -130,8 +137,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	Ewah tarItemBmp = query.itemFilter & itemBmpInFact;
 	cerr << "tarItemBmp "; Cmn::CheckEwah(tarItemBmp);
 
-
-	traNum = tarTraBmp.numberOfOnes();
+	size_t traNum = tarTraBmp.numberOfOnes();
 
 	// granularityのsizeが1で、かつ、[0]がキーであれば、granularityを指定していない(=false)
 	bool isTraGranu  = (query.granularity.first.size() != 1) ||
@@ -166,23 +172,15 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 			// *i2の持つtransaction
 			Ewah traBmp;
-			// _occ->bmpList.GetVal(_config->traFile.itemFld, _occ->itemAtt_item(*i2), traBmp);
 			_occ->getTraBmpFromItem(*i2,traBmp);
 			traBmp = traBmp & tarTraBmp;
 
-			// これいる？
-			Ewah *itemBmp=NULL;
-			if(! _occ->ibmpList_GetVal(query.granularity.second,vnode2,itemBmp)){
-					itemFreq[*i2]  = 0;
+			size_t lcnt = 0;
+			for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+				if (!_factTable->existInFact(*t, *i2, query.factFilter)) continue;
+				lcnt++;
 			}
-			else{
-				size_t cnt = 0;
-				for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
-					if (!_factTable->existInFact(*t, *i2, query.factFilter)) continue;
-					cnt++;
-				}
-				itemFreq[*i2]  = cnt;
-			}
+			itemFreq[*i2]  = lcnt;
 
 			if ( ((float)itemFreq[*i2]/traNum) < query.selCond.minSup ){ continue; }
 			if (itemFreq[*i2] == 0) continue;
@@ -235,20 +233,14 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 					if (f == _config->traFile.itemFld) {
 						item1 += _occ->getItemCD(i1->first) + delim;
 						itemName1 += _occ->getItemName(i1->first) + delim;
-						//item2 += _occ->getItemCD(*i2) + delim;
-						//itemName2 += _occ->getItemName(*i2) + delim;
 					}
 					else {
 						item1 += _occ->getItemCD(i1->first, f) + delim;
 						itemName1 += _occ->getItemName(i1->first, f) + delim;
-						//item2 += _occ->getItemCD(*i2, f) + delim;
-						//itemName2 += _occ->getItemName(*i2, f) + delim;
 					}
 				}
 				Cmn::EraseLastChar(item1);
 				Cmn::EraseLastChar(itemName1);
-				//Cmn::EraseLastChar(item2);
-				//Cmn::EraseLastChar(itemName2);
 
 				size_t freq = i1->second;
 				float sup = (float)freq / traNum;
@@ -455,7 +447,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				tra_i2_tmp1 = tra_i2_tmp1 | tra_i2_tmp2;
 			}
 
-			// item2 の持つtra LIST //多分この辺でfactfilterとのチェックした方がいいはず
+			// item2 の持つtra LIST //多分この辺でfactfilterとのチェックした方がいいはずunsetした方がいい？
 			Ewah tra_i2 = tra_i2_tmp1 & tarTraBmp;
 
 			// ここおそくなりそうbmpで一気する方法はある？ 

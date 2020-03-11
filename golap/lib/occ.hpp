@@ -252,13 +252,6 @@ namespace kgmod {
 				return cnt;
 			}
 
-
-
-
-
-
-
-
         void combiValues(const vector<string> flds, vector<string>& csvVals, vector<Ewah>& bmps,
                          const Ewah* traFilter = NULL) {
             return bmpList.combiValues(flds, csvVals, bmps, traFilter);
@@ -272,9 +265,6 @@ namespace kgmod {
             return itemAtt->evalKeyValue(key, ItmFilter);
         }
 
-        size_t ibmpList_GetVal(const vector<string>& attKey,const vector<string> attVal,Ewah *itemBmp){
-					return itemAtt->bmpList.GetVal(attKey[0], attVal[0], itemBmp);
-				}	
         size_t sendMax(void) {return _config->sendMax;}
     };
 }

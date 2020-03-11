@@ -62,16 +62,21 @@ namespace kgmod {
         void InitKey(const string& Key, const DataType& DataType);
         void SetBit(const string& Key, const string& KeyValue, size_t bit);
         void SetVal(const string& Key, const string& KeyValue, Ewah& Bitmap);
+
         bool GetVal(const string& Key, const string& KeyValue, Ewah*& Bitmap);
         bool GetVal(const string& Key, const string& KeyValue, Ewah& Bitmap);
         Ewah& GetVal(const string& Key, const string& KeyValue);
         Ewah GetVal(const vector<string> Keys, const vector<string> KeyValues);
         void GetVal(const vector<string> Keys, const vector<string> KeyValues, Ewah& Bitmap);
+
+
         Ewah& operator[](const pair<string, string>& Key) {return GetVal(Key.first, Key.second);}
+
         bool GetValMulti(const string& Key, const string& LikeKey, Ewah& Bitmap);
         bool GetValMulti(const string& Key, const string& Kakko, const string& FromKey,
                          const string& Kokka, const string& ToKey, Ewah& Bitmap);
         bool GetValMulti(const string& Key, const string& Operator, const string& KeyValue, Ewah& Bitmap);
+
         struct kvHandle {
             str_btree_t::iterator str_iter;
             num_btree_t::iterator num_iter;

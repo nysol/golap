@@ -263,68 +263,7 @@ namespace kgmod {
 					return cnt;
 				}
 
-
-        
-/*
-        size_t attFreq(
-        	const vector<string>& attKeys, 
-        	const vector<string> attVal, 
-        	const Ewah& traFilter,
-          const Ewah& itemFilter, 
-          const vector<string>* tra2key = NULL){
-
-			    size_t cnt = 0;
-   				Ewah itemBmp;
-					itemBmp.padWithZeroes(_occ->itemMax() + 1);
-					itemBmp.inplace_logicalnot();
-
-					//粒度で拡張
-			    for (size_t i = 0; i < attKeys.size(); i++) {
-						Ewah *tmpItemBmp;
-						if (! _occ->getItmBmp(attKeys[i], attVals[i], tmpItemBmp)) continue;
-		        itemBmp = itemBmp & *tmpItemBmp;
-    			}
-			   // アイテム一覧 ::
-			    itemBmp = itemBmp & itemFilter;
-			    
-					Ewah traBmp;
-			    for (auto it = itemBmp.begin(), eit = itemBmp.end(); it != eit; it++) {
-			    
-						Ewah* tmpTraBmp;
-        		if (! bmpList.GetVal(_config->traFile.itemFld, itemAtt->item[*it], tmpTraBmp)) continue;
-        		traBmp = traBmp | *tmpTraBmp;
-        	}
-        	( itemBmp vs traBmp )
-        	
-	    }
-    // traBmp = traBmp & traFilter;なせいらなくなった？
-    
-    if (tra2key == NULL) {
-        cnt = traBmp.numberOfOnes();
-    } else {
-
-        set<string> checkedAttVal;
-        for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
-            string val = (*tra2key)[*t];
-            if (checkedAttVal.find(val) == checkedAttVal.end()) {
-                cnt++;
-                checkedAttVal.insert(val);
-            }
-        }
-    }
-    return cnt;
-}
-          
-          
-        }
-*/
-
-
-
-
-
-
-        void toTraItemBmp(const Ewah& factFilter, const Ewah& itemFilter, Ewah& traBmp, Ewah& itemBmp);
+		  void toTraItemBmp(const Ewah& factFilter, const Ewah& itemFilter, Ewah& traBmp, Ewah& itemBmp);
 
         size_t valCount(void) {return _numFldPos.size();}
         unordered_map<string, int>* valPosMap(void) {return &_numFldPos;};
