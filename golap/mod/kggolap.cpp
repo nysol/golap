@@ -474,11 +474,13 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 				checked_tra1[vTraAtt] = true;
 
 				// queryのfactFilterに，traNo(*t2)と拡張済itemNo(*at2)の組み合わせがなければcontinue
-				if(isTraGranu){
-					if (!_factTable->existInFact(*t2, itemInTheAtt2 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
-				}
-				else{
-					if (!_factTable->existInFact(*t2, itemInTheAtt2 , query.factFilter)) continue;
+				if(_ffilFlag){
+					if(isTraGranu){
+						if (!_factTable->existInFact(*t2, itemInTheAtt2 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
+					}
+					else{
+						if (!_factTable->existInFact(*t2, itemInTheAtt2 , query.factFilter)) continue;
+					}
 				}
 
 	  	  Ewah item_i1;
@@ -508,11 +510,13 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 						Ewah itemInTheAtt1 = _occ->getItmBmpFromGranu(query.granularity.second, vnode1);
 						itemInTheAtt1 = itemInTheAtt1  & tarItemBmp;
 		        if (*(itemInTheAtt1.begin()) >= *(itemInTheAtt2.begin())) continue;
-						if(isTraGranu){
-							if (!_factTable->existInFact(*t2, itemInTheAtt1 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
-						}
-						else{
-							if (!_factTable->existInFact(*t2, itemInTheAtt1 , query.factFilter)) continue;
+						if(_ffilFlag){
+							if(isTraGranu){
+								if (!_factTable->existInFact(*t2, itemInTheAtt1 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
+							}
+							else{
+								if (!_factTable->existInFact(*t2, itemInTheAtt1 , query.factFilter)) continue;
+							}
 						}
 
 						size_t itemNo4node;
@@ -527,7 +531,9 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 					}
 					else{//istraGranu
 	    	  	if (*i1 >= *i2) break;
-						if (!_factTable->existInFact(*t2, *i1 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
+	    	  	if(_ffilFlag){
+							if (!_factTable->existInFact(*t2, *i1 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
+						}
 						coitems[*i1]++;
 	    	  }
 				}
@@ -697,6 +703,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 		qPara.itemFilter = _fil->makeItemBitmap(itemFilter);
 	}
 	if(!factFilter.empty()){
+		_ffilFlag = true;
 		qPara.factFilter = _fil->makeFactBitmap(factFilter);
 	}
 
@@ -845,6 +852,7 @@ vector< vector<string> > kgmod::kgGolap::nodestat(
 		nSpara.itemFilter = _fil->makeItemBitmap(itemFilter);
 	}
 	if(!factFilter.empty()){
+		_ffilFlag = true;
 		nSpara.factFilter = _fil->makeFactBitmap(factFilter);
 	}
 
@@ -952,6 +960,7 @@ CsvFormat kgmod::kgGolap::nodeimage(
 		nIpara.itemFilter = _fil->makeItemBitmap(itemFilter);
 	}
 	if(!factFilter.empty()){
+		_ffilFlag = true;
 		nIpara.factFilter = _fil->makeFactBitmap(factFilter);
 	}
 

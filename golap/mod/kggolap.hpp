@@ -352,6 +352,7 @@ namespace kgmod {
 			FactTable* _factTable = NULL;
 			Filter* _fil = NULL;
 			cmdCache* cmdcache;
+			bool _ffilFlag;
 
 			void setArgs(void);
 
@@ -367,6 +368,7 @@ namespace kgmod {
 			kgGolap(void);
 				kgGolap(char *fn){
 				opt_inf = string(fn);
+				_ffilFlag = false;
 			}
 
 			~kgGolap(void){
