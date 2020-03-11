@@ -354,7 +354,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
     set<vector<string>> checked_node2;       // [vnodes] -> exists
 
 		// DEBUG		
-		size_t icnt =query.itemFilter.numberOfOnes();
+		size_t icnt =tarItemBmp.numberOfOnes();
 		int cnt=1;
 		
 		cerr << "icnt "<< tarItemBmp.numberOfOnes() << endl;
