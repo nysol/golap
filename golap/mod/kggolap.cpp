@@ -372,7 +372,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			if (checked_node2.find(vnode2) != checked_node2.end()) { continue; }
 
 			if (isTraGranu) {
-					itemFreq[*i2] = _factTable->attFreq(query.granularity.second, vnode2,
+				itemFreq[*i2] = _factTable->attFreq(query.granularity.second, vnode2,
                                         tarTraBmp,tarItemBmp,query.factFilter, tra2key);        
         
       }else{

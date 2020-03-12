@@ -38,20 +38,19 @@ using namespace kgmod;
 namespace kgmod {
 
 	class Occ {
-		//BTree exBmpList;
 
 		Config* _config;
 		kgEnv* _env;
 		string _dbName;
 		string _liveTraFile;
-		// public:
 		TraAtt* traAtt;
 		ItemAtt* itemAtt;
 		string occKey;
 		BTree bmpList;
 		Ewah liveTra;
-		boost::mutex ex_occ_mtx;        
-    typedef vector<Ewah> occ_t; // traNo -> item bitmap
+		boost::mutex ex_occ_mtx;    
+		// traNo -> item bitmap    
+    typedef vector<Ewah> occ_t; 
     occ_t occ;
 
     public:
@@ -179,27 +178,11 @@ namespace kgmod {
         void load(void);
 
         
-        //void item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp);
-
-				// New
-        void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
-        											 const Ewah& traFilter, const Ewah& itemFilter, 
-        											 map<size_t, Ewah>& ex_occ,
-                               map<string, map<size_t, Ewah>>& ex_occ_cacheOnceQuery);
-
-				// old
+				// 一旦戻す
 				void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
                                    const Ewah& traFilter, const Ewah& itemFilter, 
                                    Ewah& itemBmp,
                                    unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery) ;
-
-
-        size_t attFreq(const vector<string>& attKeys, const vector<string> attVal, const Ewah& traFilter,
-                       const Ewah& itemFilter, const vector<string>* tra2key = NULL);
-
-        size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter,
-                       const Ewah& itemFilter, const vector<string>* tra2key = NULL);
-
 
         void occ_dump(const bool debug);
         void dump(const bool debug);
@@ -268,5 +251,22 @@ namespace kgmod {
         size_t sendMax(void) {return _config->sendMax;}
     };
 }
+
+/*
+        //void item2traBmp(string& itemKey, string& itemVal, Ewah& traBmp);
+
+				// New
+        void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
+        											 const Ewah& traFilter, const Ewah& itemFilter, 
+        											 map<size_t, Ewah>& ex_occ,
+                               map<string, map<size_t, Ewah>>& ex_occ_cacheOnceQuery);
+
+        size_t attFreq(const vector<string>& attKeys, const vector<string> attVal, const Ewah& traFilter,
+                       const Ewah& itemFilter, const vector<string>* tra2key = NULL);
+
+        size_t attFreq(string& attKey, string& attVal, const Ewah& traFilter,
+                       const Ewah& itemFilter, const vector<string>* tra2key = NULL);
+*/
+
 
 #endif /* occ_hpp */

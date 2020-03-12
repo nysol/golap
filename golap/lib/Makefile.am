@@ -22,7 +22,6 @@ libgolaplib@MOD_MAJOR_VERSION@_la_LDFLAGS = -version-info $(MOD_SO_VERSION) -sin
 
 libgolaplib@MOD_MAJOR_VERSION@_la_SOURCES = \
 btree.cpp \
-cmdcache.cpp \
 cmn.cpp \
 config.cpp \
 filter.cpp \
@@ -30,7 +29,6 @@ itematt.cpp \
 occ.cpp \
 param.cpp \
 traatt.cpp \
-request.cpp \
 facttable.cpp \
 bidx-ewah.hpp \
 btree.hpp \
@@ -38,7 +36,6 @@ cmdcache.hpp \
 cmn.hpp \
 config.hpp \
 filter.hpp \
-http.hpp \
 itematt.hpp \
 lrucache.hpp \
 occ.hpp \

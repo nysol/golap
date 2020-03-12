@@ -143,9 +143,10 @@ namespace kgmod {
         	const Ewah& traBmp,const Ewah& factBmp,
         	const vector<string>& attKeys2
         	) 
-        {//たぶんおそい
+        {//たぶんおそい速くする方法ありそう
 					bool stat = false;
-					Ewah checktra = _occ->getTraBmpFromGranu(keys ,  KeyValue) & traBmp; //tra拡張
+					 //tra拡張 
+					Ewah checktra = _occ->getTraBmpFromGranu(keys ,  KeyValue) & traBmp;
 					for (auto t2 = checktra.begin(), et2 = checktra.end(); t2 != et2; t2++) { 
 						for (auto i2 = itemNos.begin(), ei2 = itemNos.end(); i2 != ei2; i2++) { 
 							size_t traNo = *t2;
