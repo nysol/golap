@@ -174,8 +174,8 @@ def reqpost():
 				
 			if "isoheader" in rtnobj:
 				rtn += "\n## isolated nodes ##\n"
-				rtn += "{}\n".format( ','.join(rtnobj["isoheader"]) )
 				rtn += "sent:%ld\n"%(len(rtnobj["isodata"]))
+				rtn += "{}\n".format( ','.join(rtnobj["isoheader"]) )
 				for v in rtnobj["isodata"]:
 					rtn += "{}\n".format(','.join(v))
 				rtn += "\n"
