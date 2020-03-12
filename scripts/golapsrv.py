@@ -158,7 +158,8 @@ def reqpost():
 				rtn += "\n"
 
 				if "isoheader" in vv:
-					rtn += "## isolated nodes ##\n"
+					rtn += "## isolated nodes ##\n"					
+					rtn += "sent:%ld\n"%(len(vv["isodata"]))
 					rtn += "{}\n".format( ','.join(vv["isoheader"]) )
 					for v in vv["isodata"]:
 						rtn += "{}\n".format(','.join(v))
@@ -174,6 +175,7 @@ def reqpost():
 			if "isoheader" in rtnobj:
 				rtn += "\n## isolated nodes ##\n"
 				rtn += "{}\n".format( ','.join(rtnobj["isoheader"]) )
+				rtn += "sent:%ld\n"%(len(rtnobj["isodata"]))
 				for v in rtnobj["isodata"]:
 					rtn += "{}\n".format(','.join(v))
 				rtn += "\n"
