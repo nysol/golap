@@ -492,16 +492,18 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
   	    	if (isTimeOut) {stat = 2; break;}
 
 					if(isNodeGranu){
-		        vector<string> vnode1 = _occ->getItemCD(*i1, query.granularity.second);
-  		      string node1 = Cmn::CsvStr::Join(vnode1, ":");
-  	  	    if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
-      			  checked_node1.insert({node1, traAtt});
+						vector<string> vnode1 = _occ->getItemCD(*i1, query.granularity.second);
+						string node1 = Cmn::CsvStr::Join(vnode1, ":");
+						if (checked_node1.find({node1, traAtt}) == checked_node1.end()) {
+							checked_node1.insert({node1, traAtt});
 						} else {
 							continue;
 						}
+
 						Ewah itemInTheAtt1 = _occ->getItmBmpFromGranu(query.granularity.second, vnode1);
 						itemInTheAtt1 = itemInTheAtt1  & tarItemBmp;
-		        if (*(itemInTheAtt1.begin()) >= *(itemInTheAtt2.begin())) continue;
+						if (*(itemInTheAtt1.begin()) >= *(itemInTheAtt2.begin())) continue;
+						
 						if(_ffilFlag){
 							if(isTraGranu){
 								if (!_factTable->existInFact(*t2, itemInTheAtt1 ,query.granularity.first ,vTraAtt,tarTraBmp, query.factFilter,query.granularity.second)) continue;
