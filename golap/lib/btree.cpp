@@ -498,7 +498,7 @@ void kgmod::BTree::GetAllKeyValue(const string& Key, pair<string, Ewah>& out, kv
     // out.first -> field name, out.second -> bitmap
     out.first = "";
     out.second.reset();
-    
+
     if (kvh == NULL) {
         kvh = new kvHandle;
         if (DataTypeMap[Key] == STR) {

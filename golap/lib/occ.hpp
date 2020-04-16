@@ -105,7 +105,7 @@ namespace kgmod {
 			return bmpList.GetValMulti(key,kv,tBmp);
 		}
 		
-		void GetAllKeyValue(const string& key, pair<string, Ewah> ret,BTree::kvHandle* kvh){
+		void GetAllKeyValue(const string& key, pair<string, Ewah>& ret,BTree::kvHandle*& kvh){
 			return bmpList.GetAllKeyValue(key, ret, kvh);
 		}
 

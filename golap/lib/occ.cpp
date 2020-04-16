@@ -235,6 +235,7 @@ void kgmod::Occ::getTra2KeyValue(string& key, vector<string>& tra2key) {
     }
 }
 
+
 void kgmod::Occ::getTra2KeyValue(const vector<string>& keys, vector<string>& tra2key) {
     vector<size_t> traAttKeyPos(keys.size());
     for (size_t i = 0; i < keys.size(); i++) {
