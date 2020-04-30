@@ -6,6 +6,10 @@ import json
 import time
 import nysolgolap.golap as ngolap
 
+import sys
+import signal
+
+
 if len(sys.argv) <= 1:
 	print("useage:"+sys.argv[0] + " confFile" )
 	exit()
@@ -187,7 +191,18 @@ def reqpost():
 	else:
 		# query
 		return Response("status:-1\nUnknown Request Pattern\n",mimetype='text/plain')
+'''
+@app.route('/',methods=["get"])
+def ttest():
+	import time
+	time.sleep(60)
+	return("test")
 
+@app.route('/ttt',methods=["get"])
+def ttest2():
+	return("testttt")
+
+'''
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0',port=useport,threaded=True)

@@ -524,11 +524,15 @@ PyObject* run(PyObject* self, PyObject* args)
 				gNode = strGET(gvv);
 			}
 		}
+		PyThreadState *savex = NULL;
+		savex  = PyEval_SaveThread();
 		map<string, Result> vstr = kolap->runQuery(
 			traFilter,itemFilter,factFilter,gTransaction,gNode,
 			SelMinSup,SelMinConf,SelMinLift,SelMinJac,SelMinPMI,
 			sortKey,sendMax,dimension,deadline,isolatedNodes
 		);
+		PyEval_RestoreThread(savex);
+		savex=NULL;
 
 		if ( dimension.empty() ){
 
