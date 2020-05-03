@@ -36,6 +36,10 @@ class mgolap(object):
 		flds.sort()
 		return flds
 
+	def timeclear(self,id):
+		return ng.timeclear(self.golapOBJ,id) 
+
+
 
 	def getTraFieldAtt(self,q):
 	
@@ -129,4 +133,5 @@ def makeIdx(confF,mp=0):
 		ng.makeindex(confF,mp)
 	
 	return mgolap(confF)
+
 

@@ -48,10 +48,10 @@ using namespace kgmod;
 void* timerLHandle(void* timer) {
 	timChkT *tt = (timChkT*)timer;
 	sleep(tt->timerInSec);
-	*(tt->isTimeOut) = 1;
-	cerr << "time out" << endl;
+	tt->isTimeOut = 1;
 	return (void*)NULL;
 }
+
 
 // -----------------------------------------------------------------------------
 // コンストラクタ(モジュール名，バージョン登録,パラメータ)
@@ -70,25 +70,40 @@ kgmod::kgGolap::kgGolap(void)
 #endif
 */
 }
+/*
+pthread_t kgmod::kgGolap::get_thID(){
+	return pthread_self();
+}
+void kgmod::kgGolap::can_thID(pthread_t id){
+	//int eid = pthread_cancel(id);
+	//cerr << "teid " << eid << endl;
+	pthread_exit(NULL);
+}
+*/
 
 // -----------------------------------------------------------------------------
 // 引数の設定
 // -----------------------------------------------------------------------------
-Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45) 
+Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST) // ,size_t tlimit=45
 {
 
 	map<string, pair<string, size_t>> isolatedNodes;
 	// Timer 設置
-	int isTimeOut=0;
+	//int isTimeOut=0;
 
 	pthread_t pt;
-	timChkT timerST;
-	timerST.isTimeOut = &isTimeOut;
-	timerST.timerInSec = tlimit;
+//	timChkT *timerST = new timChkT();
+//	timerST->isTimeOut = 0 ;//&isTimeOut;
+//	timerST->timerInSec = tlimit;
 
-	if (tlimit){ // 要エラーチェック
-		cerr << "setTimer: " << tlimit << " sec" << endl;
-		pthread_create(&pt, NULL, timerLHandle, &timerST);			
+	// ロック必要用
+	//if(!query.runID.empty()){
+	//	timerSet.insert(r_tim_t::value_type(query.runID,timerST));
+	//}
+
+	if (timerST->timerInSec){ // 要エラーチェック
+		cerr << "setTimer: " << timerST->timerInSec << " sec" << endl;
+		pthread_create(&pt, NULL, timerLHandle, timerST);			
 	}
 
 	const char *headstr[] = {
@@ -116,8 +131,8 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	if (tarTraBmp.numberOfOnes() == 0) {
 		cerr << "trabitmap is empty" << endl;
 		res.setSTS(0,0,0);
-		if (tlimit){ 
-			if (!isTimeOut) {
+		if (timerST->timerInSec){ 
+			if (!timerST->isTimeOut) {
 				pthread_cancel(pt);
 				cerr << "timer canceled" << endl;
 			}
@@ -163,7 +178,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
 			cnt++;
 
-			if (isTimeOut) {stat = 2; break;}
+			if (timerST->isTimeOut) {stat = 2; break;}
 
 			string node2 = _occ->getItemCD(*i2);
 			vector<string> vnode2; vnode2.resize(1);
@@ -191,14 +206,14 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			// sup条件を満たしている場合、もう一回loopしてpairカウント
 			for (auto t2 = traBmp.begin(), et2 = traBmp.end(); t2 != et2; t2++) {
 
-				if (isTimeOut) {stat = 2; break;}
+				if (timerST->isTimeOut) {stat = 2; break;}
 				
 				if (!_factTable->existInFact(*t2, *i2, query.factFilter)) continue;
 				
 				Ewah item_i1 = _occ->getItmBmpFromTra(*t2) & tarItemBmp;
 
 				for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
-					if (isTimeOut) {stat = 2; break;}
+					if (timerST->isTimeOut) {stat = 2; break;}
 					if (*i1 >= *i2) break;
           if (!_factTable->existInFact(*t2, *i1, query.factFilter)) { 
           	continue;
@@ -225,7 +240,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			isolatedNodes[item2] = make_pair(itemName2, itemFreq[*i2]);
 
 			for (auto i1 = coitems.begin(), ei1 = coitems.end(); i1 != ei1; i1++) {
-				if (isTimeOut) {stat = 2; break;}
+				if (timerST->isTimeOut) {stat = 2; break;}
 				string item1 ;
 				string itemName1;
 				for (auto& f : query.granularity.second) {
@@ -354,7 +369,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 		// 件数のみカウント なくてもできる？
     for (auto i2 = tarItemBmp.begin(), ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
 
-			if (isTimeOut) {stat = 2; break;}
+			if (timerST->isTimeOut) {stat = 2; break;}
 			vector<string> vnode2;
 			string node2;
 			if (isNodeGranu) {
@@ -399,7 +414,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			// CHECK 用
 			if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
 			cnt++;
-			if (isTimeOut) {stat = 2; break;}
+			if (timerST->isTimeOut) {stat = 2; break;}
 
 	    vector<string> vnode2;
   	  string node2;
@@ -441,7 +456,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 			Ewah tra_i2_tmp1;
 			for (auto at2 = itemInTheAtt2.begin(), eat2 = itemInTheAtt2.end(); at2 != eat2; at2++) {
-				if (isTimeOut) {stat = 2; break;}
+				if (timerST->isTimeOut) {stat = 2; break;}
 				Ewah tra_i2_tmp2; 
 				_occ->getTraBmpFromItem(*at2,tra_i2_tmp2);
 				tra_i2_tmp1 = tra_i2_tmp1 | tra_i2_tmp2;
@@ -455,7 +470,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 
 			for (auto t2 = tra_i2.begin(), et2 = tra_i2.end(); t2 != et2; t2++) {
 
-				if (isTimeOut) {stat = 2; break;}
+				if (timerST->isTimeOut) {stat = 2; break;}
 
 				vector<string> vTraAtt;
 				_occ->traNo2traAtt(*t2, query.granularity.first, vTraAtt);
@@ -489,7 +504,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 	  	  }
 
 				for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
-  	    	if (isTimeOut) {stat = 2; break;}
+  	    	if (timerST->isTimeOut) {stat = 2; break;}
 
 					if(isNodeGranu){
 						vector<string> vnode1 = _occ->getItemCD(*i1, query.granularity.second);
@@ -550,7 +565,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 			isolatedNodes[item2] = make_pair(itemName2, itemFreq[*i2]);
 
         for (auto i1 = coitems.begin(), ei1 = coitems.end(); i1 != ei1; i1++) {
-            if (isTimeOut) {stat = 2; break;}
+            if (timerST->isTimeOut) {stat = 2; break;}
             string item1;
             string itemName1;
             for (auto& f : query.granularity.second) {
@@ -644,24 +659,30 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,size_t tlimit=45)
 		}
 	}
 
-	if (tlimit){ 
-		if (!isTimeOut) {
+	if (timerST->timerInSec){ 
+		if (timerST->isTimeOut==0 ||timerST->isTimeOut==2 ) {
 			pthread_cancel(pt);
 			cerr << "timer canceled" << endl;
 		}
 	}
-
+	//if (!query.runID.empty()){
+	//	timerSet.erase(query.runID); 
+	//}
+	//delete timerST;
+	//timerST =NULL;
 	res.setSTS(stat,res.size(),hit);
 	res.showSTS();
-		return res;
+	return res;
+
 }
 
-void kgmod::kgGolap::MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res ,unsigned int *dl) 
+void kgmod::kgGolap::MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res ,vector<timChkT *> * timesets) 
 {
+		// ロック必要かも
     mq_t::th_t* T = mq->pop();
     while (T != NULL) {
         cerr << "#" << T->first << ") tarTra:"; Cmn::CheckEwah(T->second.second);
-        Result rr = Enum(*query, *(T->second.second),*dl);
+        Result rr = Enum(*query, *(T->second.second),timesets->at(T->first));
         (*res)[T->second.first] = rr;
         delete T->second.second;
         delete T;
@@ -677,7 +698,7 @@ map<string, Result> kgmod::kgGolap::runQuery(
 		string SelMinSup,string SelMinConf,string SelMinLift,
 		string SelMinJac,string SelMinPMI,
 		string sortKey,string sendMax,string dimension,string deadline,
-		string isolatedNodes
+		string isolatedNodes,string runID
 ) 
 {
 
@@ -687,7 +708,8 @@ map<string, Result> kgmod::kgGolap::runQuery(
 		_factTable->recMax,
 		_config->sendMax,
 		_config->traFile.traFld ,
-		_config->traFile.itemFld
+		_config->traFile.itemFld,
+		runID
 	);
 
 	if(!traFilter.empty()){
@@ -784,39 +806,102 @@ map<string, Result> kgmod::kgGolap::runQuery(
 	}
 
 	map<string, Result> res;
-
+	vector<timChkT *> timesets;
 	if (qPara.dimension.DimBmpList.size() == 0) {	
+	
+	
 		// ダミーで_occ->liveTraをセットしてる？
+		timesets.resize(1);
+		timesets[0] = new timChkT();
+//	timChkT *timerST = new timChkT();
+		timesets[0]->isTimeOut = 0 ;//&isTimeOut;
+		timesets[0]->timerInSec = dline;
+
+		if(!runID.empty()){
+			timerSet[runID] = timesets;
+		}
+
 		Ewah dmy = _occ->getliveTra();
-		res[""] = Enum(qPara, dmy,dline); 
+		res[""] = Enum(qPara, dmy,timesets[0]); 
+
+		if(!runID.empty()){
+			timerSet.erase(runID);
+		}
+
+		delete timesets[0];
 	}
 	else{
 		if (_config->mt_enable) {
 			mq_t::th_t *th;
 			mq_t mq;
 			size_t threadNo = 0;
+
+			timesets.resize(qPara.dimension.DimBmpList.size());
+
+
 			for (auto i = qPara.dimension.DimBmpList.begin(); i != qPara.dimension.DimBmpList.end(); i++) {
 				cerr << "running with multi-threading (";
 				cerr << threadNo << " of " << qPara.dimension.DimBmpList.size() << ")" << endl;
 				th = new mq_t::th_t;
 				th->first = threadNo;
+
+				timesets[threadNo] = new timChkT();
+				timesets[threadNo]->isTimeOut = 0 ;//&isTimeOut;
+				timesets[threadNo]->timerInSec = dline;
+				
+/*				Ewah *etmp =  new Ewah
+				etmp->expensive_copy(i->second);
+				make_tuple(i->first, etmp, i->second);
+*/
+				
 				th->second.first = i->first;
 				th->second.second = new Ewah;
 				th->second.second->expensive_copy(i->second);
 				mq.push(th);
 				threadNo++;
 			}
+			if(!runID.empty()){
+				timerSet[runID] = timesets;
+			}
 			vector<boost::thread> thg;
 			for (int i = 0; i < _config->mt_degree; i++) {
 				thg.push_back(
-					boost::thread([this,&mq, &qPara, &res,&dline] {MT_Enum(&mq, &qPara, &res ,&dline);})
+					boost::thread([this,&mq, &qPara, &res,&timesets] {MT_Enum(&mq, &qPara, &res,&timesets );})
 				);
 			}
 			for (boost::thread& th : thg) { th.join();}
+			if(!runID.empty()){
+				timerSet.erase(runID);
+			}	
+			for (size_t ii = 0; ii != qPara.dimension.DimBmpList.size(); ii++) {
+				delete timesets[ii];
+			}
 		}
 		else{
+			timesets.resize(qPara.dimension.DimBmpList.size());
+			for (size_t ii = 0; ii < qPara.dimension.DimBmpList.size(); ii++) {
+				timesets[ii] = new timChkT();
+				timesets[ii]->isTimeOut = 0 ;//&isTimeOut;
+				timesets[ii]->timerInSec = dline;
+			}
+			if(!runID.empty()){
+				timerSet[runID] = timesets;
+			}
 			for (auto i = qPara.dimension.DimBmpList.begin(); i != qPara.dimension.DimBmpList.end(); i++) {
-				res[i->first] = Enum(qPara, i->second,dline);
+				timesets.resize(1);
+				timesets[0] = new timChkT();
+				timesets[0]->isTimeOut = 0 ;//&isTimeOut;
+				timesets[0]->timerInSec = dline;
+				if(!runID.empty()){
+					timerSet[runID] = timesets;
+				}
+				res[i->first] = Enum(qPara, i->second,timesets[0]);
+			}
+			if(!runID.empty()){
+				timerSet.erase(runID);
+			}
+			for (size_t ii = 0; ii < qPara.dimension.DimBmpList.size(); ii++) {
+				delete timesets[ii];
 			}
 		}
 	}
@@ -998,7 +1083,6 @@ CsvFormat kgmod::kgGolap::nodeimage(
 		string msg = "nodeimage.itemVal must be set in request\n";
 		throw kgError(msg);
 	}
-
 	Ewah itemBmp;
 	//_occ->itemAtt->bmpList.GetVal(nIpara.granularity.second, nIpara.itemVal, tmpItemBmp);
 	Ewah tmpItemBmp = _occ-> getItmBmpFromGranu(nIpara.granularity.second, nIpara.itemVal);

@@ -5,9 +5,27 @@ import os
 import json
 import time
 import nysolgolap.golap as ngolap
-
+import threading
+import traceback 
 import sys
 import signal
+
+
+class MyThread(threading.Thread):
+	def __init__(self,arg):
+		super(MyThread, self).__init__()
+		self.stop_event = threading.Event()
+		self.sjson = arg
+		self.result = None
+
+	def stop(self):
+		self.stop_event.set()
+
+	def run(self):
+		self.result = golapM.query(self.sjson)
+		
+
+jobs = {}
 
 
 if len(sys.argv) <= 1:
@@ -43,6 +61,16 @@ app = Flask(__name__,**option)
 @app.route('/',methods=["POST"])
 def reqpost():
 
+	#ret = []
+	#for th in threading.enumerate():
+	#	frames = sys._current_frames()
+	#	if frames.get(th.ident):
+	#		s = traceback.extract_stack(frames[th.ident])
+	#	else:
+	#		s = f"th: {th.ident} is not found in current frames"
+	#
+	#		ret.append((th, s))
+
 	ss= request.get_data()
 	utstr = str(time.time())
 	with open(logD+"/"+utstr,"w") as wfp:
@@ -54,6 +82,7 @@ def reqpost():
 		return Response("status:-1\njson parse error\n",mimetype='text/plain')
 
 	print(sjson)
+
 
 	# control
 	if 'control' in sjson : 
@@ -143,8 +172,16 @@ def reqpost():
 		return Response( rtn ,mimetype='text/plain')
 
 	elif 'query' in sjson : 
-
 		try:
+			#print("a0")
+			#t = MyThread(sjson)
+			#print(t)
+			#print("a1")
+			#t.start()
+			#print("a2")
+			#t.join()
+			#print("a3")
+			#rtnobj = t.result
 			rtnobj = golapM.query(sjson)
 
 		except Exception as ep :
@@ -191,20 +228,21 @@ def reqpost():
 	else:
 		# query
 		return Response("status:-1\nUnknown Request Pattern\n",mimetype='text/plain')
-'''
-@app.route('/',methods=["get"])
-def ttest():
-	import time
-	time.sleep(60)
-	return("test")
 
-@app.route('/ttt',methods=["get"])
-def ttest2():
-	return("testttt")
+@app.route('/cancel/<id>',methods=["get"])
+def cancel(id):
+	rtn = ""
+	if golapM.timeclear(id) == 0 :
+		rtn = "status:0\n"
+		rtn += "recive cancel\n"
+	else:
+		rtn = "status:1\n"
+		rtn += "not found id(%s)\n"%(id)
 
-'''
+	return Response( rtn ,mimetype='text/plain')
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0',port=useport,threaded=True)
+	
 	
 	

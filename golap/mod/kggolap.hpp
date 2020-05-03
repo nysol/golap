@@ -170,11 +170,12 @@ namespace kgmod {
 		sort_key sortKey;
 		bool isolatedNodes;
 		size_t sendMax;
+		string runID;
 		// first:transaction granurality, second:node granurality
 		pair<vector<string>, vector<string>> granularity;   
 		Dimension dimension;
 
-		QueryParams(size_t traMax,size_t itemMax ,size_t recMax,size_t sndMax ,string traFld,string itemFld){
+		QueryParams(size_t traMax,size_t itemMax ,size_t recMax,size_t sndMax ,string traFld,string itemFld,string runid){
 
 			traFilter.padWithZeroes( traMax + 1 );
 			traFilter.inplace_logicalnot();
@@ -195,6 +196,7 @@ namespace kgmod {
 			isolatedNodes = false;
 			
 			sendMax = sndMax;
+			runID = runid;
 		
 		}
 		
@@ -336,7 +338,7 @@ namespace kgmod {
 
 	struct timChkT{
 		unsigned int timerInSec;
-		int* isTimeOut;
+		int isTimeOut;
 	};
 
 	typedef MtQueue<pair<string, Ewah*>> mq_t;
@@ -354,19 +356,38 @@ namespace kgmod {
 			cmdCache* cmdcache;
 			bool _ffilFlag;
 
+			typedef map< string, vector<timChkT*> > r_tim_t;	
+
+
+			r_tim_t timerSet;
+
 			void setArgs(void);
 
-		  Result Enum(QueryParams& query, Ewah& dimBmp ,size_t tlimit);
-			void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res, unsigned int *lim);
+		  Result Enum(QueryParams& query, Ewah& dimBmp ,timChkT *timerST);
+
+			void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res,vector<timChkT *> *lim);
 
 
     public:
 
-			kgEnv   _lenv;    
+
+			int timeclear(string s){
+				if( timerSet.find(s) != timerSet.end() ){
+					for(size_t i=0 ; i < timerSet[s].size();i++){
+						timerSet[s][i]->isTimeOut = 2;
+					}
+					return 0;
+				}
+				else{
+					return 1;
+				}
+			}
+
+			kgEnv   _lenv;
 			kgEnv * _env;
 
 			kgGolap(void);
-				kgGolap(char *fn){
+			kgGolap(char *fn){
 				opt_inf = string(fn);
 				_ffilFlag = false;
 			}
@@ -413,7 +434,8 @@ namespace kgmod {
 				string SelMinSup,string SelMinConf,string SelMinLift,
 				string SelMinJac,string SelMinPMI,
 				string sortKey,string sendMax,string dimension,string deadline,
-				string isolatedNodes
+				string isolatedNodes,
+				string runID
 			);
 
 			void save(){

@@ -11,8 +11,6 @@
 //using namespace kgmod;
 //using namespace kglib;
 
-
-
 #if PY_MAJOR_VERSION >= 3
 extern "C" {
 	PyMODINIT_FUNC PyInit__nysolshell_core(void);
@@ -411,6 +409,9 @@ PyObject* run(PyObject* self, PyObject* args)
 		}
 		kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(ol,"kggolapP");
 
+		//cerr << "xx "<< kolap->get_thID() << endl;
+		//pthread_t ptid = kolap->get_thID();
+
 		
 		PyObject * ni = PyDict_GetItemString(jsonDict,"query");
 		if(!ni){
@@ -435,6 +436,9 @@ PyObject* run(PyObject* self, PyObject* args)
 		string deadline;
 		string isolatedNodes;
 
+		string runID;
+
+
 		PyObject * v;
 		v = PyDict_GetItemString(jsonDict,"deadlineTimer");
 		if(v){
@@ -450,6 +454,10 @@ PyObject* run(PyObject* self, PyObject* args)
 
 		v = PyDict_GetItemString(ni,"factFilter");
 		if(v){ factFilter = strGET(v); }
+
+		v = PyDict_GetItemString(ni,"runID");
+		if(v){ runID = strGET(v); }
+
 
 
 		v = PyDict_GetItemString(ni,"selCond");
@@ -529,7 +537,7 @@ PyObject* run(PyObject* self, PyObject* args)
 		map<string, Result> vstr = kolap->runQuery(
 			traFilter,itemFilter,factFilter,gTransaction,gNode,
 			SelMinSup,SelMinConf,SelMinLift,SelMinJac,SelMinPMI,
-			sortKey,sendMax,dimension,deadline,isolatedNodes
+			sortKey,sendMax,dimension,deadline,isolatedNodes,runID
 		);
 		PyEval_RestoreThread(savex);
 		savex=NULL;
@@ -748,6 +756,20 @@ PyObject* run(PyObject* self, PyObject* args)
 
 }
 
+PyObject* timeclear(PyObject* self, PyObject* args){
+
+		PyObject *ol;
+		char* idstr;
+
+		if (!PyArg_ParseTuple(args, "Os", &ol, &idstr)){
+ 	   return Py_BuildValue("");
+		}
+		kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(ol,"kggolapP");
+
+
+		return PyLong_FromLong( kolap->timeclear(string(idstr))); 
+
+}
 
 PyObject* makeindex(PyObject* self, PyObject* args){
 
@@ -805,6 +827,7 @@ static PyMethodDef callmethods[] = {
 	{"getItmAtt"  ,reinterpret_cast<PyCFunction>(getItmAtt)  , METH_VARARGS },
 	{"getNodeIMG" ,reinterpret_cast<PyCFunction>(getNodeIMG) , METH_VARARGS },
 	{"getNodeStat",reinterpret_cast<PyCFunction>(getNodeStat), METH_VARARGS },
+	{"timeclear"  ,reinterpret_cast<PyCFunction>(timeclear)  , METH_VARARGS },
 	{NULL}
 };
 
