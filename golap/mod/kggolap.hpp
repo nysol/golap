@@ -365,6 +365,29 @@ namespace kgmod {
 
 		  Result Enum(QueryParams& query, Ewah& dimBmp ,timChkT *timerST);
 
+			void EnumiLoop(
+				Ewah* tarTraBmp,Ewah* tarItemBmp, 
+				unordered_map<size_t, size_t>* itemFreq,
+				QueryParams* query ,
+				vector<size_t>* xx , size_t *counter ,size_t ed ,
+				timChkT *timerST,int *stat ,boost::mutex * mtx);
+
+		  void EnumLoop(	Ewah* tarTraBmp , Ewah* tarItemBmp ,
+		  								unordered_map<size_t, size_t>* itemFreq,
+											map<string, pair<string, size_t>>* isolatedNodes,
+											Result* res ,QueryParams* query,
+		  								vector<size_t>* dt ,size_t* st ,size_t ed,
+		  								timChkT *timerST,int *stat,size_t *hit,boost::mutex* mtx);
+/*
+		  void EnumLoop(	Ewah& tarTraBmp , Ewah& tarItemBmp ,
+		  								unordered_map<size_t, size_t>& itemFreq,
+											map<string, pair<string, size_t>>& isolatedNodes,
+											Result& res ,QueryParams& query,
+		  								vector<size_t>& dt ,size_t st ,size_t ed,
+		  								timChkT *timerST,int *stat,size_t *hit);
+*/
+
+
 			void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res,vector<timChkT *> *lim);
 
 

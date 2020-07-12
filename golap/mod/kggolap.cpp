@@ -81,6 +81,409 @@ void kgmod::kgGolap::can_thID(pthread_t id){
 }
 */
 
+//void kgmod::kgGolap::EnumLoop(
+//	Ewah& tarTraBmp, Ewah& tarItemBmp, 
+//	unordered_map<size_t, size_t>& itemFreq,
+//	map<string, pair<string, size_t>>& isolatedNodes,
+//	Result& res, QueryParams& query ,
+//	vector<size_t>& dt , size_t st ,size_t ed ,
+//	timChkT *timerST,int *stat ,size_t *hit)
+/*{
+		size_t * i2;
+		size_t icnt = ed - st ;
+		size_t cnt = 0 ; // for debug
+		size_t traNum = tarTraBmp.numberOfOnes();
+
+		for (size_t iix = st ; iix <  ed; iix++) {
+			i2 = &dt[iix];
+			// CHECK 用
+			if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
+			cnt++;
+
+			if (timerST->isTimeOut) {*stat = 2; break;}
+
+			string node2 = _occ->getItemCD(*i2);
+			vector<string> vnode2; vnode2.resize(1);
+			vnode2[0] = node2;
+
+
+			// *i2の持つtransaction
+			Ewah traBmp;
+			_occ->getTraBmpFromItem(*i2,traBmp);
+			traBmp = traBmp & tarTraBmp;
+
+			//
+			//size_t lcnt = 0;
+			//for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+			//	if (!_factTable->existInFact(*t, *i2, query.factFilter)) continue;
+			//	lcnt++;
+			//}
+			//itemFreq[*i2]  = lcnt;
+
+			if ( ((float)itemFreq[*i2]/traNum) < query.selCond.minSup ){ continue; }
+			if (itemFreq[*i2] == 0) continue;
+
+			// i2 が繋がってる nodeid ごとの件数(頻度)	 
+			map<size_t, size_t> coitems;
+
+			// sup条件を満たしている場合、もう一回loopしてpairカウント
+			for (auto t2 = traBmp.begin(), et2 = traBmp.end(); t2 != et2; t2++) {
+
+				if (timerST->isTimeOut) {*stat = 2; break;}
+				
+				if (!_factTable->existInFact(*t2, *i2, query.factFilter)) continue;
+				
+				Ewah item_i1 = _occ->getItmBmpFromTra(*t2) & tarItemBmp;
+
+				for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
+					if (timerST->isTimeOut) {*stat = 2; break;}
+					if (*i1 >= *i2) break;
+          if (!_factTable->existInFact(*t2, *i1, query.factFilter)) { 
+          	continue;
+          }
+					coitems[*i1]++;
+				}
+			}
+
+			//++++++++++++++
+			const string delim = ":";
+			string item2;
+			string itemName2;
+			for (auto& f : query.granularity.second) {
+				if (f == _config->traFile.itemFld) {
+					item2 += _occ->getItemCD(*i2) + delim;
+					itemName2 += _occ->getItemName(*i2) + delim;
+				} else {
+					item2 += _occ->getItemCD(*i2, f) + delim;
+					itemName2 += _occ->getItemName(*i2, f) + delim;
+				}
+			}
+			Cmn::EraseLastChar(item2);
+			Cmn::EraseLastChar(itemName2);
+			isolatedNodes[item2] = make_pair(itemName2, itemFreq[*i2]);
+
+			for (auto i1 = coitems.begin(), ei1 = coitems.end(); i1 != ei1; i1++) {
+				if (timerST->isTimeOut) {*stat = 2; break;}
+				string item1 ;
+				string itemName1;
+				for (auto& f : query.granularity.second) {
+
+					if (f == _config->traFile.itemFld) {
+						item1 += _occ->getItemCD(i1->first) + delim;
+						itemName1 += _occ->getItemName(i1->first) + delim;
+					}
+					else {
+						item1 += _occ->getItemCD(i1->first, f) + delim;
+						itemName1 += _occ->getItemName(i1->first, f) + delim;
+					}
+				}
+				Cmn::EraseLastChar(item1);
+				Cmn::EraseLastChar(itemName1);
+
+				size_t freq = i1->second;
+				float sup = (float)freq / traNum;
+				if (sup < query.selCond.minSup) continue;
+
+				float conf1 = (float)freq / itemFreq[i1->first];
+				if (conf1 < query.selCond.minConf) continue;
+
+				float jac = (float)freq / (itemFreq[i1->first] + itemFreq[*i2] - freq);
+				if (jac < query.selCond.minJac) continue;
+				
+				double lift = (double)(freq * traNum) / (itemFreq[i1->first] * itemFreq[*i2]);
+				if (lift < query.selCond.minLift) continue;
+
+				float pmi = Cmn::calcPmi(freq, itemFreq[i1->first], itemFreq[*i2], traNum);
+				if (pmi < query.selCond.minPMI) continue;
+
+				vector<string> dt(13);
+				dt[0] = item1; 
+				dt[1] = item2; 
+				dt[2] = toString(freq); 
+				dt[3] = toString(itemFreq[i1->first]); 
+				dt[4] = toString(itemFreq[*i2]); 
+				dt[5] = toString(traNum); 
+				char conv[64];
+				sprintf(conv,"%.5f",sup);   dt[6] = conv; 
+				sprintf(conv,"%.5f",conf1); dt[7] = conv; 
+				sprintf(conv,"%.5lf",lift); dt[8] = conv; 
+				sprintf(conv,"%.5f",jac);   dt[9] = conv; 
+				sprintf(conv,"%.5f",pmi);   dt[10]= conv; 
+				dt[11] = itemName1; 
+				dt[12] = itemName2; 
+
+				float skey;
+				bool notSort = false;
+				if (query.sortKey == SORT_SUP) {
+					skey = -sup;
+				} else if (query.sortKey == SORT_CONF) {
+					skey = -conf1;
+				} else if (query.sortKey == SORT_LIFT) {
+					skey = -lift;
+				} else if (query.sortKey == SORT_JAC) {
+					skey = -jac;
+				} else if (query.sortKey == SORT_PMI) {
+					skey = -pmi;
+				} else {
+					notSort = true;
+					skey = -10;
+				}
+
+				res.insert(make_pair(skey, dt));
+				//listedNodes.insert(item1);
+				//listedNodes.insert(item2);
+				auto it1 = isolatedNodes.find(item1);
+				if (it1 != isolatedNodes.end()) isolatedNodes.erase(it1);
+				auto it2 = isolatedNodes.find(item2);
+				if (it2 != isolatedNodes.end()) isolatedNodes.erase(it2);
+
+				if (res.size() > query.sendMax) {
+					res.pop();
+					*stat = 1;
+					if (notSort) break;
+				}
+				(*hit)++;
+			}
+		}
+}
+*/
+
+void kgmod::kgGolap::EnumLoop(
+	Ewah* tarTraBmp, Ewah* tarItemBmp, 
+	unordered_map<size_t, size_t>* itemFreq,
+	map<string, pair<string, size_t>>* isolatedNodes,
+	Result* res, QueryParams* query ,
+	vector<size_t>* xx , size_t *counter ,size_t ed ,
+	timChkT *timerST,int *stat ,size_t *hit,boost::mutex * mtx)
+
+{
+
+		size_t * i2;
+		size_t icnt = ed  ;
+		size_t cnt = 0 ; // for debug
+		size_t traNum = tarTraBmp->numberOfOnes();
+		
+	while (1){
+		
+		if ( *counter >= ed  ) { break; }
+		
+		size_t iis=0;
+		size_t iie=ed;
+		
+		{
+			boost::mutex::scoped_lock look(*mtx);
+			iis = *counter;
+			*counter = (ed< (*counter)+100 ? (ed): (*counter)+100 ) ;
+			iie = *counter;
+		}
+				
+
+		for (size_t iix = iis ; iix <  iie; iix++) {
+			i2 = &((*xx)[iix]);
+			// CHECK 用
+			if ( iix%1000==0 ){ cerr << iix << "/" << icnt << endl;}
+			cnt++;
+
+			if (timerST->isTimeOut) {*stat = 2; break;}
+
+			string node2 = _occ->getItemCD(*i2);
+			vector<string> vnode2; vnode2.resize(1);
+			vnode2[0] = node2;
+
+
+			// *i2の持つtransaction
+			Ewah traBmp;
+			_occ->getTraBmpFromItem(*i2,traBmp);
+			traBmp = traBmp & (*tarTraBmp);
+
+
+			if ( ((float)(*itemFreq)[*i2]/traNum) < query->selCond.minSup ){ continue; }
+			if ((*itemFreq)[*i2] == 0) continue;
+
+			// i2 が繋がってる nodeid ごとの件数(頻度)	 
+			map<size_t, size_t> coitems;
+
+			// sup条件を満たしている場合、もう一回loopしてpairカウント
+			for (auto t2 = traBmp.begin(), et2 = traBmp.end(); t2 != et2; t2++) {
+
+				if (timerST->isTimeOut) {*stat = 2; break;}
+				
+				if (!_factTable->existInFact(*t2, *i2, query->factFilter)) continue;
+				
+				Ewah item_i1 = _occ->getItmBmpFromTra(*t2) & (*tarItemBmp);
+
+				for (auto i1 = item_i1.begin(), ei1 = item_i1.end(); i1 != ei1; i1++) {
+					if (timerST->isTimeOut) {*stat = 2; break;}
+					if (*i1 >= *i2) break;
+          if (!_factTable->existInFact(*t2, *i1, query->factFilter)) { 
+          	continue;
+          }
+					coitems[*i1]++;
+				}
+			}
+
+			//++++++++++++++
+			const string delim = ":";
+			string item2;
+			string itemName2;
+			for (auto& f : query->granularity.second) {
+				if (f == _config->traFile.itemFld) {
+					item2 += _occ->getItemCD(*i2) + delim;
+					itemName2 += _occ->getItemName(*i2) + delim;
+				} else {
+					item2 += _occ->getItemCD(*i2, f) + delim;
+					itemName2 += _occ->getItemName(*i2, f) + delim;
+				}
+			}
+			Cmn::EraseLastChar(item2);
+			Cmn::EraseLastChar(itemName2);
+
+			{
+			boost::mutex::scoped_lock look_isoNode(*mtx);
+			(*isolatedNodes)[item2] = make_pair(itemName2, (*itemFreq)[*i2]);
+			}
+				
+
+
+
+			for (auto i1 = coitems.begin(), ei1 = coitems.end(); i1 != ei1; i1++) {
+				if (timerST->isTimeOut) {*stat = 2; break;}
+				string item1 ;
+				string itemName1;
+				for (auto& f : query->granularity.second) {
+
+					if (f == _config->traFile.itemFld) {
+						item1 += _occ->getItemCD(i1->first) + delim;
+						itemName1 += _occ->getItemName(i1->first) + delim;
+					}
+					else {
+						item1 += _occ->getItemCD(i1->first, f) + delim;
+						itemName1 += _occ->getItemName(i1->first, f) + delim;
+					}
+				}
+				Cmn::EraseLastChar(item1);
+				Cmn::EraseLastChar(itemName1);
+
+				size_t freq = i1->second;
+				float sup = (float)freq / traNum;
+				if (sup < query->selCond.minSup) continue;
+
+				float conf1 = (float)freq / (*itemFreq)[i1->first];
+				if (conf1 < query->selCond.minConf) continue;
+
+				float jac = (float)freq / ((*itemFreq)[i1->first] + (*itemFreq)[*i2] - freq);
+				if (jac < query->selCond.minJac) continue;
+				
+				double lift = (double)(freq * traNum) / ((*itemFreq)[i1->first] * (*itemFreq)[*i2]);
+				if (lift < query->selCond.minLift) continue;
+
+				float pmi = Cmn::calcPmi(freq, (*itemFreq)[i1->first], (*itemFreq)[*i2], traNum);
+				if (pmi < query->selCond.minPMI) continue;
+
+				vector<string> dt(13);
+				dt[0] = item1; 
+				dt[1] = item2; 
+				dt[2] = toString(freq); 
+				dt[3] = toString((*itemFreq)[i1->first]); 
+				dt[4] = toString((*itemFreq)[*i2]); 
+				dt[5] = toString(traNum); 
+				char conv[64];
+				sprintf(conv,"%.5f",sup);   dt[6] = conv; 
+				sprintf(conv,"%.5f",conf1); dt[7] = conv; 
+				sprintf(conv,"%.5lf",lift); dt[8] = conv; 
+				sprintf(conv,"%.5f",jac);   dt[9] = conv; 
+				sprintf(conv,"%.5f",pmi);   dt[10]= conv; 
+				dt[11] = itemName1; 
+				dt[12] = itemName2; 
+
+				float skey;
+				bool notSort = false;
+				if (query->sortKey == SORT_SUP) {
+					skey = -sup;
+				} else if (query->sortKey == SORT_CONF) {
+					skey = -conf1;
+				} else if (query->sortKey == SORT_LIFT) {
+					skey = -lift;
+				} else if (query->sortKey == SORT_JAC) {
+					skey = -jac;
+				} else if (query->sortKey == SORT_PMI) {
+					skey = -pmi;
+				} else {
+					notSort = true;
+					skey = -10;
+				}
+
+				{
+				boost::mutex::scoped_lock look_res(*mtx);
+
+				res->insert(make_pair(skey, dt));
+				//listedNodes.insert(item1);
+				//listedNodes.insert(item2);
+				auto it1 = isolatedNodes->find(item1);
+				if (it1 != isolatedNodes->end()) isolatedNodes->erase(it1);
+				auto it2 = isolatedNodes->find(item2);
+				if (it2 != isolatedNodes->end()) isolatedNodes->erase(it2);
+
+				if (res->size() > query->sendMax) {
+					res->pop();
+					*stat = 1;
+					if (notSort) break;
+				}
+				(*hit)++;
+
+				}
+
+
+			}
+		}
+		
+	}
+}
+
+void kgmod::kgGolap::EnumiLoop(
+	Ewah* tarTraBmp,Ewah* tarItemBmp, 
+	unordered_map<size_t, size_t>* itemFreq,
+	QueryParams* query ,
+	vector<size_t>* xx , size_t *counter ,size_t ed ,
+	timChkT *timerST,int *stat ,boost::mutex * mtx)
+{
+
+	while (1){
+	
+		if ( *counter >= ed  ) { break; }
+		
+		size_t iis=0;
+		size_t iie=ed;	
+		{
+			boost::mutex::scoped_lock look(*mtx);
+			iis = *counter;
+			*counter = (ed< (*counter)+100 ? (ed): (*counter)+100 ) ;
+			iie = *counter;
+		}
+		for (size_t iix = iis ; iix <  iie; iix++) {
+			size_t i2 = (*xx)[iix];
+
+			// CHECK 用
+			if ( iix%1000==0 ){ cerr << iix << "/" << ed << endl;}
+
+			if (timerST->isTimeOut) {*stat = 2; break;}
+			// *i2の持つtransaction
+			Ewah traBmp;
+			_occ->getTraBmpFromItem(i2,traBmp);
+			traBmp = traBmp & (*tarTraBmp);
+
+			size_t lcnt = 0;
+			for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+				if (!_factTable->existInFact(*t, i2, query->factFilter)) continue;
+				lcnt++;
+			}
+			{
+			boost::mutex::scoped_lock look(*mtx);
+			(*itemFreq)[i2]  = lcnt;
+			}
+		}
+	}
+}
 // -----------------------------------------------------------------------------
 // 引数の設定
 // -----------------------------------------------------------------------------
@@ -115,7 +518,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 	cerr << "enumerating" << endl;
 	size_t hit = 0;
 	bool notSort = false;
-	signed int stat = 0;
+	int stat = 0;
 	unordered_map<size_t, size_t> itemFreq;
 
     
@@ -171,9 +574,86 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 
 		// DEBUG
 		size_t icnt = tarItemBmp.numberOfOnes();
+		size_t iend = icnt;
 
-		int cnt=1;
+		cerr << "cnt start" << endl;
+		vector<size_t> xxi = tarItemBmp.toArray();
+
+		// カウントのみ
+		boost::mutex mutexiloop;
+		size_t icounter =0;
+
+		vector<boost::thread> thgiloop;
+		for (int i = 0; i < 4; i++) {
+			thgiloop.push_back(
+				boost::thread(
+					[this,&tarTraBmp,&tarItemBmp,&itemFreq,&query,&xxi,&icounter,iend,timerST,&stat,&mutexiloop] {
+						EnumiLoop(&tarTraBmp ,&tarItemBmp,&itemFreq,&query,&xxi,&icounter,iend,timerST,&stat,&mutexiloop);
+					}
+				)
+			);
+		}
+		for (boost::thread& th : thgiloop) { th.join();}
+		cerr << "cnt end " << endl;
+
+
+
+
+
+		/*
 		for (auto i2 = tarItemBmp.begin(), ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
+			if (timerST->isTimeOut) {stat = 2; break;}
+			// *i2の持つtransaction
+			Ewah traBmp;
+			_occ->getTraBmpFromItem(*i2,traBmp);
+			traBmp = traBmp & tarTraBmp;
+
+			size_t lcnt = 0;
+			for (auto t = traBmp.begin(), et = traBmp.end(); t != et; t++) {
+				if (!_factTable->existInFact(*t, *i2, query.factFilter)) continue;
+				lcnt++;
+			}
+			itemFreq[*i2]  = lcnt;
+		}
+		*/
+		cerr << "cnt end " << endl;
+
+
+
+		//int cnt=1;
+		//for (auto i2 = tarItemBmp.begin()+0, ei2 = tarItemBmp.end(); i2 != ei2; i2++) {
+		vector<size_t> xx = tarItemBmp.toArray();
+		/*
+		cerr << "aaa " << xx.size() << endl;
+		for(size_t i=0 ; i < xx.size() ;i++  ){
+			cerr << xx[i] << " ";
+		}
+		cerr << endl;
+		*/
+
+	
+
+		//EnumLoop(&tarTraBmp ,&tarItemBmp,&itemFreq,&isolatedNodes,&res,&query,&xx,0,xx.size(), timerST,&stat,&hit);		
+		boost::mutex mutexloop;
+		size_t counter =0;
+		size_t ed =xx.size();
+		vector<boost::thread> thgloop;
+		for (int i = 0; i < 4; i++) {
+			thgloop.push_back(
+				boost::thread(
+					[this,&tarTraBmp ,&tarItemBmp,&itemFreq,&isolatedNodes,&res,&query,&xx,&counter,ed, timerST,&stat,&hit,&mutexloop] {
+						EnumLoop(&tarTraBmp ,&tarItemBmp,&itemFreq,&isolatedNodes,&res,&query,&xx,&counter,ed,  timerST,&stat,&hit ,&mutexloop);
+					}
+				)
+			);
+		}
+		for (boost::thread& th : thgloop) { th.join();}
+
+
+
+/*
+		for (size_t iix=0 ; iix <  xx.size(); iix++) {
+			i2 = &xx[iix];
 			// CHECK 用
 			if ( cnt%1000==0 ){ cerr << cnt << "/" << icnt << endl;}
 			cnt++;
@@ -321,6 +801,8 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 				hit++;
 			}
 		}
+
+*/
 
 		if (query.isolatedNodes) {
 			vector<string> dt(3);
