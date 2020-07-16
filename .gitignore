@@ -59,4 +59,7 @@ install-sh
 libtool
 ltmain.sh
 missing
-
+build/
+dist/
+nysolgolap.egg-info/
+golap/.vscode/

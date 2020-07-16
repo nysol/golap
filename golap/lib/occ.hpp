@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,7 +14,7 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #ifndef occ_hpp
@@ -48,10 +48,10 @@ namespace kgmod {
 		string occKey;
 		BTree bmpList;
 		Ewah liveTra;
-		boost::mutex ex_occ_mtx;    
-		// traNo -> item bitmap    
-    typedef vector<Ewah> occ_t; 
-    occ_t occ;
+		boost::mutex ex_occ_mtx;
+		// traNo -> item bitmap
+		typedef vector<Ewah> occ_t;
+		occ_t occ;
 
     public:
 
@@ -59,33 +59,33 @@ namespace kgmod {
 		size_t itemMax(void){ return itemAtt->itemMax;}
 		bool isItemAtt(string f) { return itemAtt->isItemAtt(f);}
 
-		void getImageList(const Ewah& itemBmp, CsvFormat& imageList){ 
+		void getImageList(const Ewah& itemBmp, CsvFormat& imageList){
 			itemAtt->getImageList(itemBmp, imageList);
 		}
 		Ewah getliveTra(void){ return liveTra; }
-		
+
 		void liveTraSet(void){
-    	liveTra.padWithZeroes(traAtt->traMax + 1); 
+    	liveTra.padWithZeroes(traAtt->traMax + 1);
 			liveTra.inplace_logicalnot();
 		}
 		void liveTraSet(string v){
-      Ewah tmp; 
-      tmp.set(traAtt->traNo[v]);
-      liveTra = liveTra - tmp;
-    }
+			Ewah tmp;
+			tmp.set(traAtt->traNo[v]);
+			liveTra = liveTra - tmp;
+		}
 
 
 
 		size_t getTraID(string v){ return traAtt->traNo[v]; }
 		size_t getItemID(string v){ return itemAtt->itemNo[v]; }
-		
+
 		string getTraCD(size_t i){ return traAtt->tra[i]; }
 		string getItemCD(size_t i){ return itemAtt->item[i]; }
 		string getItemCD(size_t i,string& f){ return itemAtt->key2att(i, f); }
 
 		vector<string> getItemCD(size_t i,const vector<string>& f){ return itemAtt->key2att(i, f); }
 		string getItemName(size_t i){ return itemAtt->itemName[i]; }
-		string getItemName(size_t i,string& f){ 
+		string getItemName(size_t i,string& f){
 			string tmp;
 			itemAtt->code2name(f,itemAtt->key2att(i, f),tmp);
 			return tmp;
@@ -104,7 +104,7 @@ namespace kgmod {
 		bool getTraBmpM(const string &key,const string kv,Ewah& tBmp){
 			return bmpList.GetValMulti(key,kv,tBmp);
 		}
-		
+
 		void GetAllKeyValue(const string& key, pair<string, Ewah>& ret,BTree::kvHandle*& kvh){
 			return bmpList.GetAllKeyValue(key, ret, kvh);
 		}
@@ -124,14 +124,14 @@ namespace kgmod {
 
 			if( traAtt->traNo[t] < occ.size() ) { return ;}
 			// これOK? occ.size()の方がいい
-			occ.resize(traAtt->traNo[t] + 1); 
-    }
+			occ.resize(traAtt->traNo[t] + 1);
+		}
 
 		void setItemTraBMP( string i , string t ){
 			Ewah tmp;
 			tmp.set(itemAtt->itemNo[i]);
 			occ[traAtt->traNo[t]] = occ[traAtt->traNo[t]] | tmp;
-    }
+		}
 
 		Ewah& getTraBmp(const string& Key, const string& KeyValue){
 			return bmpList.GetVal( Key, KeyValue);
@@ -177,12 +177,12 @@ namespace kgmod {
         void loadCooccur(void);
         void load(void);
 
-        
-				// 一旦戻す
-				void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
-                                   const Ewah& traFilter, const Ewah& itemFilter, 
-                                   Ewah& itemBmp,
-                                   unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery) ;
+
+		// 一旦戻す
+		void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
+							const Ewah& traFilter, const Ewah& itemFilter,
+							Ewah& itemBmp,
+							unordered_map<string, Ewah>& ex_occ_CacheOnceQeuery) ;
 
         void occ_dump(const bool debug);
         void dump(const bool debug);
@@ -210,7 +210,7 @@ namespace kgmod {
 
 					vector<size_t> traAttKeyPos(keys.size());
 					for (size_t i = 0; i < keys.size(); i++) {
-							
+
 							boost::optional<size_t> pos = Cmn::posInVector(_config->traAttFile.granuFields, keys[i]);
 			        if (! pos) {
       		      string msg = keys[i] + " is not set in config file (traAttFile.granuFields)\n";
@@ -218,7 +218,7 @@ namespace kgmod {
 							}
 							traAttKeyPos[i] = *pos;
 					}
-    
+
 			    size_t cnt = 0;
 					unordered_map<string, bool> checked_vals;
 					for (auto tra = traFilter.begin(), etra = traFilter.end(); tra != etra; tra++) {
@@ -257,7 +257,7 @@ namespace kgmod {
 
 				// New
         void expandItemByGranu(const size_t traNo, const vector<string>& traAttKey,
-        											 const Ewah& traFilter, const Ewah& itemFilter, 
+        											 const Ewah& traFilter, const Ewah& itemFilter,
         											 map<size_t, Ewah>& ex_occ,
                                map<string, map<size_t, Ewah>>& ex_occ_cacheOnceQuery);
 

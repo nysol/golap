@@ -24,7 +24,7 @@ extern "C" {
 #if PY_MAJOR_VERSION >= 3
  #define strGET   PyUnicode_AsUTF8
  #define strCHECK PyUnicode_Check
-#else		
+#else
  #define strGET   PyString_AsString
  #define strCHECK PyString_Check
 #endif
@@ -77,7 +77,7 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 		PyObject *ol;
 		char* fldname;
 		char* ifil = NULL;
-		
+
 		if (!PyArg_ParseTuple(args, "Os|s", &ol , &fldname ,&ifil  )){
  	   return Py_BuildValue("");
 		}
@@ -87,7 +87,7 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 			rtn = kolap->getItmAtt(fldname);
 		}
 		else{
-			rtn = kolap->getItmAtt(fldname,ifil);		
+			rtn = kolap->getItmAtt(fldname,ifil);
 		}
 
 		PyObject *rtnList  = PyList_New(rtn.size());
@@ -99,7 +99,7 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 
 	}catch(kgError& err){
 		std::cerr << err.message(0) << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -110,7 +110,7 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 	}
 	catch(char const * msg){
 		std::cerr << msg << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -120,7 +120,7 @@ PyObject* getItmAtt(PyObject* self, PyObject* args)
 		return kerr;
 	}
 	catch(...){
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -152,7 +152,7 @@ PyObject* getTraAtt(PyObject* self, PyObject* args)
 
 	}catch(kgError& err){
 		std::cerr << err.message(0) << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -163,7 +163,7 @@ PyObject* getTraAtt(PyObject* self, PyObject* args)
 	}
 	catch(char const *msg){
 		std::cerr << msg << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -173,7 +173,7 @@ PyObject* getTraAtt(PyObject* self, PyObject* args)
 		return kerr;
 	}
 	catch(...){
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -247,7 +247,7 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 
 	}catch(kgError& err){
 		std::cerr << err.message(0) << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -258,7 +258,7 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 	}
 	catch(char const *msg){
 		std::cerr << msg << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -268,7 +268,7 @@ PyObject* getNodeIMG(PyObject* self, PyObject* args)
 		return kerr;
 	}
 	catch(...){
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -321,12 +321,12 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 			else if(PyLong_Check(v)){
 				long lv = PyLong_AsLong(v);
 				itemVal = toString(lv);
-			} 
+			}
 			else{
 				throw("nodestat.itemVal unsupprt datatype");
 			}
 		}
-		else { 
+		else {
 			throw("nodestat.itemVal must be set in request");
 		}
 
@@ -367,7 +367,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 
 	}catch(kgError& err){
 		std::cerr << err.message(0) << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -378,7 +378,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 	}
 	catch(char const *msg){
 		std::cerr << msg << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -388,7 +388,7 @@ PyObject* getNodeStat(PyObject* self, PyObject* args)
 		return kerr;
 	}
 	catch(...){
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -412,11 +412,11 @@ PyObject* run(PyObject* self, PyObject* args)
 		//cerr << "xx "<< kolap->get_thID() << endl;
 		//pthread_t ptid = kolap->get_thID();
 
-		
+
 		PyObject * ni = PyDict_GetItemString(jsonDict,"query");
 		if(!ni){
 			std::cerr << "parameter err" << std::endl;
-	 	 	return Py_BuildValue("");			
+	 	 	return Py_BuildValue("");
 		}
 		string traFilter;
 		string itemFilter;
@@ -505,7 +505,7 @@ PyObject* run(PyObject* self, PyObject* args)
 		v = PyDict_GetItemString(ni,"sendMax");
 		if(v){
 			if(strCHECK(v)){
-				 sendMax = strGET(v);	
+				 sendMax = strGET(v);
 			}
 			else if(PyLong_Check(v)){
 				 sendMax = toString(PyLong_AsLong(v));
@@ -545,9 +545,9 @@ PyObject* run(PyObject* self, PyObject* args)
 		if ( dimension.empty() ){
 
 			PyObject* rlist = PyDict_New();
-			
+
 			PyObject* vv ;
-			
+
 			vv = PyLong_FromLong(vstr[""].status());
 			PyDict_SetItemString(rlist,"status",vv);
 			Py_DECREF(vv);
@@ -559,8 +559,11 @@ PyObject* run(PyObject* self, PyObject* args)
 			vv = PyLong_FromLong(vstr[""].hitCnt());
 			PyDict_SetItemString(rlist,"hit",vv);
 			Py_DECREF(vv);
-			
-			
+
+			vv = PyLong_FromLong(vstr[""].diffCnt());
+			PyDict_SetItemString(rlist,"diff",vv);
+			Py_DECREF(vv);
+
 			PyObject* head = PyList_New(vstr[""].fldCnt());
 			for(size_t i=0 ; i < vstr[""].fldCnt() ; i++){
 				string hname = vstr[""].fldName(i);
@@ -571,7 +574,7 @@ PyObject* run(PyObject* self, PyObject* args)
 
 
 			vector< vector<string> > rtn = vstr[""].getdata();
-			
+
 			PyObject* rblist = PyList_New(rtn.size());
 
 			for(size_t i=0 ;i<rtn.size();i++){
@@ -585,7 +588,7 @@ PyObject* run(PyObject* self, PyObject* args)
 
 				PyList_SetItem(rblist,i,rbblist);
 
-			}			
+			}
 			PyDict_SetItemString(rlist,"data", rblist);
 			Py_DECREF(rblist);
 
@@ -621,7 +624,7 @@ PyObject* run(PyObject* self, PyObject* args)
 
 			}
 
-			return rlist;			
+			return rlist;
 
 		}
 		else{
@@ -632,9 +635,9 @@ PyObject* run(PyObject* self, PyObject* args)
 			PyObject* rblists = PyList_New(dstr.size()-1);
 
 			for(size_t ai=1; ai<dstr.size();ai++){
-				PyObject* rlist = PyDict_New();	
+				PyObject* rlist = PyDict_New();
 				PyObject* vv ;
-			
+
 				vv = PyLong_FromLong(vstr[dstr[ai]].status());
 				PyDict_SetItemString(rlist,"status",vv);
 				Py_DECREF(vv);
@@ -645,6 +648,10 @@ PyObject* run(PyObject* self, PyObject* args)
 
 				vv = PyLong_FromLong(vstr[dstr[ai]].hitCnt());
 				PyDict_SetItemString(rlist,"hit",vv);
+				Py_DECREF(vv);
+
+				vv = PyLong_FromLong(vstr[dstr[ai]].diffCnt());
+				PyDict_SetItemString(rlist,"diff",vv);
 				Py_DECREF(vv);
 
 				vv = PyUnicode_FromString(dstr[0].c_str());
@@ -666,11 +673,11 @@ PyObject* run(PyObject* self, PyObject* args)
 
 
 				vector< vector<string> > rtn = vstr[dstr[ai]].getdata();
-			
+
 				PyObject* rblist = PyList_New(rtn.size());
 
 				for(size_t i=0 ;i<rtn.size();i++){
-	
+
 					PyObject* rbblist = PyList_New(rtn[i].size());
 
 					for(size_t j=0 ;j<rtn[i].size();j++){
@@ -715,7 +722,7 @@ PyObject* run(PyObject* self, PyObject* args)
 
 				PyList_SetItem(rblists,ai-1,rlist);
 			}
-		
+
 			return rblists;
 
 		}
@@ -723,7 +730,7 @@ PyObject* run(PyObject* self, PyObject* args)
 
 	}catch(kgError& err){
 		std::cerr << err.message(0) << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -731,10 +738,10 @@ PyObject* run(PyObject* self, PyObject* args)
 		PyDict_SetItemString(kerr,"errmsg",kvv);
 		Py_DECREF(kvv);
 		return kerr;
-        
+
   }	catch(char const *msg){
 		std::cerr << msg << std::endl;
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -744,7 +751,7 @@ PyObject* run(PyObject* self, PyObject* args)
 		return kerr;
 	}
   catch(...){
-		PyObject* kerr = PyDict_New();	
+		PyObject* kerr = PyDict_New();
 		PyObject* kvv = PyLong_FromLong(-1);
 		PyDict_SetItemString(kerr,"status",kvv);
 		Py_DECREF(kvv);
@@ -767,7 +774,7 @@ PyObject* timeclear(PyObject* self, PyObject* args){
 		kgGolap *kolap	= (kgGolap *)PyCapsule_GetPointer(ol,"kggolapP");
 
 
-		return PyLong_FromLong( kolap->timeclear(string(idstr))); 
+		return PyLong_FromLong( kolap->timeclear(string(idstr)));
 
 }
 
@@ -791,7 +798,7 @@ PyObject* makeindex(PyObject* self, PyObject* args){
 	vv[1]=ipara.c_str();
 
 	if(mpsize==NULL){
-		kgmod.init(2, vv, &env);	
+		kgmod.init(2, vv, &env);
 	}
 	else{
 		string mpara = "mp=" + string(mpsize);
@@ -800,7 +807,7 @@ PyObject* makeindex(PyObject* self, PyObject* args){
 	}
 	kgmod.run();
 
-	return PyLong_FromLong(0); 
+	return PyLong_FromLong(0);
 
 }
 

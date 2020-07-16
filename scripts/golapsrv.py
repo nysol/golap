@@ -6,7 +6,7 @@ import json
 import time
 import nysolgolap.golap as ngolap
 import threading
-import traceback 
+import traceback
 import sys
 import signal
 
@@ -23,7 +23,7 @@ class MyThread(threading.Thread):
 
 	def run(self):
 		self.result = golapM.query(self.sjson)
-		
+
 
 jobs = {}
 
@@ -85,7 +85,7 @@ def reqpost():
 
 
 	# control
-	if 'control' in sjson : 
+	if 'control' in sjson :
 
 		if sjson['control'] == 'config':
 			cnf = golapM.getConf()
@@ -103,22 +103,22 @@ def reqpost():
 			return Response( "status:-1\nunknown control request\n",mimetype='text/plain' )
 
 	# 'retrieve'
-	elif 'retrieve' in sjson : 
+	elif 'retrieve' in sjson :
 
 		rtn = ""
 		vlist = None
 
 		try:
 			kv  = sjson['retrieve'].split(",",2)
-		
+
 			if kv[0] == 'ListTraAtt':
 				vlist = golapM.getTraFieldName()
 				rtn += "TraAtt\n"
-	
+
 			elif kv[0] == 'GetTraAtt':
 				if len(kv) <= 1:
 					raise Exception("getTraAtt is nesseary field name")
-				
+
 				vlist = golapM.getTraFieldAtt(kv[1])
 				rtn += "GetTraAtt\n"
 
@@ -130,7 +130,7 @@ def reqpost():
 				itmfil = ""
 				if 'itemFilter' in sjson :
 					itmfil = sjson['itemFilter']
-				
+
 				vlist = golapM.getItmFieldAtt(kv[1],itmfil)
 				rtn += "GetItmAtt\n"
 
@@ -146,7 +146,7 @@ def reqpost():
 		return Response( rtn , mimetype='text/plain' )
 
 	# 'nodeimage'
-	elif 'nodeimage' in sjson : 
+	elif 'nodeimage' in sjson :
 		try:
 			vlist = golapM.getNodeIMG(sjson)
 		except Exception as ep :
@@ -159,7 +159,7 @@ def reqpost():
 		return Response( rtn ,mimetype='text/plain')
 
 	# 'nodeimage'
-	elif 'nodestat' in sjson : 
+	elif 'nodestat' in sjson :
 		try:
 			vlist = golapM.getNodeStat(sjson)
 		except Exception as ep :
@@ -171,7 +171,7 @@ def reqpost():
 
 		return Response( rtn ,mimetype='text/plain')
 
-	elif 'query' in sjson : 
+	elif 'query' in sjson :
 		try:
 			#print("a0")
 			#t = MyThread(sjson)
@@ -192,14 +192,14 @@ def reqpost():
 
 			for vv in rtnobj:
 				rtn += "%s:%s\n"%(vv["dmName"],vv["dmValue"])
-				rtn += "status:%ld,sent:%ld,hit:%ld\n"%(vv["status"],vv["sent"],vv["hit"])
-				rtn += "{}\n".format( ','.join(vv["header"]) )		
+				rtn += "status:%ld,sent:%ld,hit:%ld,diff:%ld\n"%(vv["status"],vv["sent"],vv["hit"],vv["diff"])
+				rtn += "{}\n".format( ','.join(vv["header"]) )
 				for v in vv["data"]:
 					rtn += "{}\n".format(','.join(v))
 				rtn += "\n"
 
 				if "isoheader" in vv:
-					rtn += "## isolated nodes ##\n"					
+					rtn += "## isolated nodes ##\n"
 					rtn += "sent:%ld\n"%(len(vv["isodata"]))
 					rtn += "{}\n".format( ','.join(vv["isoheader"]) )
 					for v in vv["isodata"]:
@@ -207,12 +207,11 @@ def reqpost():
 					rtn += "\n"
 
 		else:
-
-			rtn = "status:%ld,sent:%ld,hit:%ld\n"%(rtnobj["status"],rtnobj["sent"],rtnobj["hit"])
+			rtn = "status:%ld,sent:%ld,hit:%ld,diff:%ld\n"%(rtnobj["status"],rtnobj["sent"],rtnobj["hit"],rtnobj["diff"])
 			rtn += "{}\n".format( ','.join(rtnobj["header"]) )
 			for v in rtnobj["data"]:
 				rtn += "{}\n".format(','.join(v))
-				
+
 			if "isoheader" in rtnobj:
 				rtn += "\n## isolated nodes ##\n"
 				rtn += "sent:%ld\n"%(len(rtnobj["isodata"]))
@@ -220,8 +219,8 @@ def reqpost():
 				for v in rtnobj["isodata"]:
 					rtn += "{}\n".format(','.join(v))
 				rtn += "\n"
-				
-			
+
+
 
 		return Response( rtn ,mimetype='text/plain')
 
@@ -243,6 +242,3 @@ def cancel(id):
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0',port=useport,threaded=True)
-	
-	
-	
