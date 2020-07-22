@@ -372,12 +372,33 @@ namespace kgmod {
 				vector<size_t>* xx , size_t *counter ,size_t ed ,
 				timChkT *timerST,int *stat ,boost::mutex * mtx);
 
+			void EnumiLoopR(
+				Ewah* tarTraBmp,Ewah* tarItemBmp, 
+				unordered_map<size_t, size_t>* itemFreq,
+				QueryParams* query ,
+				vector<size_t>* xx , size_t *counter ,size_t ed ,
+				timChkT *timerST,int *stat ,boost::mutex * mtx,
+				bool isTraGranu,bool isNodeGranu ,vector<string>* tra2key,
+				set<vector<string>> *checked_node2
+				);
+
 		  void EnumLoop(	Ewah* tarTraBmp , Ewah* tarItemBmp ,
-		  								unordered_map<size_t, size_t>* itemFreq,
+											unordered_map<size_t, size_t>* itemFreq,
 											map<string, pair<string, size_t>>* isolatedNodes,
 											Result* res ,QueryParams* query,
 		  								vector<size_t>* dt ,size_t* st ,size_t ed,
 		  								timChkT *timerST,int *stat,size_t *hit,boost::mutex* mtx);
+		  void EnumLoopR(	Ewah* tarTraBmp , Ewah* tarItemBmp ,
+		  								unordered_map<size_t, size_t>* itemFreq,
+											map<string, pair<string, size_t>>* isolatedNodes,
+											Result* res ,QueryParams* query,
+		  								vector<size_t>* dt ,size_t* st ,size_t ed,
+		  								timChkT *timerST,int *stat,size_t *hit,boost::mutex* mtx,
+		  								bool isTraGranu,bool isNodeGranu,
+											unordered_map<vector<string>, bool, boost::hash<vector<string>>> *checked_node2_b,size_t traNum);
+									    
+
+
 /*
 		  void EnumLoop(	Ewah& tarTraBmp , Ewah& tarItemBmp ,
 		  								unordered_map<size_t, size_t>& itemFreq,
@@ -386,6 +407,8 @@ namespace kgmod {
 		  								vector<size_t>& dt ,size_t st ,size_t ed,
 		  								timChkT *timerST,int *stat,size_t *hit);
 */
+
+
 
 
 			void MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* res,vector<timChkT *> *lim);
