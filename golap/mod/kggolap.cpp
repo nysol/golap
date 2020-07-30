@@ -138,24 +138,24 @@ void kgmod::kgGolap::calcDiffData(pair<string, string>& item, QueryParams& query
 	dt[5] = toString(traNum);
 	if (freq != 0) {
 		char conv[64];
-		if (! isnan(sup)) {
+		if (! std::isnan(sup)) {
 			sprintf(conv,"%.5f",sup);   dt[6] = conv;
 		}
-		if (! isnan(conf1)) {
+		if (! std::isnan(conf1)) {
 			sprintf(conv,"%.5f",conf1); dt[7] = conv;
 		}
-		if (! isnan(lift)) {
+		if (! std::isnan(lift)) {
 			sprintf(conv,"%.5lf",lift); dt[8] = conv;
 		}
-		if (! isnan(jac)) {
+		if (! std::isnan(jac)) {
 			sprintf(conv,"%.5f",jac);   dt[9] = conv;
 		}
-		if (! isnan(pmi)) {
+		if (! std::isnan(pmi)) {
 			sprintf(conv,"%.5f",pmi);   dt[10]= conv;
 		}
 	}
-	dt[11] = item.first;
-	dt[12] = item.second;
+	dt[11] = _occ->getItemName(itemNo[0]);
+	dt[12] = _occ->getItemName(itemNo[1]);
 
 	return;
 }
