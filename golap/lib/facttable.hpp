@@ -187,6 +187,19 @@ namespace kgmod {
 				}
 
 
+        Ewah adjustFact(const Ewah& traNo, const size_t itemNo, const Ewah& factBmp) {
+        		Ewah newtraNo;
+            bool stat = false;
+            for (auto i = traNo.begin(), ei = traNo.end(); i != ei; i++) {
+                stat = existInFact(*i, itemNo, factBmp);
+                if (stat) { newtraNo.set(*i); }
+            }
+            return newtraNo;
+        }
+
+
+
+
         size_t attFreq(
         	const vector<string>& attKeys, 
         	const vector<string> attVal, 
