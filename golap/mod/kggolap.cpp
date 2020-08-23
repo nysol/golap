@@ -1285,25 +1285,21 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 			}
 			Ewah tralist0;
 			tralist0.reset();
-			size_t ixcnt = 0;
 	    for (auto i = tra_i2_tmp1.begin(), ei = tra_i2_tmp1.end(); i != ei; i++) {
 					vector<string> vTraAtt;
 					_occ->traNo2traAtt(*i, query.granularity.first, vTraAtt);
 					if (checked_tra1.find(vTraAtt) != checked_tra1.end()) { continue; }
+					
+					if (!_factTable->existInFact(*i, itemInTheAtt2 , query.factFilter)) continue;
+
 
 		      Ewah traInTheAtt2 = _occ->getTraBmpFromGranu(query.granularity.first,vTraAtt);
 		      traInTheAtt2 = traInTheAtt2  & (tarTraBmp);
 		      
 		      Ewah tralist0x;
-
 	        tralist0x.set( *(traInTheAtt2.begin()) );
 	        tralist0 = tralist0 | tralist0x;
 
-	        ixcnt++;
-					for(size_t jj=0;jj<vTraAtt.size();jj++){
-						cerr << vTraAtt[jj] << " "	;				
-					}
-					cerr << *(traInTheAtt2.begin()) << endl;
 	        checked_tra1[vTraAtt]=true;
 	        /*
 					if ( Rep_tralist.find(*(traInTheAtt2.begin())) !=  Rep_tralist.end()){
@@ -1313,7 +1309,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 					Rep_tralist[*(traInTheAtt2.begin())].set(iix);
 					*/
 	    }
-			cerr << "cj "<< i2 << " " <<   ixcnt << " "  << tralist0.numberOfOnes() << endl;
 			//tralist.push_back(Rep_tralist0);
 			tralists.push_back(tralist0);
 			//Ewah tra_i2 = tra_i2_tmp1 & (tarTraBmp);
@@ -1336,6 +1331,10 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 		//vector<Ewah> tralists; //item => tra
 
 		for(size_t iiv=0 ;iiv <Rep_itemlist.size();iiv++){
+
+			// CHECK 用
+			if ( iiv%1000==0 ){ cerr << iiv << "/" << Rep_itemlist.size() << endl;}
+
 			size_t i2no = Rep_itemlist[iiv];
 
 				const string delim = ":";
@@ -1353,7 +1352,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 				Cmn::EraseLastChar(item2);
 				Cmn::EraseLastChar(itemName2);
 
-			cerr << "x "<< i2no  << " " << item2 << " " << tralists[iiv].numberOfOnes() << endl;
 
 			if (  ((float)tralists[iiv].numberOfOnes()/traNum) < query.selCond.minSup ){
 				continue;
