@@ -1281,9 +1281,11 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 				Ewah tra_i2_tmp2; 
 				_occ->getTraBmpFromItem(*at2,tra_i2_tmp2);
 				 tra_i2_tmp1 = tra_i2_tmp1 |tra_i2_tmp2;
-
 			}
+			tra_i2_tmp1 = tra_i2_tmp1 & tarTraBmp;
+
 			Ewah tralist0;
+			size_t xcnt = 0; 
 			tralist0.reset();
 	    for (auto i = tra_i2_tmp1.begin(), ei = tra_i2_tmp1.end(); i != ei; i++) {
 					vector<string> vTraAtt;
@@ -1291,10 +1293,14 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 					if (checked_tra1.find(vTraAtt) != checked_tra1.end()) { continue; }
 					
 					if (!_factTable->existInFact(*i, itemInTheAtt2 , query.factFilter)) continue;
-
+					
 
 		      Ewah traInTheAtt2 = _occ->getTraBmpFromGranu(query.granularity.first,vTraAtt);
-		      traInTheAtt2 = traInTheAtt2  & (tarTraBmp);
+		     	traInTheAtt2 = traInTheAtt2  & (tarTraBmp);
+		     	
+		     	if ( traInTheAtt2.numberOfOnes()==0 ) {  continue; }
+
+					xcnt++;
 		      
 		      Ewah tralist0x;
 	        tralist0x.set( *(traInTheAtt2.begin()) );
@@ -1312,7 +1318,7 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 			//tralist.push_back(Rep_tralist0);
 			tralists.push_back(tralist0);
 			//Ewah tra_i2 = tra_i2_tmp1 & (tarTraBmp);
-			//cerr << "cnt gra start icntxx "<< tra_i2 .numberOfOnes() << endl;
+			//cerr << "cnt gra start icntxx " << xcnt << " " << tralist0.numberOfOnes() << endl;
 
 		}
 		//for(size_t zi = 0 ;zi < tralists.size(); zi++){
