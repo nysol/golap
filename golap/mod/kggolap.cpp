@@ -1284,29 +1284,27 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 			}
 			tra_i2_tmp1 = tra_i2_tmp1 & tarTraBmp;
 
-			Ewah tralist0;
-			size_t xcnt = 0; 
-			tralist0.reset();
-	    for (auto i = tra_i2_tmp1.begin(), ei = tra_i2_tmp1.end(); i != ei; i++) {
-					vector<string> vTraAtt;
-					_occ->traNo2traAtt(*i, query.granularity.first, vTraAtt);
-					if (checked_tra1.find(vTraAtt) != checked_tra1.end()) { continue; }
+			if (isTraGranu) {
+				Ewah tralist0;
+				tralist0.reset();
+	  	  for (auto i = tra_i2_tmp1.begin(), ei = tra_i2_tmp1.end(); i != ei; i++) {
+						vector<string> vTraAtt;
+						_occ->traNo2traAtt(*i, query.granularity.first, vTraAtt);
+						if (checked_tra1.find(vTraAtt) != checked_tra1.end()) { continue; }
 					
-					if (!_factTable->existInFact(*i, itemInTheAtt2 , query.factFilter)) continue;
-					
+						if (!_factTable->existInFact(*i, itemInTheAtt2 , query.factFilter)) continue;
 
-		      Ewah traInTheAtt2 = _occ->getTraBmpFromGranu(query.granularity.first,vTraAtt);
-		     	traInTheAtt2 = traInTheAtt2  & (tarTraBmp);
-		     	
-		     	if ( traInTheAtt2.numberOfOnes()==0 ) {  continue; }
 
-					xcnt++;
-		      
-		      Ewah tralist0x;
-	        tralist0x.set( *(traInTheAtt2.begin()) );
-	        tralist0 = tralist0 | tralist0x;
+				      Ewah traInTheAtt2 = _occ->getTraBmpFromGranu(query.granularity.first,vTraAtt);
+			   	  	traInTheAtt2 = traInTheAtt2  & (tarTraBmp);
+			  	   	if ( traInTheAtt2.numberOfOnes()==0 ) {  continue; }
+				      Ewah tralist0x;
+			        tralist0x.set( *(traInTheAtt2.begin()) );
+	  		      tralist0 = tralist0 | tralist0x;
 
-	        checked_tra1[vTraAtt]=true;
+	    		    checked_tra1[vTraAtt]=true;
+
+
 	        /*
 					if ( Rep_tralist.find(*(traInTheAtt2.begin())) !=  Rep_tralist.end()){
 						Ewah bmpbmp;
@@ -1314,9 +1312,22 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 					}
 					Rep_tralist[*(traInTheAtt2.begin())].set(iix);
 					*/
-	    }
-			//tralist.push_back(Rep_tralist0);
-			tralists.push_back(tralist0);
+		    }
+				//tralist.push_back(Rep_tralist0);
+				tralists.push_back(tralist0);
+			}
+			else{
+				Ewah tralist0;
+				tralist0.reset();
+	  	  for (auto i = tra_i2_tmp1.begin(), ei = tra_i2_tmp1.end(); i != ei; i++) {
+						if (!_factTable->existInFact(*i, itemInTheAtt2 , query.factFilter)) continue;
+				    Ewah tralist0x;
+			      tralist0x.set( *(i) );
+	  		    tralist0 = tralist0 | tralist0x;
+	  	  }
+
+				tralists.push_back(tralist0);
+			}
 			//Ewah tra_i2 = tra_i2_tmp1 & (tarTraBmp);
 			//cerr << "cnt gra start icntxx " << xcnt << " " << tralist0.numberOfOnes() << endl;
 
