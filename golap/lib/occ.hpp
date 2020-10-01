@@ -90,6 +90,13 @@ namespace kgmod {
 			itemAtt->code2name(f,itemAtt->key2att(i, f),tmp);
 			return tmp;
 		}
+		string getItemName(vector<string>& v_cd, vector<string>& v_f) {
+			if (v_cd.size() != v_cd.size()) return "";
+
+			vector<string> tmp(v_cd.size());
+			itemAtt->code2name(v_f, v_cd, tmp);
+			return Cmn::CsvStr::Join(tmp, ":");
+		}
 
 		string itemAtt_item(size_t i){ return itemAtt->item[i]; }
 
