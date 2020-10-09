@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,7 +14,7 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #ifndef facttable_hpp
@@ -36,7 +36,7 @@ using namespace std;
 
 namespace kgmod {
     typedef double factVal_t;
-    
+
     ////
     class AggrFunc {
         string _original;
@@ -52,11 +52,11 @@ namespace kgmod {
         const map<string, int> _funcs = {{"COUNT",0}, {"SUM",1}, {"AVE",1}, {"MED",1}, {"MIN",1},
                                          {"MAX",1}, {"VAR",1}, {"SD",1}, {"QTILE",1}};
                                                     // ["function name"] -> argument count
-        
+
     private:
         string getOneElem(char** ptr);
         void eval(void);
-        
+
     public:
         void setValPosMap(unordered_map<string, int>* valPosMap) {_valPosMap = valPosMap;}
         string& getOriginal(void) {return _original;};
@@ -65,7 +65,7 @@ namespace kgmod {
         factVal_t calc(vector<vector<factVal_t>>& dat);
         void dump(void);
     };
-    
+
     ////
     class FactTable {
         Config* _config;
@@ -83,10 +83,10 @@ namespace kgmod {
 
         // both of numField and strField
         typedef pair<size_t, size_t> addr_t;
-        
+
         vector<addr_t> _addr;                   // [factTable recNo] -> {traNo, itemNo}
         multimap<addr_t, size_t> _recNo; // [{traNo, itemNo}] -> factTable recNo
-        
+
     public:
         size_t recMax;
         BTree bmplist;                          // [{key, value}] -> bitmap of facttable recNo
@@ -98,7 +98,7 @@ namespace kgmod {
         void item2traBmp(const Ewah& itemBmp, Ewah& traBmp);
         bool getVals(const size_t trano, const size_t itmno, vals_t*& vals);
         bool getItems(const size_t traNo, Ewah& itemBmp);
-        
+
     public:
 
         void build(void);
@@ -109,6 +109,14 @@ namespace kgmod {
             addr_t& tmp = _addr[recNo];
             traNo = tmp.first;
             itemNo = tmp.second;
+        }
+        boost::optional<size_t> keys2recNo(size_t traNo, size_t itemNo) {
+          auto tmp = _recNo.find({traNo, itemNo});
+          if (tmp == _recNo.end()) {
+            return boost::none;
+          } else {
+            return tmp->second;
+          }
         }
         bool existInFact(const size_t traNo, const size_t itemNo, const Ewah& factBmp) {
             bool stat = false;
@@ -142,13 +150,13 @@ namespace kgmod {
         	vector<string>& keys , vector<string>& KeyValue ,
         	const Ewah& traBmp,const Ewah& factBmp,
         	const vector<string>& attKeys2
-        	) 
+        	)
         {//たぶんおそい速くする方法ありそう
 					bool stat = false;
-					 //tra拡張 
+					 //tra拡張
 					Ewah checktra = _occ->getTraBmpFromGranu(keys ,  KeyValue) & traBmp;
-					for (auto t2 = checktra.begin(), et2 = checktra.end(); t2 != et2; t2++) { 
-						for (auto i2 = itemNos.begin(), ei2 = itemNos.end(); i2 != ei2; i2++) { 
+					for (auto t2 = checktra.begin(), et2 = checktra.end(); t2 != et2; t2++) {
+						for (auto i2 = itemNos.begin(), ei2 = itemNos.end(); i2 != ei2; i2++) {
 							size_t traNo = *t2;
 							size_t itemNo = *i2;
 							for (auto r = _recNo.lower_bound({traNo, itemNo}), er = _recNo.end(); r != er; r++) {
@@ -169,11 +177,11 @@ namespace kgmod {
         	vector<string>& keys , vector<string>& KeyValue ,
         	const Ewah& traBmp,const Ewah& factBmp,
         	const vector<string>& attKeys2
-        	) 
+        	)
         {//たぶんおそい
 					bool stat = false;
 					Ewah checktra = _occ->getTraBmpFromGranu(keys ,  KeyValue) & traBmp; //tra拡張
-					for (auto t2 = checktra.begin(), et2 = checktra.end(); t2 != et2; t2++) { 
+					for (auto t2 = checktra.begin(), et2 = checktra.end(); t2 != et2; t2++) {
 						size_t traNo = *t2;
 						for (auto r = _recNo.lower_bound({traNo, itemNo}), er = _recNo.end(); r != er; r++) {
 								if (r->first.first != traNo || r->first.second !=itemNo) break;
@@ -188,8 +196,8 @@ namespace kgmod {
 
 
         size_t attFreq(
-        	const vector<string>& attKeys, 
-        	const vector<string> attVal, 
+        	const vector<string>& attKeys,
+        	const vector<string> attVal,
         	const Ewah& traFilter,
           const Ewah& itemFilter,
           const Ewah& factFilter
@@ -206,14 +214,14 @@ namespace kgmod {
     			}
 			   // アイテム一覧 ::
 					itemBmp = itemBmp & itemFilter;
-					
+
 					//  Ewahで直接できそうな気も・。
 					set<size_t> sumiTra;
 			    for (auto it = itemBmp.begin(), eit = itemBmp.end(); it != eit; it++) {
 						Ewah tmpTraBmp;
         		if (!_occ->getTraBmpFromItem(*it ,tmpTraBmp)) continue;
         		tmpTraBmp = tmpTraBmp & traFilter;
-		
+
 		        for (auto t = tmpTraBmp.begin(), et = tmpTraBmp.end(); t != et; t++) {
 		        	if( sumiTra.find(*t) != sumiTra.end()){ continue; }
 		        	if(!existInFact(*t, *it, factFilter)) { continue; }
@@ -225,8 +233,8 @@ namespace kgmod {
 				}
 
         size_t attFreq(
-        	const vector<string>& attKeys, 
-        	const vector<string> attVal, 
+        	const vector<string>& attKeys,
+        	const vector<string> attVal,
         	const Ewah& traFilter,
           const Ewah& itemFilter,
           const Ewah& factFilter,
@@ -244,7 +252,7 @@ namespace kgmod {
     			}
 			   // アイテム一覧 ::
 					itemBmp = itemBmp & itemFilter;
-					
+
 					//  Ewahで直接できそうな気も・。
 					set<size_t> sumiTra;
 					set<string> checkedAttVal;

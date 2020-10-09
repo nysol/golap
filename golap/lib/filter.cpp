@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,7 +14,7 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #include <string>
@@ -108,14 +108,14 @@ void kgmod::cmdCache::initFile(void) {
 void kgmod::cmdCache::save(void) {
     if (! config->cmdCache_enable) return;
     if (modCount == 0) return;
-    
+
     FILE* fp = fopen(fileName.c_str(), "wb");
     if (fp == NULL) {
         stringstream msg;
         msg << "failed to open " + fileName;
         throw kgError(msg.str());
     }
-    
+
     try {
         for (auto i = _cache_items_list.cbegin(); i != _cache_items_list.cend(); i++) {
             size_t rc;
@@ -125,7 +125,7 @@ void kgmod::cmdCache::save(void) {
             if (rc == 0) throw 0;
             rc = fwrite(cmd, size, 1, fp);
             if (rc == 0) throw 0;
-            
+
             stringstream ss;
             i->second.write(ss);
             size_t sssize = ss.str().size();
@@ -140,20 +140,20 @@ void kgmod::cmdCache::save(void) {
         msg << "failed to write " << fileName;
         throw kgError(msg.str());
     }
-    
+
     fclose(fp);
 }
 
 void kgmod::cmdCache::load(void) {
     if (! config->cmdCache_enable) return;
-    
+
     FILE* fp = fopen(fileName.c_str(), "rb");
     if (fp == NULL) {
         stringstream msg;
         msg << "failed to open " + fileName;
         throw kgError(msg.str());
     }
-    
+
     try {
         while (true) {
             size_t rc;
@@ -165,20 +165,20 @@ void kgmod::cmdCache::load(void) {
             keyBuf[keyLen] = '\0';
             if (rc == 0) {free(keyBuf); throw 1;}
             string key(keyBuf);
-            
+
             size_t ssSize;
             rc = fread(&ssSize, sizeof(ssSize), 1, fp);
             if (rc == 0) {free(keyBuf); throw 1;}
             char* ssBuf = (char*)malloc(ssSize);
             rc = fread(ssBuf, ssSize, 1, fp);
             if (rc == 0) {free(keyBuf); free(ssBuf); throw 1;}
-            
+
             stringstream ss;
             ss.write(ssBuf, ssSize);
             Ewah bmp;
             bmp.read(ss);
             put(key, bmp, true);
-            
+
             free(keyBuf); free(ssBuf);
         }
     } catch(int e) {
@@ -187,7 +187,7 @@ void kgmod::cmdCache::load(void) {
         msg << "failed to read " << fileName;
         throw kgError(msg.str());
     }
-    
+
     fclose(fp);
 }
 
@@ -199,7 +199,7 @@ void kgmod::cmdCache::clear(void) {
 void kgmod::cmdCache::dump(bool debug) {
     if (! config->cmdCache_enable) return;
     if (! debug) return;
-    
+
     cerr << "<<< dump command cache >>>" << endl;
     for (auto i = _cache_items_list.cbegin(); i != _cache_items_list.cend(); i++) {
         cerr << i->first << "-> ";
@@ -252,7 +252,7 @@ Ewah& kgmod::Filter::logicalnot(Ewah& bmp, const tra_item traitem) {
         msg << "invalid tra_item: " << traitem;
         throw kgError(msg.str());
     }
-    
+
     bmp.padWithZeroes(bmpCnt);
     bmp.inplace_logicalnot();
     return bmp;
@@ -268,7 +268,7 @@ BTree* kgmod::Filter::setModeTraItem(const tra_item traitem) {
     if (traitem == TRA) {
         bmpList = occ->getTraBtree();
     } else if (traitem == ITEM) {
-        bmpList = occ->getItemBtree(); 
+        bmpList = occ->getItemBtree();
     } else if (traitem == FACT) {
         bmpList = &(fact->bmplist);
     } else {
@@ -296,7 +296,7 @@ pair<BTree*, string> kgmod::Filter::setModeTraItem2(const tra_item traitem) {
         msg << "invalid tra_item: " << traitem;
         throw kgError(msg.str());
     }
-    
+
     pair<BTree*, string> out = {bmpList, key};
     return out;
 }
@@ -306,9 +306,11 @@ Ewah kgmod::Filter::sel(const values_t& values, const tra_item traitem) {
     for (auto val = values.begin(); val != values.end(); val++) {
         size_t num;
         if (traitem == TRA) {
-            num = occ->getTraID(*val);
+            boost::optional<size_t> tmp = occ->getTraID(*val);
+            num = *tmp;
         } else if (traitem == ITEM) {
-            num = occ->getItemID(*val);
+            boost::optional<size_t> tmp = occ->getItemID(*val);
+            num = *tmp;
         } else if (traitem == FACT) {
             stringstream msg;
             msg << "cannot use sel for fact filter" << traitem;
@@ -318,7 +320,7 @@ Ewah kgmod::Filter::sel(const values_t& values, const tra_item traitem) {
             msg << "invalid tra_item: " << traitem;
             throw kgError(msg.str());
         }
-        
+
         Ewah bmp;
         bmp.set(num);
         out = out | bmp;
@@ -385,7 +387,7 @@ Ewah kgmod::Filter::search(const string& method, const string& key, const values
         } else {
             kv = *i;
         }
-        
+
         Ewah tmp;
         bool stat = occ->getTraBmpM(key, kv, tmp);
         if (! stat) throw kgError("error occures in search");
@@ -409,7 +411,7 @@ Ewah kgmod::Filter::range(const string& key, const pair<string, string>& values,
         msg << "invalid tra_item: " << traitem;
         throw kgError(msg.str());
     }
-    
+
     bool stat = bmpList->GetValMulti(key, "[", values.first, "]", values.second, out);
     if (! stat) throw kgError("error occures in search");
     return out;
@@ -442,12 +444,12 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
     Ewah itemBmp = makeItemBitmap(itemFilter);
     Ewah traBmp;
     if (itemBmp.numberOfOnes() == 0) return traBmp;
-    
+
     if (boost::iequals(andor, "AND")) traBmp = logicalnot(traBmp, TRA);
     for (auto i = itemBmp.begin(); i != itemBmp.end(); i++) {
 
         //Ewah tmp = occ->bmpList.GetVal(occ->occKey, occ->itemAtt->item[*i]);
-        
+
         Ewah tmp = occ->getTraBmpFromItem(*i);
 
 
@@ -459,7 +461,7 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
             throw 0;
         }
     }
-    
+
     vector<string> values;
     btree::btree_map<string, bool> uniqCheck;
     BTree::kvHandle* kvh = NULL;
@@ -475,7 +477,7 @@ Ewah kgmod::Filter::having(const string& key, string& andor, string& itemFilter,
         }
         occ->GetAllKeyValue(key, ret, kvh);
     }
-    
+
     if (debug) {
         int c = 0;
         cerr << "(internal) ISIN(tra): ";
@@ -514,7 +516,7 @@ string kgmod::Filter::getFunc(char** cmdPtr) {
 kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
     go_next(cmdPtr);
     if (**cmdPtr != '(') throw 0;
-    
+
     values_t arg;
     int argn = 0;
     char inQuote = '\0';
@@ -561,15 +563,15 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
               if (isQuoted[argn]) continue;
             }
         }
-        
+
         if (arg.size() == argn) arg.push_back("");
         char tmp[2];
         tmp[0] = **cmdPtr; tmp[1] = '\0';
         arg[argn] += tmp;
-        
+
         isEscape = false;
     }
-    
+
     if (arg.size() == argn) arg.push_back("");
     if (*(*cmdPtr - 1) != ')') throw 0;
     for (size_t i = 0; i < arg.size(); i++) {
@@ -748,3 +750,87 @@ Ewah kgmod::Filter::makeFactBitmap(string& cmdline) {
     return bmp;
 }
 
+// TraID一覧をファイルで受けて、Filter Bitmapとする
+Ewah kgmod::Filter::makeTraFileFilter(string& infile) {
+    Ewah out;
+    string fileName;
+    fileName = config->inDir + "/" + infile;
+    if (infile != "" && Cmn::FileExists(fileName)) {
+        set<size_t> bitlist;
+        bool first = true;
+        string line;
+        ifstream ifs(fileName);
+        while (getline(ifs, line)) {
+            // ommit CSV Header
+            if (first) {first = false; continue;}
+
+            vector<string> buf = Cmn::CsvStr::Parse(line);
+            boost::optional<size_t> traNo = occ->getTraID(buf[0]);
+            if (traNo) bitlist.insert(*traNo);
+        }
+        for (size_t t : bitlist) {
+            out.set(t);
+        }
+    } else {
+        out.padWithZeroes(occ->traMax() + 1);
+        out.inplace_logicalnot();
+    }
+    return out;
+}
+
+Ewah kgmod::Filter::makeItemFileFilter(string& infile) {
+    Ewah out;
+    string fileName;
+    fileName = config->inDir + "/" + infile;
+    if (infile != "" && Cmn::FileExists(fileName)) {
+        set<size_t> bitlist;
+        bool first = true;
+        string line;
+        ifstream ifs(fileName);
+        while (getline(ifs, line)) {
+            // ommit CSV Header
+            if (first) {first = false; continue;}
+
+            vector<string> buf = Cmn::CsvStr::Parse(line);
+            boost::optional<size_t> traNo = occ->getItemID(buf[0]);
+            if (traNo) bitlist.insert(*traNo);
+        }
+        for (size_t t : bitlist) {
+            out.set(t);
+        }
+    } else {
+        out.padWithZeroes(occ->itemMax() + 1);
+        out.inplace_logicalnot();
+    }
+    return out;
+}
+
+Ewah kgmod::Filter::makeFactFileFilter(string& infile) {
+    Ewah out;
+    string fileName;
+    fileName = config->inDir + "/" + infile;
+    if (infile != "" && Cmn::FileExists(fileName)) {
+        set<size_t> bitlist;
+        size_t cnt = 0;
+        string line;
+        ifstream ifs(fileName);
+        while (getline(ifs, line)) {
+            // ommit CSV Header
+            if (cnt == 0) {cnt++; continue;}
+
+            vector<string> buf = Cmn::CsvStr::Parse(line);
+            boost::optional<size_t> traNo = occ->getTraID(buf[0]);
+            boost::optional<size_t> itemNo = occ->getItemID(buf[1]);
+            boost::optional<size_t> recNo = fact->keys2recNo(*traNo, *itemNo);
+            if (recNo) bitlist.insert(*recNo);
+            cnt++;
+        }
+        for (size_t t : bitlist) {
+            out.set(t);
+        }
+    } else {
+        out.padWithZeroes(fact->recMax + 1);
+        out.inplace_logicalnot();
+    }
+    return out;
+}

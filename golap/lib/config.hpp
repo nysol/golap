@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,7 +14,7 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #ifndef config_hpp
@@ -35,13 +35,14 @@ namespace kgmod {
     // STR_HC,NUM_HCではhigh cardinality用のbitmapを使わないインデックスを使用する
     enum DataType {NONE=0,STR=1,NUM=2,STR_HC=3,NUM_HC=4};
     const vector<string> DataTypeStr = {"NONE","STR","NUM","STR_HC","NUM_HC"};
-    
+
     struct Config {
         Param Prm;
-        
+
         string dbDir;
+        string inDir;
         string outDir;
-        
+
         struct traFile {
             string name;
             string traFld;
@@ -50,7 +51,7 @@ namespace kgmod {
             vector<string> numFields;
             vector<string> highCardinality;
         } traFile;
-        
+
         struct traAttFile {
             string name;
             vector<string> strFields;
@@ -59,7 +60,7 @@ namespace kgmod {
             vector<string> granuFields;
         } traAttFile;
         btree::btree_map<string, DataType> traDataType; // ["field name"] -> data type
-        
+
         struct itemAttFile {
             string name;
             string itemName;
@@ -71,21 +72,21 @@ namespace kgmod {
             unordered_map<string, string> name2code_map;
         } itemAttFile;
         btree::btree_map<string, DataType> itemDataType; // ["field name"] -> data type
-        
+
         bool cmdCache_enable;
         size_t cmdCache_size;
         size_t cmdCache_saveInterval;
-        
+
 #define MAX_THREAD 100
         bool mt_enable;
         size_t mt_degree;
-        
+
         size_t bottomSupport;
-        
+
         size_t sendMax;
         u_short port;
         unsigned int deadlineTimer;
-        
+
     public:
         Config(string& infile);
         bool getJson(string& json) {return Prm.convJson(json);}

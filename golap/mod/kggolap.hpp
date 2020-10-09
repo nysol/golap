@@ -521,6 +521,8 @@ namespace kgmod {
 		map<string, Result> runQuery(
 			string traFilter,string itemFilter,
 			string factFilter,
+			string traFilterFile,string itemFilterFile,
+			string factFilterFile,
 			string gTransaction,string gNode,
 			string SelMinSup,string SelMinConf,string SelMinLift,
 			string SelMinJac,string SelMinPMI,

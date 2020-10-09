@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,7 +14,7 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #include <string>
@@ -41,7 +41,7 @@ string kgmod::AggrFunc::getOneElem(char** ptr) {
         (*ptr)++;
         return out;
     }
-    
+
     while (**ptr != '\0' && (strchr("+-*/(),\t ", **ptr) == NULL)) {
         out.push_back(**ptr);
         (*ptr)++;
@@ -83,7 +83,7 @@ void kgmod::AggrFunc::parse(const string& cmd){
                 _stack.push_back({opeStack.back(), "", 0, 0});
                 opeStack.pop_back();
             }
-            
+
             if (! funcStack.empty()) {
                 funcStack.back().second--;
                 if (funcStack.back().second == 0) {
@@ -98,7 +98,7 @@ void kgmod::AggrFunc::parse(const string& cmd){
                 _stack.push_back({'V', "", 0, itr1->second});
                 continue;
             }
-            
+
             Cmn::ToUpper(elem);
             if (_funcs.find(elem) != _funcs.end()) {
                 funcStack.push_back(make_pair(elem, 1));    // 後ろに"("なければエラーをスローするので、あるのが前提で1をセット
@@ -110,7 +110,7 @@ void kgmod::AggrFunc::parse(const string& cmd){
             throw kgError("unknown data or function: " + _original);
         }
     }
-    
+
     if (! opeStack.empty()) throw kgError("formula error: " + _original);
 
     eval();
@@ -152,15 +152,15 @@ double kgmod::AggrFunc::calc(vector<vector<factVal_t>>& dat) {
                 rslt.push_back({(double)dat[st.fldPos].size()});
                 continue;
             }
-            
+
             auto f = _funcs.find(st.func);
             if (f == _funcs.end()) throw kgError("internal error: " + _original);
             if (rslt.size() < f->second) throw kgError("internal error: " + _original);
-            
+
             vector<factVal_t> buf;
             buf.reserve(rslt.back().size());
             copy(rslt.back().begin(), rslt.back().end(), back_inserter(buf));
-            
+
 //            vector<factVal_t>& e = rslt.back();
             rslt.back().resize(1);
             if (boost::iequals(st.func, "SUM")) {
@@ -186,7 +186,7 @@ double kgmod::AggrFunc::calc(vector<vector<factVal_t>>& dat) {
             buf.reserve(rslt.back().size());
             copy(rslt.back().begin(), rslt.back().end(), back_inserter(buf));
             rslt.pop_back();
-            
+
             vector<factVal_t>& e = rslt.back();
             if (e.size() == 1 && buf.size() > 1) {
                 e.resize(buf.size());
@@ -195,7 +195,7 @@ double kgmod::AggrFunc::calc(vector<vector<factVal_t>>& dat) {
                 buf.resize(e.size());
                 for (auto& i : buf) i = buf[0];
             }
-            
+
             if (st.ope == '+') {
                 for (size_t i = 0; i < e.size(); i++) e[i] += buf[i];
             } else if (st.ope == '-') {
@@ -207,7 +207,7 @@ double kgmod::AggrFunc::calc(vector<vector<factVal_t>>& dat) {
             }
         }
     }
-    
+
     if ((rslt.size() != 1) && (rslt[0].size() != 1)) {
         throw kgError("internal error: " + _original);
     }
@@ -270,7 +270,7 @@ void kgmod::FactTable::build(void) {
     kgCSVfld ft;
     ft.open(_config->traFile.name, _env, false);
     ft.read_header();
-    
+
     cerr << "building transaction and fact index" << endl;
     vector<string> fldName = ft.fldName();
     int traIDPos = -1, itemIDPos = -1;
@@ -292,7 +292,7 @@ void kgmod::FactTable::build(void) {
                 factCnt++;
             } else if (auto pos = Cmn::posInVector(_config->traFile.numFields, fldName[i])) {
                 _numFldPos[fldName[i]] = (int)(*pos);
-                
+
                 if (Cmn::posInVector(_config->traFile.highCardinality, fldName[i])) {
                     bmplist.InitKey(fldName[i], NUM_HC);
                 } else {
@@ -302,7 +302,7 @@ void kgmod::FactTable::build(void) {
             }
         }
     }
-    
+
     if (traIDPos == -1) {
         stringstream ss;
         ss << traIDFld << " is not found on " << _config->traFile.name;
@@ -313,27 +313,30 @@ void kgmod::FactTable::build(void) {
         ss << itemIDFld << " is not found on " << _config->traFile.name;
         throw kgError(ss.str());
     }
-    
+
     //if (factCnt == 0) return;
-    
+
     //
     map<string, bool> checkedTra;
     for (auto i = _occ->traNoBegin(), ie = _occ->traNoEnd(); i != ie; i++) {
         checkedTra[i->first] = false;
     }
-    
+
     _numFldTbl.resize(_occ->traMax() + 1);
     bool isError = false;
     set<string> errKeyList;
     while (ft.read() != EOF) {
 
         string traID = ft.getVal(traIDPos);
-        size_t traNo = _occ->getTraID(traID);
+        boost::optional<size_t> tmp;
+        tmp = _occ->getTraID(traID);
+        size_t traNo = *tmp;
         string itemID = ft.getVal(itemIDPos);
-        size_t itemNo = _occ->getItemID(itemID);
+        tmp = _occ->getItemID(itemID);
+        size_t itemNo = *tmp;
 
         _numFldTbl[traNo][itemNo].resize(_numFldPos.size());
-        
+
         bool errThisTime = false;
         for (int i = 0; i < fldName.size(); i++) {
             if (i == traIDPos) {
@@ -369,7 +372,7 @@ void kgmod::FactTable::build(void) {
             // configファイルに登録されていないデータ項目は処理しない
             if (!Cmn::posInVector(_config->traFile.strFields, fldName[i]) &&
                 !Cmn::posInVector(_config->traFile.numFields, fldName[i])) continue;
-            
+
             string fld = fldName[i];
             string val = ft.getVal(i);
             if (auto p = Cmn::posInVector(_config->traFile.numFields, fld)) {
@@ -377,7 +380,7 @@ void kgmod::FactTable::build(void) {
             }
             bmplist.SetBit(fld, val, ft.recNo() - 1);
         }
-        
+
 
         //_occ->bmpList.SetBit(_occ->occKey, itemID, _occ->traAtt->traNo[traID]);
 				_occ->setTraBmpFromItem(itemID, traID);
@@ -393,16 +396,16 @@ void kgmod::FactTable::build(void) {
 
 
         checkedTra[traID] = true;
-        
+
         _addr.push_back({traNo, itemNo});               // it means {traNo, itemNo} set to [ft.recNo() - 1]
         size_t rn = ft.recNo() - 1;
         _recNo.insert({{traNo, itemNo}, rn});
     }
     recMax = ft.recNo() - 1;
     ft.close();
-    
+
     _occ->liveTraSet();
-    //_occ->liveTra.padWithZeroes(_occ->traAtt->traMax + 1); 
+    //_occ->liveTra.padWithZeroes(_occ->traAtt->traMax + 1);
     //_occ->liveTra.inplace_logicalnot();
 
 
@@ -410,17 +413,17 @@ void kgmod::FactTable::build(void) {
         if (i->second) continue;
         cerr << "#WARNING# " << traIDFld << ":" << i->first << " does not exist on " << _config->traFile.name << endl;
 		    _occ->liveTraSet(i->first);
-        
+
         //Ewah tmp; tmp.set(_occ->traAtt->traNo[i->first]);
         //_occ->liveTra = _occ->liveTra - tmp;
     }
-    
+
     if (isError) throw kgError("error occurred in building transaction index");
 }
 
 void kgmod::FactTable::save(const bool clean = true) {
     bmplist.save(clean);
-    
+
     cerr << "writing " << _key2recFile << " ..." << endl;
     FILE* fp = fopen(_key2recFile.c_str(), "wb");
     if (fp == NULL) {
@@ -428,24 +431,24 @@ void kgmod::FactTable::save(const bool clean = true) {
         msg << "failed to open " + _key2recFile;
         throw kgError(msg.str());
     }
-    
+
     try {
         size_t rc;
         size_t fldCnt = _config->traFile.numFields.size();
         rc = fwrite(&fldCnt, sizeof(size_t), 1, fp);
         if (rc == 0) throw 0;
-        
+
         for (size_t i = 0; i < _addr.size(); i++) {
             size_t traNo = _addr[i].first;
             size_t itemNo = _addr[i].second;
-            
+
             rc = fwrite(&i, sizeof(size_t), 1, fp);
             if (rc == 0) throw 0;
             rc = fwrite(&traNo, sizeof(size_t), 1, fp);
             if (rc == 0) throw 0;
             rc = fwrite(&itemNo, sizeof(size_t), 1, fp);
             if (rc == 0) throw 0;
-            
+
             for (size_t c = 0; c < fldCnt; c++) {
                 rc = fwrite(&(_numFldTbl[traNo][itemNo][c]), sizeof(factVal_t), 1, fp);
                 if (rc == 0) throw 0;
@@ -464,11 +467,11 @@ void kgmod::FactTable::load(void) {
     cerr << "loading fact table" << endl;
     bmplist.load();
     //    bmplist.dump(true);
-    
+
     for (int pos = 0; pos < _config->traFile.numFields.size(); pos++) {
         _numFldPos[_config->traFile.numFields[pos]] = pos;
     }
-    
+
     cerr << "reading " << _key2recFile << "..." << endl;
     _numFldTbl.resize(_occ->traMax() + 1);
     FILE* fp = fopen(_key2recFile.c_str(), "rb");
@@ -492,7 +495,7 @@ void kgmod::FactTable::load(void) {
             if (rc == 0) throw 0;
             rc = fread(&itemNo, sizeof(size_t), 1, fp);
             if (rc == 0) throw 0;
-            
+
             _addr.push_back({traNo, itemNo});
             _recNo.insert({{traNo, itemNo}, recNo});
             _numFldTbl[traNo][itemNo].resize(fldCnt);
@@ -523,12 +526,12 @@ void kgmod::FactTable::toTraItemBmp(const Ewah& factFilter, const Ewah& itemFilt
             itemWork.insert(_addr[*i].second);
         }
     }
-    
+
     traBmp.reset();
     for (auto t : traWork) {
         traBmp.set(t);
     }
-    
+
     itemBmp.reset();
     for (auto t : itemWork) {
         itemBmp.set(t);
@@ -555,9 +558,9 @@ void kgmod::FactTable::load(void) {
             pos++;
         }
     }
-    
+
     if (_fldPos.empty()) return;
-    
+
     _factTable.resize(_occ->traAtt->traMax + 1);
     while (ft.read() != EOF) {
         string traID = ft.getVal(traIDPos);
@@ -634,7 +637,7 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
 //        cerr << "0 ";
         return 0;
     }
-    
+
     size_t lineCount = 0;
     if (vals.empty()) {
         for (size_t i = 0; i < factVals[0].size(); i++) {
@@ -664,7 +667,7 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
         } else {
             sprintf(buf, "%s,%s", traBmp.first.c_str(), itemBmp.first.c_str());
         }
-        
+
         for (size_t i = 0; i < vals.size(); i++) {
             char tmp[256]; memset(tmp, '\0', sizeof(tmp));
             factVal_t v = vals[i].first.calc(factVals);
@@ -689,21 +692,21 @@ size_t kgmod::FactTable::aggregate(const pair<string&, Ewah&>& traBmp, const pai
 void kgmod::FactTable::dump(void) {
     string dmpfile = _config->outDir + "/facttable.dmp";
     ofstream ofs(dmpfile);
-    
+
     ofs << "numField" << endl;
 //    ofs << "_numFldPos,_config->traFile.numFields: ";
     for (size_t i = 0; i < _config->traFile.numFields.size(); i++) {
         ofs << _numFldPos[_config->traFile.numFields[i]] << "," << _config->traFile.numFields[i] << " ";
     }
     ofs << endl;
-    
+
     ofs << "\nstrField" << endl;
 //    ofs << "_numFldPos,_config->traFile.numFields: ";
     for (size_t i = 0; i < _config->traFile.strFields.size(); i++) {
         ofs << _config->traFile.strFields[i] << " ";
     }
     ofs << endl;
-    
+
     ofs << "\n_numFldTbl" << endl;
     for (size_t i1 = 0; i1 < _numFldTbl.size(); i1++) {
         string traID = _occ->getTraCD(i1);
@@ -717,7 +720,7 @@ void kgmod::FactTable::dump(void) {
         }
     }
     ofs << endl;
-    
+
     ofs << "\n_addr" << endl;
     for (size_t i = 0; i < _addr.size(); i++) {
         ofs << i << ": " << _addr[i].first << "," << _addr[i].second;
@@ -725,7 +728,7 @@ void kgmod::FactTable::dump(void) {
         ofs << _occ->getItemCD(_addr[i].second) << ")" << endl;
     }
     ofs << endl;
-    
+
     ofs << "\n_recNo" << endl;
     for (auto i = _recNo.begin(), ei = _recNo.end(); i != ei; i++) {
         ofs << i->first.first << "," << i->first.second;
@@ -733,12 +736,12 @@ void kgmod::FactTable::dump(void) {
         ofs << _occ->getItemCD(i->first.second) << "): ";
         ofs << i->second << endl;
     }
-    
+
     ofs.close();
 //    bmplist.dump(true);
 }
 void kgmod::FactTable::aggregate(
-	const pair<string&, Ewah&>& traBmp, 
+	const pair<string&, Ewah&>& traBmp,
 	const pair<string&, Ewah&>& itemBmp,
 	vector<pair<AggrFunc, string>>& vals,
 	vector< vector <string> > & rtn
@@ -786,7 +789,7 @@ void kgmod::FactTable::aggregate(
 	  	boby.push_back(conv);
 	  }
 	  rtn.push_back(boby);
-	  
+
 
     cerr << "(" << skipCount0 << "," << skipCount << "," << hitCount << ":" << lineCount << ") " << endl;
     return;

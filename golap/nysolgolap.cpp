@@ -421,6 +421,9 @@ PyObject* run(PyObject* self, PyObject* args)
 		string traFilter;
 		string itemFilter;
 		string factFilter;
+		string traFilterFile;
+		string itemFilterFile;
+		string factFilterFile;
 		string gTransaction;
 		string gNode;
 
@@ -454,6 +457,15 @@ PyObject* run(PyObject* self, PyObject* args)
 
 		v = PyDict_GetItemString(ni,"factFilter");
 		if(v){ factFilter = strGET(v); }
+
+		v = PyDict_GetItemString(ni,"traFilterFile");
+		if(v){ traFilterFile = strGET(v); }
+
+		v = PyDict_GetItemString(ni,"itemFilterFile");
+		if(v){ itemFilterFile = strGET(v); }
+
+		v = PyDict_GetItemString(ni,"factFilterFile");
+		if(v){ factFilterFile = strGET(v); }
 
 		v = PyDict_GetItemString(ni,"runID");
 		if(v){ runID = strGET(v); }
@@ -535,7 +547,9 @@ PyObject* run(PyObject* self, PyObject* args)
 		PyThreadState *savex = NULL;
 		savex  = PyEval_SaveThread();
 		map<string, Result> vstr = kolap->runQuery(
-			traFilter,itemFilter,factFilter,gTransaction,gNode,
+			traFilter,itemFilter,factFilter,
+			traFilterFile,itemFilterFile,factFilterFile,
+			gTransaction,gNode,
 			SelMinSup,SelMinConf,SelMinLift,SelMinJac,SelMinPMI,
 			sortKey,sendMax,dimension,deadline,isolatedNodes,runID
 		);

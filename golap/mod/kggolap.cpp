@@ -187,7 +187,7 @@ void kgmod::kgGolap::calcDiffData_granu(pair<string, string>& item, QueryParams&
 	}
 
 	float sup = (float)freq / traNum;
-	float conf1 = (float)freq / iFreq[0];;
+	float conf1 = (float)freq / iFreq[0];
 	double lift = (double)(freq * traNum) / (iFreq[0] * iFreq[1]);
 	float jac = (float)freq / (iFreq[0] + iFreq[1] - freq);
 	float pmi = Cmn::calcPmi(freq, iFreq[0], iFreq[0], traNum);
@@ -232,8 +232,11 @@ void kgmod::kgGolap::calcDiffData_nogranu(pair<string, string>& item, QueryParam
 	itemCD[0] = item.first;
 	itemCD[1] = item.second;
 	vector<size_t> itemNo(2);
-	itemNo[0] = _occ->getItemID(item.first);
-	itemNo[1] = _occ->getItemID(item.second);
+	boost::optional<size_t> tmp;
+	tmp = _occ->getItemID(item.first);
+	itemNo[0] = *tmp;
+	tmp = _occ->getItemID(item.second);
+	itemNo[1] = *tmp;
 
 	vector<Ewah> traBmp(2);
 	vector<Ewah> traBmpInFact(2);
@@ -948,6 +951,8 @@ void kgmod::kgGolap::MT_Enum(mq_t* mq, QueryParams* query, map<string, Result>* 
 map<string, Result> kgmod::kgGolap::runQuery(
 		string traFilter,string itemFilter,
 		string factFilter,
+		string traFilterFile,string itemFilterFile,
+		string factFilterFile,
 		string gTransaction,string gNode,
 		string SelMinSup,string SelMinConf,string SelMinLift,
 		string SelMinJac,string SelMinPMI,
@@ -968,13 +973,31 @@ map<string, Result> kgmod::kgGolap::runQuery(
 
 	if(!traFilter.empty()){
 		qPara.traFilter = _fil->makeTraBitmap(traFilter);
+		Ewah tmp = _fil->makeTraFileFilter(traFilterFile);
+		cerr << traFilterFile; Cmn::CheckEwah(tmp);
+		qPara.traFilter = qPara.traFilter & tmp;
+	} else {
+		qPara.traFilter = _fil->makeTraFileFilter(traFilterFile);
+		cerr << traFilterFile; Cmn::CheckEwah(qPara.traFilter);
 	}
 	if(!itemFilter.empty()){
 		qPara.itemFilter = _fil->makeItemBitmap(itemFilter);
+		Ewah tmp = _fil->makeItemFileFilter(itemFilterFile);
+		cerr << itemFilterFile; Cmn::CheckEwah(tmp);
+		qPara.itemFilter = qPara.itemFilter & tmp;
+	} else {
+		qPara.itemFilter = _fil->makeItemFileFilter(itemFilterFile);
+		cerr << itemFilterFile; Cmn::CheckEwah(qPara.itemFilter);
 	}
 	if(!factFilter.empty()){
 		_ffilFlag = true;
 		qPara.factFilter = _fil->makeFactBitmap(factFilter);
+		Ewah tmp = _fil->makeFactFileFilter(itemFilterFile);
+		cerr << factFilterFile; Cmn::CheckEwah(tmp);
+		qPara.factFilter = qPara.factFilter & tmp;
+	} else {
+		qPara.factFilter = _fil->makeFactFileFilter(factFilterFile);
+		cerr << factFilterFile; Cmn::CheckEwah(qPara.factFilter);
 	}
 
 	if(!gTransaction.empty()){

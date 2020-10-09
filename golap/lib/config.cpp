@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,7 +14,7 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #include <iostream>
@@ -32,12 +32,18 @@ using namespace kglib;
 kgmod::Config::Config(string& infile) : Prm(infile) {
     if (infile.size() != 0) {
         Prm.ReadParam();
-        
+
         if (boost::optional<string> val = Prm.get<string>("dbDir")) {
             dbDir = *val;
             Cmn::MkDir(dbDir);
         } else {
             throw kgError("dbDir is mandatory: " + infile);
+        }
+        if (boost::optional<string> val = Prm.get<string>("inDir")) {
+            inDir = *val;
+            Cmn::MkDir(inDir);
+        } else {
+            inDir = "/var/tmp";
         }
         if (boost::optional<string> val = Prm.get<string>("outDir")) {
             outDir = *val;
@@ -45,7 +51,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         } else {
             outDir = "/var/tmp";
         }
-        
+
         if (boost::optional<string> val = Prm.get<string>("traFile.name")) {
             traFile.name = *val;
         } else {
@@ -75,7 +81,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         itemDataType[traFile.itemFld] = STR;
 
 
-        
+
         if (boost::optional<string> val = Prm.get<string>("traAttFile.name")) {
             traAttFile.name = *val;
         } else {
@@ -94,7 +100,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         if (boost::optional<string> val = Prm.get<string>("traAttFile.granuFields")) {
             traAttFile.granuFields = Cmn::CsvStr::Parse(*val);
         }
-        
+
         for (auto i = traAttFile.strFields.begin(); i != traAttFile.strFields.end(); i++) {
             if (Cmn::posInVector(traAttFile.highCardinality, *i)) {
                 traDataType[*i] = STR_HC;
@@ -109,7 +115,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
                 traDataType[*i] = NUM;
             }
         }
-        
+
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.name")) {
             itemAttFile.name = *val;
         } else {
@@ -122,7 +128,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         } else {
             throw kgError("itemAttFile.itemName is mandatory: " + infile);
         }
-        
+
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.strFields")) {
             itemAttFile.strFields = Cmn::CsvStr::Parse(*val);
         }
@@ -146,11 +152,11 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
                 itemDataType[*i] = NUM;
             }
         }
-        
+
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.imageField")) {
             itemAttFile.imageField = *val;
         }
-        
+
         if (boost::optional<string> val = Prm.get<string>("itemAttFile.Code-Name")) {
             vector<string> code_name_list = Cmn::CsvStr::Parse(*val);
             for (auto& code_name : code_name_list) {
@@ -162,7 +168,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
                 }
             }
         }
-        
+
         if (boost::optional<string> val = Prm.get<string>("cmdCache.enable")) {
             string tmp = *val;
             transform(tmp.cbegin(), tmp.cend(), tmp.begin(), ::toupper);
@@ -184,7 +190,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         } else {
             cmdCache_saveInterval = 1;
         }
-        
+
         if (boost::optional<string> val = Prm.get<string>("mt.enable")) {
             string tmp = *val;
             transform(tmp.cbegin(), tmp.cend(), tmp.begin(), ::toupper);
@@ -210,7 +216,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
         } else {
             mt_degree = thread::hardware_concurrency();
         }
-        
+
         if (boost::optional<size_t> val = Prm.get<size_t>("etc.sendMax")) {
             sendMax = *val;
         } else {
@@ -234,7 +240,7 @@ kgmod::Config::Config(string& infile) : Prm(infile) {
 
 void kgmod::Config::dump(bool debug) {
     if (! debug) return;
-    
+
     cerr << "<<< dump config >>>" << endl;
     cerr << "dbDir: " << dbDir << endl;
     cerr << "traFile: " << traFile.name << endl;
@@ -263,19 +269,19 @@ void kgmod::Config::dump(bool debug) {
         cerr << *i << " ";
     }
     cerr << endl;
-    
+
     cerr << "traDataType: ";
     for (auto i = traDataType.begin(); i != traDataType.end(); i++) {
         cerr << "(" << i->first << ":" << DataTypeStr[i->second] << ") ";
     }
     cerr << endl;
-    
+
     cerr << "itemDataType: ";
     for (auto i = itemDataType.begin(); i != itemDataType.end(); i++) {
         cerr << "(" << i->first << ":" << DataTypeStr[i->second] << ") ";
     }
     cerr << endl;
-    
+
     cerr << "itemAtt code -> name: ";
     for (auto i = itemAttFile.code2name_map.begin(); i != itemAttFile.code2name_map.end(); i++) {
         cerr << i->first << ":" << i->second << " ";

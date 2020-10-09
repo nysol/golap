@@ -76,8 +76,24 @@ namespace kgmod {
 
 
 
-		size_t getTraID(string v){ return traAtt->traNo[v]; }
-		size_t getItemID(string v){ return itemAtt->itemNo[v]; }
+		// size_t getTraID(string v){ return traAtt->traNo[v]; }
+		boost::optional<size_t> getTraID(string v) {
+			auto tmp = traAtt->traNo.find(v);
+			if (tmp == traAtt->traNo.end()) {
+				return boost::none;
+			} else {
+				return tmp->second;
+			}
+		}
+		// size_t getItemID(string v){ return itemAtt->itemNo[v]; }
+		boost::optional<size_t> getItemID(string v) {
+			auto tmp = itemAtt->itemNo.find(v);
+			if (tmp == itemAtt->itemNo.end()) {
+				return boost::none;
+			} else {
+				return tmp->second;
+			}
+		}
 
 		string getTraCD(size_t i){ return traAtt->tra[i]; }
 		string getItemCD(size_t i){ return itemAtt->item[i]; }
