@@ -757,19 +757,31 @@ Ewah kgmod::Filter::makeTraFileFilter(string& infile) {
     fileName = config->inDir + "/" + infile;
     if (infile != "" && Cmn::FileExists(fileName)) {
         set<size_t> bitlist;
+        size_t tra_colNo = -1;
         bool first = true;
         string line;
         ifstream ifs(fileName);
         while (getline(ifs, line)) {
-            // ommit CSV Header
-            if (first) {first = false; continue;}
-
             vector<string> buf = Cmn::CsvStr::Parse(line);
-            boost::optional<size_t> traNo = occ->getTraID(buf[0]);
-            if (traNo) bitlist.insert(*traNo);
+            if (first) {
+                string reg;
+                reg = config->traFile.traFld + "(|%[0-9]+|%[0-9]+r)";
+                tra_colNo = Cmn::find_regex(buf, reg);
+                if (tra_colNo == -1) break;
+                first = false;
+            } else {
+                boost::optional<size_t> traNo = occ->getTraID(buf[tra_colNo]);
+                if (traNo) bitlist.insert(*traNo);
+            }
         }
-        for (size_t t : bitlist) {
-            out.set(t);
+
+        if (tra_colNo == -1) {
+            out.padWithZeroes(occ->traMax() + 1);
+            out.inplace_logicalnot();
+        } else {
+            for (size_t t : bitlist) {
+                out.set(t);
+            }
         }
     } else {
         out.padWithZeroes(occ->traMax() + 1);
@@ -784,19 +796,31 @@ Ewah kgmod::Filter::makeItemFileFilter(string& infile) {
     fileName = config->inDir + "/" + infile;
     if (infile != "" && Cmn::FileExists(fileName)) {
         set<size_t> bitlist;
+        size_t item_colNo = -1;
         bool first = true;
         string line;
         ifstream ifs(fileName);
         while (getline(ifs, line)) {
-            // ommit CSV Header
-            if (first) {first = false; continue;}
-
             vector<string> buf = Cmn::CsvStr::Parse(line);
-            boost::optional<size_t> traNo = occ->getItemID(buf[0]);
-            if (traNo) bitlist.insert(*traNo);
+            if (first) {
+                string reg;
+                reg = config->traFile.itemFld + "(|%[0-9]+|%[0-9]+r)";
+                item_colNo = Cmn::find_regex(buf, reg);
+                if (item_colNo == -1) break;
+                first = false;
+            } else {
+                boost::optional<size_t> traNo = occ->getItemID(buf[item_colNo]);
+                if (traNo) bitlist.insert(*traNo);
+            }
         }
-        for (size_t t : bitlist) {
-            out.set(t);
+
+        if (item_colNo == -1) {
+            out.padWithZeroes(occ->itemMax() + 1);
+            out.inplace_logicalnot();
+        } else {
+            for (size_t t : bitlist) {
+                out.set(t);
+            }
         }
     } else {
         out.padWithZeroes(occ->itemMax() + 1);
@@ -811,22 +835,38 @@ Ewah kgmod::Filter::makeFactFileFilter(string& infile) {
     fileName = config->inDir + "/" + infile;
     if (infile != "" && Cmn::FileExists(fileName)) {
         set<size_t> bitlist;
+        size_t tra_colNo = -1;
+        size_t item_colNo = -1;
         size_t cnt = 0;
         string line;
         ifstream ifs(fileName);
         while (getline(ifs, line)) {
-            // ommit CSV Header
-            if (cnt == 0) {cnt++; continue;}
-
             vector<string> buf = Cmn::CsvStr::Parse(line);
-            boost::optional<size_t> traNo = occ->getTraID(buf[0]);
-            boost::optional<size_t> itemNo = occ->getItemID(buf[1]);
-            boost::optional<size_t> recNo = fact->keys2recNo(*traNo, *itemNo);
-            if (recNo) bitlist.insert(*recNo);
+            if (cnt == 0) {
+                string reg;
+                reg = config->traFile.traFld + "(|%[0-9]+|%[0-9]+r)";
+                tra_colNo = Cmn::find_regex(buf, reg);
+                if (tra_colNo == -1) break;
+
+                reg = config->traFile.itemFld + "(|%[0-9]+|%[0-9]+r)";
+                item_colNo = Cmn::find_regex(buf, reg);
+                if (item_colNo == -1) break;
+            } else {
+                boost::optional<size_t> traNo = occ->getTraID(buf[tra_colNo]);
+                boost::optional<size_t> itemNo = occ->getItemID(buf[item_colNo]);
+                boost::optional<size_t> recNo = fact->keys2recNo(*traNo, *itemNo);
+                if (recNo) bitlist.insert(*recNo);
+            }
             cnt++;
         }
-        for (size_t t : bitlist) {
-            out.set(t);
+
+        if (cnt == 0) {
+            out.padWithZeroes(fact->recMax + 1);
+            out.inplace_logicalnot();
+        } else {
+            for (size_t t : bitlist) {
+                out.set(t);
+            }
         }
     } else {
         out.padWithZeroes(fact->recMax + 1);

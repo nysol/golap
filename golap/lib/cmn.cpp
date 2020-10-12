@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,13 +14,14 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #include <iostream>
 #include <sstream>
 #include <cmath>
 #include <time.h>
+#include <regex>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/property_tree/ptree.hpp>
@@ -178,12 +179,23 @@ bool kgmod::Cmn::DelFile(const string Path) {
 }
 
 
-size_t kgmod::Cmn::Find(const vector<string>List, string Value) {
-    auto ite = find(List.begin(), List.end(), Value);
-    if (ite == List.end()) {
+size_t kgmod::Cmn::Find(const vector<string>vec, string Value) {
+    auto ite = find(vec.begin(), vec.end(), Value);
+    if (ite == vec.end()) {
         return -1;
     }
-    return distance(List.begin(), ite);
+    return distance(vec.begin(), ite);
+}
+
+size_t kgmod::Cmn::find_regex(vector<string> vec, string reg) {
+    size_t index = -1;
+    for (size_t i = 0; i < vec.size(); i++) {
+        smatch smatch;
+        if (regex_search(vec[i], smatch, regex(reg))) {
+            index = i;
+        }
+    }
+    return index;
 }
 
 void kgmod::Cmn::CheckEwah(Ewah& bmp) {

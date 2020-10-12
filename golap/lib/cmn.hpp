@@ -1,5 +1,5 @@
 /* ////////// LICENSE INFO ////////////////////
- 
+
  * Copyright (C) 2013 by NYSOL CORPORATION
  *
  * Unless you have received this program directly from NYSOL pursuant
@@ -14,7 +14,7 @@
  *
  * Please refer to the AGPL (http://www.gnu.org/licenses/agpl-3.0.txt)
  * for more details.
- 
+
  ////////// LICENSE INFO ////////////////////*/
 
 #ifndef cmn_hpp
@@ -54,7 +54,8 @@ namespace kgmod {
         size_t FileSize(const string Path);
         bool MkDir(const string Path);
         bool DelFile(const string Path);
-        size_t Find(const vector<string>List, string value);
+        size_t Find(const vector<string> vec, string value);
+        size_t find_regex(vector<string> vec, string reg);
         void CheckEwah(Ewah& b);
         void CheckEwah(Ewah* b);
         bool MatchWild(const char* pat, const char* str);
@@ -71,12 +72,12 @@ namespace kgmod {
         bool ReplaceString(string& str, string fm, string to);
         static inline void EraseLastChar(string& str) {if (! str.empty()) str.erase(--str.end());}
         void readJson(string file);
-        
+
         float calcPmi(size_t freq, size_t freq1, size_t freq2, size_t total);
         void timeStamp(string& datetime);
 //        template <class T> boost::optional<size_t> posInVector(vector<T> vec, T target);
         boost::optional<size_t> posInVector(const vector<string>& vec, const string& target);
-        
+
         // Min
         template <typename U, template<class T, class Allocator = allocator<T>> class Container>
         U min(Container<U>& x) {return *min_element(x.begin(), x.end());}
