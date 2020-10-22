@@ -765,7 +765,7 @@ Ewah kgmod::Filter::makeTraFileFilter(string& infile) {
             vector<string> buf = Cmn::CsvStr::Parse(line);
             if (first) {
                 string reg;
-                reg = config->traFile.traFld + "(|%[0-9]+|%[0-9]+r)";
+                reg = config->traFile.traFld + "(|%[0-9]+|%[0-9]+r|%[0-9]+n|%[0-9]+nr)";
                 tra_colNo = Cmn::find_regex(buf, reg);
                 if (tra_colNo == -1) break;
                 first = false;
@@ -804,7 +804,7 @@ Ewah kgmod::Filter::makeItemFileFilter(string& infile) {
             vector<string> buf = Cmn::CsvStr::Parse(line);
             if (first) {
                 string reg;
-                reg = config->traFile.itemFld + "(|%[0-9]+|%[0-9]+r)";
+                reg = config->traFile.itemFld + "(|%[0-9]+|%[0-9]+r|%[0-9]+n|%[0-9]+nr)";
                 item_colNo = Cmn::find_regex(buf, reg);
                 if (item_colNo == -1) break;
                 first = false;
@@ -844,11 +844,11 @@ Ewah kgmod::Filter::makeFactFileFilter(string& infile) {
             vector<string> buf = Cmn::CsvStr::Parse(line);
             if (cnt == 0) {
                 string reg;
-                reg = config->traFile.traFld + "(|%[0-9]+|%[0-9]+r)";
+                reg = config->traFile.traFld + "(|%[0-9]+|%[0-9]+r|%[0-9]+n|%[0-9]+nr)";
                 tra_colNo = Cmn::find_regex(buf, reg);
                 if (tra_colNo == -1) break;
 
-                reg = config->traFile.itemFld + "(|%[0-9]+|%[0-9]+r)";
+                reg = config->traFile.itemFld + "(|%[0-9]+|%[0-9]+r|%[0-9]+n|%[0-9]+nr)";
                 item_colNo = Cmn::find_regex(buf, reg);
                 if (item_colNo == -1) break;
             } else {
