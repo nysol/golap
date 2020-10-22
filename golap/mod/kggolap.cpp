@@ -108,83 +108,55 @@ void kgmod::kgGolap::calcDiffData_granu(pair<string, string>& item, QueryParams&
 
 	size_t traNum = res.getDiffCache_traNum();
 	size_t freq;
-	boost::optional<size_t> cf = res.getDiffCache_corrFreq(item.first, item.second);
-	vector<boost::optional<size_t>> f(2);
 	for (size_t i = 0; i < 2; i++) {
-	 	f[i] = res.getDiffCache_freq(itemCD[i]);
-	}
+		auto ct = traBmpCache.find(itemCD[i]);
+		if ( ct == traBmpCache.end()) {
+			Ewah tmp_traBmp;
+			unordered_map<vector<string>, bool , boost::hash<vector<string>>> checked_tra;
+			iFreq[i] = 0;
+			// Ewah traBmp;
+			for (auto at2 = itemBmp[i].begin(), eat2 = itemBmp[i].end(); at2 != eat2; at2++) {
+				Ewah tra_i2_tmp2;
+				_occ->getTraBmpFromItem(*at2,tra_i2_tmp2);
+				tmp_traBmp = tmp_traBmp | tra_i2_tmp2;
+			}
+			tmp_traBmp = tmp_traBmp & tarTraBmp;
 
-	if (cf && f[0] && f[1]) {
-		freq = *cf;
-		for (size_t i = 0; i < 2; i++) {
-			iFreq[i] = *f[i];
-		}
-	} else {
-		for (size_t i = 0; i < 2; i++) {
-			auto ct = traBmpCache.find(itemCD[i]);
-			if ( ct == traBmpCache.end()) {
-				Ewah tmp_traBmp;
-				unordered_map<vector<string>, bool , boost::hash<vector<string>>> checked_tra;
-				iFreq[i] = 0;
-				// Ewah traBmp;
-				for (auto at2 = itemBmp[i].begin(), eat2 = itemBmp[i].end(); at2 != eat2; at2++) {
-					Ewah tra_i2_tmp2;
-					_occ->getTraBmpFromItem(*at2,tra_i2_tmp2);
-					tmp_traBmp = tmp_traBmp | tra_i2_tmp2;
+			if (isTraGranu) {
+				for (auto it = tmp_traBmp.begin(), eit = tmp_traBmp.end(); it != eit; it++) {
+					vector<string> vTraAtt;
+					_occ->traNo2traAtt(*it, query.granularity.first, vTraAtt);
+					if (checked_tra.find(vTraAtt) != checked_tra.end()) continue;
+
+					if (!_factTable->existInFact(*it, itemBmp[i] , query.factFilter)) continue;
+
+					Ewah traInTheAtt = _occ->getTraBmpFromGranu(query.granularity.first, vTraAtt);
+					traInTheAtt = traInTheAtt  & tarTraBmp;
+					if (traInTheAtt.numberOfOnes() == 0) continue;
+					Ewah oneBit;
+					oneBit.set(*(traInTheAtt.begin()));
+					traBmpInFact[i] = traBmpInFact[i] | oneBit;
+
+					checked_tra[vTraAtt]=true;
 				}
-				tmp_traBmp = tmp_traBmp & tarTraBmp;
-
-				if (isTraGranu) {
-					for (auto it = tmp_traBmp.begin(), eit = tmp_traBmp.end(); it != eit; it++) {
-						vector<string> vTraAtt;
-						_occ->traNo2traAtt(*it, query.granularity.first, vTraAtt);
-						if (checked_tra.find(vTraAtt) != checked_tra.end()) continue;
-
-						if (!_factTable->existInFact(*it, itemBmp[i] , query.factFilter)) continue;
-
-						Ewah traInTheAtt = _occ->getTraBmpFromGranu(query.granularity.first, vTraAtt);
-						traInTheAtt = traInTheAtt  & tarTraBmp;
-						if (traInTheAtt.numberOfOnes() == 0) continue;
-						Ewah oneBit;
-						oneBit.set(*(traInTheAtt.begin()));
-						traBmpInFact[i] = traBmpInFact[i] | oneBit;
-
-						checked_tra[vTraAtt]=true;
-					}
-				} else {
-					for (auto it = tmp_traBmp.begin(), eit = tmp_traBmp.end(); it != eit; it++) {
-						if (!_factTable->existInFact(*it, itemBmp[i], query.factFilter)) continue;
-						Ewah oneBit;
-						oneBit.set(*it);
-						traBmpInFact[i] = traBmpInFact[i] | oneBit;
-					}
-				}
-
-				traBmpCache[itemCD[i]] = traBmpInFact[i];
 			} else {
-				traBmpInFact[i] = ct->second;
+				for (auto it = tmp_traBmp.begin(), eit = tmp_traBmp.end(); it != eit; it++) {
+					if (!_factTable->existInFact(*it, itemBmp[i], query.factFilter)) continue;
+					Ewah oneBit;
+					oneBit.set(*it);
+					traBmpInFact[i] = traBmpInFact[i] | oneBit;
+				}
 			}
 
-			iFreq[i] = traBmpInFact[i].numberOfOnes();
-		}
-		Ewah tmp = traBmpInFact[0] & traBmpInFact[1];
-		freq = tmp.numberOfOnes();
-
-		for (size_t i = 0; i < 2; i++) {
-			if (!f[i]) res.setDiffCache_freq(itemCD[i], iFreq[i]);
+			traBmpCache[itemCD[i]] = traBmpInFact[i];
+		} else {
+			traBmpInFact[i] = ct->second;
 		}
 
-		// to compare results
-		// for (size_t i = 0; i < 2; i++) {
-		// 	if (f[i]) {
-		// 		if (*f[i] == iFreq[i]) {
-		// 			cerr << itemCD[i] << " cache matched: " << *f[i] << "," << iFreq[i] << endl;
-		// 		} else {
-		// 			cerr << itemCD[i] << " cache not match: " << *f[i] << "," << iFreq[i] << endl;
-		// 		}
-		// 	}
-		// }
+		iFreq[i] = traBmpInFact[i].numberOfOnes();
 	}
+	Ewah tmpBmp = traBmpInFact[0] & traBmpInFact[1];
+	freq = tmpBmp.numberOfOnes();
 
 	float sup = (float)freq / traNum;
 	float conf1 = (float)freq / iFreq[0];
@@ -232,11 +204,8 @@ void kgmod::kgGolap::calcDiffData_nogranu(pair<string, string>& item, QueryParam
 	itemCD[0] = item.first;
 	itemCD[1] = item.second;
 	vector<size_t> itemNo(2);
-	boost::optional<size_t> tmp;
-	tmp = _occ->getItemID(item.first);
-	itemNo[0] = *tmp;
-	tmp = _occ->getItemID(item.second);
-	itemNo[1] = *tmp;
+	itemNo[0] = *(_occ->getItemID(item.first));
+	itemNo[1] = *(_occ->getItemID(item.second));
 
 	vector<Ewah> traBmp(2);
 	vector<Ewah> traBmpInFact(2);
@@ -244,49 +213,28 @@ void kgmod::kgGolap::calcDiffData_nogranu(pair<string, string>& item, QueryParam
 
 	size_t traNum = res.getDiffCache_traNum();
 	size_t freq;
-	boost::optional<size_t> cf = res.getDiffCache_corrFreq(item.first, item.second);
-	vector<boost::optional<size_t>> f(2);
 	for (size_t i = 0; i < 2; i++) {
-	 	f[i] = res.getDiffCache_freq(itemCD[i]);
-	}
-
-	if (cf && f[0] && f[1]) {
-		freq = *cf;
-		for (size_t i = 0; i < 2; i++) {
-			iFreq[i] = *f[i];
-		}
-	} else {
-		for (size_t i = 0; i < 2; i++) {
-			// auto it = cached_bmp.find({i, itemNo[i]});
-			auto it = traBmpCache.find(itemCD[i]);
-			if (it == traBmpCache.end()) {
-				_occ->getTraBmpFromItem(itemNo[i], traBmp[i]);
-				traBmp[i] = traBmp[i] & tarTraBmp;
-				iFreq[i] = 0;
-				for (auto t = traBmp[i].begin(), et = traBmp[i].end(); t != et; t++) {
-					if (_factTable->existInFact(*t, itemNo[i], query.factFilter)) {
-						iFreq[i]++;
-						traBmpInFact[i].set(*t);
-					}
+		// auto it = cached_bmp.find({i, itemNo[i]});
+		auto it = traBmpCache.find(itemCD[i]);
+		if (it == traBmpCache.end()) {
+			_occ->getTraBmpFromItem(itemNo[i], traBmp[i]);
+			traBmp[i] = traBmp[i] & tarTraBmp;
+			iFreq[i] = 0;
+			for (auto t = traBmp[i].begin(), et = traBmp[i].end(); t != et; t++) {
+				if (_factTable->existInFact(*t, itemNo[i], query.factFilter)) {
+					iFreq[i]++;
+					traBmpInFact[i].set(*t);
 				}
-
-				traBmpCache[itemCD[i]] = traBmpInFact[i];
-			} else {
-				iFreq[i] = it->second.numberOfOnes();
-				traBmpInFact[i] = it->second;
 			}
-		}
-		Ewah tmp = traBmpInFact[0] & traBmpInFact[1];
-		freq = tmp.numberOfOnes();
 
-		cerr << "****" << itemCD[0] << ":" << itemCD[1] << endl;
-		if (!cf) {res.setDiffCache_coorFreq(itemCD[0], itemCD[1], freq);}
-		else {cerr << itemCD[0] << ":" << itemCD[1] << endl;}
-		for (size_t i = 0; i < 2; i++) {
-			if (!f[i]) {res.setDiffCache_freq(itemCD[i], iFreq[i]);}
-			else {cerr << itemCD[i] << endl;}
+			traBmpCache[itemCD[i]] = traBmpInFact[i];
+		} else {
+			iFreq[i] = it->second.numberOfOnes();
+			traBmpInFact[i] = it->second;
 		}
 	}
+	Ewah tmpBmp = traBmpInFact[0] & traBmpInFact[1];
+	freq = tmpBmp.numberOfOnes();
 
 	float sup = (float)freq / traNum;
 	float conf1 = (float)freq / iFreq[0];;
@@ -367,7 +315,6 @@ void kgmod::kgGolap::addDiffData(QueryParams& query, map<string, Result>& res) {
 	for (size_t i = 0; i < dimNum; i++) {
 		tarTraBmp[i] = query.traFilter & query.dimension.DimBmpList[dimValue[i]]
 						& _occ->getliveTra() & traBmpInFact;
-		// traNum[i] = res[dimValue[i]].getDiffCache_traNum();
 	}
 
 	typedef set<pair<string, string>> keylist_t;
@@ -533,7 +480,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 				lcnt++;
 			}
 			itemFreq[*i2]  = lcnt;
-			res.setDiffCache_freq(node2, lcnt);
 
 			if ( ((float)itemFreq[*i2]/traNum) < query.selCond.minSup ){ continue; }
 			if (itemFreq[*i2] == 0) continue;
@@ -594,8 +540,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 				}
 				Cmn::EraseLastChar(item1);
 				Cmn::EraseLastChar(itemName1);
-
-				res.setDiffCache_coorFreq(item1, item2, i1->second);
 
 				size_t freq = i1->second;
 				float sup = (float)freq / traNum;
@@ -799,7 +743,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 			Cmn::EraseLastChar(item2);
 			Cmn::EraseLastChar(itemName2);
 
-			res.setDiffCache_freq(item2, tralists[iiv].numberOfOnes());	// diff受渡用
 			if (  ((float)tralists[iiv].numberOfOnes()/traNum) < query.selCond.minSup ){
 				continue;
 			}
@@ -846,9 +789,6 @@ Result kgmod::kgGolap::Enum( QueryParams& query, Ewah& dimBmp ,timChkT *timerST)
 				}
 				Cmn::EraseLastChar(item1);
 				Cmn::EraseLastChar(itemName1);
-
-				res.setDiffCache_freq(item1, tralists[iiv2].numberOfOnes());	// diff受渡用
-				res.setDiffCache_coorFreq(item1, item2, freq);
 
 				vector<string> dt(13);
 				dt[0] = item1;

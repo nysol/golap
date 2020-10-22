@@ -248,8 +248,8 @@ namespace kgmod {
 		// diff受け渡し用キャッシュ
 		struct {
 			size_t traNum;				// トランザクション数
-			map<pair<string, string>, size_t> coorFreq;	// 共起数
-			map<string, size_t> freq;	// ノード（アイテム）頻度
+			// map<pair<string, string>, size_t> coorFreq;	// 共起数
+			// map<string, size_t> freq;	// ノード（アイテム）頻度
 		} diffCache;
 
 		public:
@@ -345,43 +345,6 @@ namespace kgmod {
 			diffCache.traNum = traNo;
 		}
 		size_t getDiffCache_traNum(void) {return diffCache.traNum;}
-
-		void setDiffCache_coorFreq(string item1, string item2, size_t corrFreq) {
-			diffCache.coorFreq[{item1, item2}] = corrFreq;
-		}
-		boost::optional<size_t> getDiffCache_corrFreq(string item1, string item2) {
-			auto freq1 = diffCache.coorFreq.find({item1, item2});
-			if (freq1 != diffCache.coorFreq.end()) return freq1->second;
-
-			auto freq2 = diffCache.coorFreq.find({item2, item1});
-			if (freq2 != diffCache.coorFreq.end()) return freq2->second;
-
-			return boost::none;
-		}
-
-		void setDiffCache_freq(string item, size_t freq) {
-			diffCache.freq[item] = freq;
-		}
-		boost::optional<size_t> getDiffCache_freq(string item) {
-			auto freq = diffCache.freq.find(item);
-			if (freq != diffCache.freq.end()) return freq->second;
-
-			return boost::none;
-		}
-
-		void dumpDiffCache(void) {
-			cerr << "traNum: " << diffCache.traNum << endl;
-			cerr << "coorFreq: ";
-			for (auto& f : diffCache.coorFreq) {
-				cerr << f.first.first << "," << f.first.second << ":" << f.second << " ";
-			}
-			cerr << endl;
-			cerr << "Freq: ";
-			for (auto& f : diffCache.freq) {
-				cerr << f.first << ":" << f.second << " ";
-			}
-			cerr << endl;
-		}
 
 		// 孤立ノード用
 		void isoHeadSet(vector<string>& hed){
