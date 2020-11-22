@@ -188,6 +188,12 @@ void kgmod::kgGolap::calcDiffData_granu(pair<string, string>& item, QueryParams&
 		if (! std::isnan(pmi)) {
 			sprintf(conv,"%.5f",pmi);   dt[10]= conv;
 		}
+	} else {
+		dt[6] = "";
+		dt[7] = "";
+		dt[8] = "";
+		dt[9] = "";
+		dt[10] = "";
 	}
 	// dt[11] = item.first;
 	// dt[12] = item.second;
@@ -266,6 +272,12 @@ void kgmod::kgGolap::calcDiffData_nogranu(pair<string, string>& item, QueryParam
 		if (! std::isnan(pmi)) {
 			sprintf(conv,"%.5f",pmi);   dt[10]= conv;
 		}
+	} else {
+		dt[6] = "";
+		dt[7] = "";
+		dt[8] = "";
+		dt[9] = "";
+		dt[10] = "";
 	}
 	// dt[11] = item.first;
 	// dt[12] = item.second;
