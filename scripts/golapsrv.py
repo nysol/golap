@@ -10,6 +10,9 @@ import traceback
 import sys
 import signal
 
+from flask import Flask
+from flask_httpauth import HTTPDigestAuth
+
 
 class MyThread(threading.Thread):
 	def __init__(self,arg):
@@ -55,21 +58,31 @@ if 'staticUrl' in jconf:
 	option['static_url_path'] = jconf['staticUrl']
 	del jconf['staticUrl']
 
+
+
 app = Flask(__name__,**option)
+auth = HTTPDigestAuth()
 
+mode = 0
+skeyname = ""
+uinfo = {}
+if ('SECRET_KEY_FILE' in jconf ) and ('PASS_FILE' in jconf ) :
+	mode = 1
+	jconf["dbDir"]+"/" + jconf['SECRET_KEY_FILE']
+	jconf["dbDir"]+"/" + jconf['PASS_FILE']
+	with open(jconf["dbDir"]+"/" + jconf['SECRET_KEY_FILE'],"r") as fp:
+		app.config['SECRET_KEY'] =  fp.readline().replace("\n", "")
 
-@app.route('/',methods=["POST"])
-def reqpost():
+	with open(jconf["dbDir"]+"/" + jconf['PASS_FILE'],"r") as fp:
+		ldata = fp.readline()
+		while ldata:
+			lvals = ldata.replace('\n', '').split(',')
+			if len (lvals) >= 2:
+				uinfo[lvals[0]] = lvals[1]
+			ldata = fp.readline()
+		
 
-	#ret = []
-	#for th in threading.enumerate():
-	#	frames = sys._current_frames()
-	#	if frames.get(th.ident):
-	#		s = traceback.extract_stack(frames[th.ident])
-	#	else:
-	#		s = f"th: {th.ident} is not found in current frames"
-	#
-	#		ret.append((th, s))
+def reqpostMain():
 
 	ss= request.get_data()
 	utstr = str(time.time())
@@ -82,7 +95,6 @@ def reqpost():
 		return Response("status:-1\njson parse error\n",mimetype='text/plain')
 
 	print(sjson)
-
 
 	# control
 	if 'control' in sjson :
@@ -173,15 +185,6 @@ def reqpost():
 
 	elif 'query' in sjson :
 		try:
-			#print("a0")
-			#t = MyThread(sjson)
-			#print(t)
-			#print("a1")
-			#t.start()
-			#print("a2")
-			#t.join()
-			#print("a3")
-			#rtnobj = t.result
 			rtnobj = golapM.query(sjson)
 
 		except Exception as ep :
@@ -228,8 +231,8 @@ def reqpost():
 		# query
 		return Response("status:-1\nUnknown Request Pattern\n",mimetype='text/plain')
 
-@app.route('/cancel/<id>',methods=["get"])
-def cancel(id):
+
+def cancelMain(id):
 	rtn = ""
 	if golapM.timeclear(id) == 0 :
 		rtn = "status:0\n"
@@ -239,6 +242,39 @@ def cancel(id):
 		rtn += "not found id(%s)\n"%(id)
 
 	return Response( rtn ,mimetype='text/plain')
+
+
+
+
+if mode == 1 : 
+
+	@auth.get_password
+	def get_pw(username):
+		if username in uinfo:
+			return uinfo.get(username)
+		return None
+
+	@app.route('/',methods=["POST"])
+	@auth.login_required()
+	def reqpost():
+		return reqpostMain()
+
+
+
+	@app.route('/cancel/<id>',methods=["get"])
+	@auth.login_required()
+	def cancel(id):
+		return cancelMain(id)
+
+else:
+	@app.route('/',methods=["POST"])
+	def reqpost():
+		return reqpostMain()
+
+	@app.route('/cancel/<id>',methods=["get"])
+	def cancel(id):
+		return cancelMain(id)
+
 
 if __name__ == '__main__':
 	app.run(host='0.0.0.0',port=useport,threaded=True)

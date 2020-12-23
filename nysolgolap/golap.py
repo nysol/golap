@@ -20,6 +20,10 @@ class mgolap(object):
 			del self.jsondf['staticFolder']
 		if 'staticUrl' in self.jsondf:
 			del self.jsondf['staticUrl']
+		if 'SECRET_KEY_FILE' in self.jsondf:
+			del self.jsondf['SECRET_KEY_FILE']
+		if 'PASS_FILE' in self.jsondf:
+			del self.jsondf['PASS_FILE']
 
 		self.golapOBJ = ng.init(confF)
 		ng.load(self.golapOBJ)
