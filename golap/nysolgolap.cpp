@@ -546,13 +546,53 @@ PyObject* run(PyObject* self, PyObject* args)
 		}
 		PyThreadState *savex = NULL;
 		savex  = PyEval_SaveThread();
-		map<string, Result> vstr = kolap->runQuery(
-			traFilter,itemFilter,factFilter,
-			traFilterFile,itemFilterFile,factFilterFile,
-			gTransaction,gNode,
-			SelMinSup,SelMinConf,SelMinLift,SelMinJac,SelMinPMI,
-			sortKey,sendMax,dimension,deadline,isolatedNodes,runID
-		);
+		map<string, Result> vstr;
+		try{
+			vstr = kolap->runQuery(
+				traFilter,itemFilter,factFilter,
+				traFilterFile,itemFilterFile,factFilterFile,
+				gTransaction,gNode,
+				SelMinSup,SelMinConf,SelMinLift,SelMinJac,SelMinPMI,
+				sortKey,sendMax,dimension,deadline,isolatedNodes,runID
+			);
+		}catch(kgError& err){
+			PyEval_RestoreThread(savex);
+			savex=NULL;
+			std::cerr << err.message(0) << std::endl;
+			PyObject* kerr = PyDict_New();
+			PyObject* kvv = PyLong_FromLong(-1);
+			PyDict_SetItemString(kerr,"status",kvv);
+			Py_DECREF(kvv);
+			kvv = PyUnicode_FromString(err.message(0).c_str());
+			PyDict_SetItemString(kerr,"errmsg",kvv);
+			Py_DECREF(kvv);
+			return kerr;
+
+	  }	catch(char const *msg){
+			PyEval_RestoreThread(savex);
+			savex=NULL;
+			std::cerr << msg << std::endl;
+			PyObject* kerr = PyDict_New();
+			PyObject* kvv = PyLong_FromLong(-1);
+			PyDict_SetItemString(kerr,"status",kvv);
+			Py_DECREF(kvv);
+			kvv = PyUnicode_FromString(msg);
+			PyDict_SetItemString(kerr,"errmsg",kvv);
+			Py_DECREF(kvv);
+			return kerr;
+		}
+ 	 catch(...){
+			PyEval_RestoreThread(savex);
+			savex=NULL;
+			PyObject* kerr = PyDict_New();
+			PyObject* kvv = PyLong_FromLong(-1);
+			PyDict_SetItemString(kerr,"status",kvv);
+			Py_DECREF(kvv);
+			kvv = PyUnicode_FromString("run Error [ unKnown ERROR ]");
+			PyDict_SetItemString(kerr,"errmsg",kvv);
+			Py_DECREF(kvv);
+			return kerr;
+		}		
 		PyEval_RestoreThread(savex);
 		savex=NULL;
 
