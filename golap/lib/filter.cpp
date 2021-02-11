@@ -531,7 +531,7 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
                     continue;
                 } else if (**cmdPtr == inQuote) {
                     inQuote = '\0';
-                    continue;
+                    if (kakkoDepth == 1) continue;
                 }
             }
         } else {
@@ -550,6 +550,9 @@ kgmod::Filter::values_t kgmod::Filter::getArg(char** cmdPtr) {
                     inQuote = **cmdPtr;
                     arg.push_back("");
                     continue;
+                }
+                else if(kakkoDepth > 1){
+                    inQuote = **cmdPtr;
                 }
             } else if (**cmdPtr == ',') {
                 if (kakkoDepth == 1) {
